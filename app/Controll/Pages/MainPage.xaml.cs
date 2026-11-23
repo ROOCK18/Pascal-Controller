@@ -169,7 +169,7 @@ public partial class MainPage : ContentPage
     // ══════════════ BT ÁLLAPOT ══════════════
     private void UpdateMainConnectionIndicator(bool isConnected)
     {
-        MainThread.BeginInvokeOnMainThread(async () =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
             ConnectionIndicatorMain.Fill = isConnected ? Colors.LimeGreen : Colors.Red;
 
@@ -178,8 +178,11 @@ public partial class MainPage : ContentPage
             else if (isConnected)
                 NoConnectionOverlayMain.IsVisible = false;
 
-            if (!isConnected && _currentTabKey != "note")
-                await DisplayAlert("Kapcsolat", "Nincs aktív Bluetooth kapcsolat.", "OK");
+            // NINCS többé felugró "Nincs aktív Bluetooth kapcsolat" ablak -
+            // ez induláskor (amikor még soha nem is volt csatlakozás) és
+            // minden lecsatlakozáskor is feleslegesen tolakodó volt. Az
+            // overlay (fenti IsVisible) már önmagában egyértelműen jelzi az
+            // állapotot, nem kell ehhez külön dialógus.
         });
     }
 
@@ -194,6 +197,20 @@ public partial class MainPage : ContentPage
 
     private async void OnSettingsClicked(object s, EventArgs e)
         => await Shell.Current.GoToAsync("settings");
+
+    // Android hardveres/gesztus vissza gomb kezelése: ha éppen a Timing
+    // (Automatikák) oldalon vagyunk, ne az app lépjen ki, hanem lépjünk
+    // vissza a Vezérlés oldalra - ugyanúgy, mint a Timing saját "Vissza"
+    // gombjával.
+    protected override bool OnBackButtonPressed()
+    {
+        if (_isTimingVisible)
+        {
+            ShowControlFromTiming();
+            return true; // esemény elfogyasztva - az app nem lép ki/navigál el
+        }
+        return base.OnBackButtonPressed();
+    }
 
     protected override void OnAppearing()
     {

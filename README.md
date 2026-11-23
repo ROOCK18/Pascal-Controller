@@ -72,12 +72,16 @@ Releases API-t használja token nélkül, ezért a release-eknek **publikus** re
 
 ## Alkalmazás – figyelem
 
-Az `app/` mappában még a 2026. júliusi (v3.x-hez illő) app van. A v4.9.0-hoz tartozó
-.NET 10-es változat (WiFi panel, `GitHubUpdateService.cs`, séma-mentés) még nincs feltöltve.
+Az `app/` a v4.9.0 firmware-hez tartozó .NET 10-es változat (WiFi panel, GitHub Releases
+alapú frissítés, séma-mentés `.pcscheme` fájlba, Kapuzás, kijelző- és dátumbeállítások).
+
+**Teendő:** a `app/Controll/Services/GitHubUpdateService.cs` 29–30. sorában a
+`GitHubOwner` / `GitHubRepo` még sablonszöveg, ki kell tölteni, különben a firmware-frissítés
+verzióválasztója nem működik. A repónak publikusnak kell lennie (token nincs implementálva).
 
 ## Alkalmazás (`app/`)
 
-- .NET 9 MAUI (Android, iOS, MacCatalyst, Windows célplatformok)
+- .NET 10 MAUI (Android, iOS, MacCatalyst, Windows célplatformok)
 - Csomagok: Plugin.BLE, CommunityToolkit.Maui.MediaElement
 - Oldalak: vezérlés, adatok, RGB, időzítés/termosztát, jegyzetek, beállítások (firmware-frissítés)
 

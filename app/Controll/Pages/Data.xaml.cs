@@ -157,28 +157,26 @@ public partial class Data : ContentView
         switch (_currentMode)
         {
             case 0: // 2 hőmérő
-                SetSensorCard("Hőmérséklet 1", "#e67e22", "Hőmérséklet 2", "#e67e22");
+                SetSensorCard("Hőmérséklet 1", "#FF453A", "Hőmérséklet 2", "#FF453A");
                 break;
 
             case 1: // 1 hőmérő (középen, egy kártya)
                 Sensor2Border.IsVisible = false;
                 SensorGrid.ColumnDefinitions[1].Width = new GridLength(0);
-                SetSensorCard("Hőmérséklet", "#e67e22", "", "");
+                SetSensorCard("Hőmérséklet", "#FF453A", "", "");
                 break;
 
             case 2: // DHT11 — hőmérséklet bal, páratartalom jobb
-                SetSensorCard("Hőmérséklet", "#e67e22", "Páratartalom", "#3498db");
+                SetSensorCard("Hőmérséklet", "#FF453A", "Páratartalom", "#FF453A");
                 break;
 
             case 3: // 1 kapcsoló + 1 hőmérő
                 // Kapcsoló a bal kártya, hőmérő a jobb
-                SetSensorCard("Kapcsoló 1", "White", "Hőmérséklet", "#e67e22");
-                BottomRelayGrid.IsVisible = false;
+                SetSensorCard("Kapcsoló 1", "White", "Hőmérséklet", "#FF453A");
                 break;
 
             case 4: // 2 kapcsoló
                 SetSensorCard("Kapcsoló 1", "White", "Kapcsoló 2", "White");
-                BottomRelayGrid.IsVisible = false;
                 break;
         }
     }
@@ -226,9 +224,9 @@ public partial class Data : ContentView
     private void UpdateStatusStyle(Border border, Label label, bool isActive)
     {
         border.BackgroundColor = isActive
-            ? Color.FromArgb("#0A3D1D")
-            : Color.FromArgb("#2C2C2C");
-        label.TextColor = isActive ? Colors.White : Color.FromArgb("#95a5a6");
+            ? Color.FromArgb("#FF453A")
+            : Color.FromArgb("#3A3A3C");
+        label.TextColor = Colors.White;
 
         if (label == Relay1Label || label == Relay2Label)
             label.Text = isActive ? "ON" : "OFF";

@@ -24,7 +24,7 @@ public partial class NoteEditorPage : ContentPage
         _entry.Description = DescriptionEditor.Text;
         _entry.Category = CategoryEntry.Text ?? ""; // Szöveges beviteli mezõ értéke
         _entry.Priority = PriorityPicker.SelectedItem?.ToString() ?? "Közepes";
-        _entry.Deadline = DeadlinePicker.Date.ToString("yyyy.MM.dd");
+        _entry.Deadline = (DeadlinePicker.Date ?? DateTime.Now).ToString("yyyy.MM.dd");
         _entry.Date = DateTime.Now.ToString("yyyy.MM.dd HH:mm");
 
         Note.CurrentInstance?.SaveDataToFile();

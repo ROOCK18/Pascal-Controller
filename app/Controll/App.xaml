@@ -39,6 +39,29 @@
                 <Setter Property="FontAttributes" Value="Bold" />
             </Style>
 
+            <!-- Picker (legördülő) stílus - a natív indigó akcentszín helyett
+                 az app saját design-nyelvét követi (sötét háttér, fehér
+                 szöveg, szürke keret). Az Android natív "indigo" alávonás
+                 platform-szintű felülírását lásd MauiProgram.cs (PickerHandler). -->
+            <Style TargetType="Picker">
+                <Setter Property="BackgroundColor" Value="{StaticResource LightGray}" />
+                <Setter Property="TextColor" Value="{StaticResource White}" />
+                <Setter Property="TitleColor" Value="#AEAEB2" />
+                <Setter Property="FontSize" Value="{StaticResource MediumFontSize}" />
+            </Style>
+
+            <!-- Entry (beviteli mező) stílus - a natív lila fókuszszín helyett
+                 az app design-jéhez illeszkedő sötét háttér/fehér szöveg. A
+                 kurzor/alávonás pirosra színezése platform-szinten történik
+                 (lásd MauiProgram.cs, EntryHandler mapper), mert a
+                 CursorColor property nem alkalmazható innen (implicit Style
+                 Setterként induláskor XamlParseException-t dobott). -->
+            <Style TargetType="Entry">
+                <Setter Property="BackgroundColor" Value="{StaticResource LightGray}" />
+                <Setter Property="TextColor" Value="{StaticResource White}" />
+                <Setter Property="PlaceholderColor" Value="#8E8E93" />
+            </Style>
+
             <!-- ... többi stílus ... -->
         </ResourceDictionary>
     </Application.Resources>

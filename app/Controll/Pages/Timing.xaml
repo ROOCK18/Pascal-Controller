@@ -7,17 +7,22 @@
     <ScrollView>
         <VerticalStackLayout Spacing="16" Padding="16">
 
-            <Button Text="← Vissza a vezérléshez"
-                    BackgroundColor="{StaticResource PrimaryRed}"
-                    TextColor="White"
-                    CornerRadius="10"
-                    HeightRequest="44"
-                    Clicked="OnBackToControlClicked" />
+            <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="44">
+                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnBackToControlClicked"/></Border.GestureRecognizers>
+                <Label Text="← Vissza a vezérléshez" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
 
             <!-- ══════════════ VENTILÁTOR 1 ══════════════ -->
             <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Ventilátor 1" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Ventilátor 1" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="Fan1ExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnFan1HeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="Fan1DetailsPanel" Spacing="10" IsVisible="False">
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Fan1TimerTab" Grid.Column="0"
@@ -56,20 +61,20 @@
                         <Label Text="Időzítő slotok (max 5)" TextColor="Gray" FontSize="12"/>
                         <VerticalStackLayout x:Name="Fan1SlotsContainer" Spacing="6"/>
 
-                        <Button Text="+ Slot hozzáadása"
-                                x:Name="Fan1AddSlotBtn"
-                                Clicked="OnFan1AddSlot"
-                                BackgroundColor="#444444" TextColor="White"
-                                CornerRadius="8" HeightRequest="38"/>
+                        <Border x:Name="Fan1AddSlotBtn" BackgroundColor="#444444" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1AddSlot"/></Border.GestureRecognizers>
+                            <Label Text="+ Slot hozzáadása" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
 
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE"
-                                    Clicked="OnFan1TimerSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan1TimerDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1TimerSave"/></Border.GestureRecognizers>
+                                <Label Text="MENTÉS" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1TimerDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Fan1TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
@@ -149,13 +154,14 @@
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE"
-                                    Clicked="OnFan1ThermoSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan1ThermoDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1ThermoSave"/></Border.GestureRecognizers>
+                                <Label Text="TERMOSZTÁT MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1ThermoDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Fan1ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
@@ -199,24 +205,41 @@
                                 <Label Grid.Row="3" Grid.Column="0" x:Name="Fan1LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
                                 <Entry Grid.Row="3" Grid.Column="1" x:Name="Fan1LogicCC" Text="100" Placeholder="%" Keyboard="Numeric" WidthRequest="70" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center"/>
                             </Grid>
+                            <Label Text="Frekvencia állapotonként (Hz)" TextColor="Gray" FontSize="11"/>
+                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                                <Entry Grid.Column="0" x:Name="Fan1LogicFreqOO" Text="30" Placeholder="OO Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                                <Entry Grid.Column="1" x:Name="Fan1LogicFreqOC" Text="30" Placeholder="OC Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                                <Entry Grid.Column="2" x:Name="Fan1LogicFreqCO" Text="30" Placeholder="CO Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                                <Entry Grid.Column="3" x:Name="Fan1LogicFreqCC" Text="30" Placeholder="CC Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                            </Grid>
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnFan1LogicSave"
-                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                                <Button Grid.Column="1" Text="Törlés" Clicked="OnFan1LogicDelete"
-                                        BackgroundColor="#444444" TextColor="White"
-                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                                <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1LogicSave"/></Border.GestureRecognizers>
+                                    <Label Text="LOGIKA MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1LogicDelete"/></Border.GestureRecognizers>
+                                    <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
                             </Grid>
                             <Label x:Name="Fan1LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
+                    </VerticalStackLayout>
             </Border>
 
             <!-- ══════════════ VENTILÁTOR 2 ══════════════ -->
             <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Ventilátor 2" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Ventilátor 2" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="Fan2ExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnFan2HeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="Fan2DetailsPanel" Spacing="10" IsVisible="False">
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Fan2TimerTab" Grid.Column="0"
@@ -246,15 +269,19 @@
                         </HorizontalStackLayout>
                         <Label Text="Időzítő slotok (max 5)" TextColor="Gray" FontSize="12"/>
                         <VerticalStackLayout x:Name="Fan2SlotsContainer" Spacing="6"/>
-                        <Button Text="+ Slot hozzáadása" x:Name="Fan2AddSlotBtn" Clicked="OnFan2AddSlot"
-                                BackgroundColor="#444444" TextColor="White" CornerRadius="8" HeightRequest="38"/>
+                        <Border x:Name="Fan2AddSlotBtn" BackgroundColor="#444444" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2AddSlot"/></Border.GestureRecognizers>
+                            <Label Text="+ Slot hozzáadása" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE" Clicked="OnFan2TimerSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan2TimerDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2TimerSave"/></Border.GestureRecognizers>
+                                <Label Text="MENTÉS" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2TimerDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Fan2TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
@@ -331,12 +358,14 @@
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE" Clicked="OnFan2ThermoSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan2ThermoDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2ThermoSave"/></Border.GestureRecognizers>
+                                <Label Text="TERMOSZTÁT MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2ThermoDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Fan2ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
@@ -380,24 +409,41 @@
                                 <Label Grid.Row="3" Grid.Column="0" x:Name="Fan2LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
                                 <Entry Grid.Row="3" Grid.Column="1" x:Name="Fan2LogicCC" Text="100" Placeholder="%" Keyboard="Numeric" WidthRequest="70" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center"/>
                             </Grid>
+                            <Label Text="Frekvencia állapotonként (Hz)" TextColor="Gray" FontSize="11"/>
+                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                                <Entry Grid.Column="0" x:Name="Fan2LogicFreqOO" Text="30" Placeholder="OO Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                                <Entry Grid.Column="1" x:Name="Fan2LogicFreqOC" Text="30" Placeholder="OC Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                                <Entry Grid.Column="2" x:Name="Fan2LogicFreqCO" Text="30" Placeholder="CO Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                                <Entry Grid.Column="3" x:Name="Fan2LogicFreqCC" Text="30" Placeholder="CC Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="38"/>
+                            </Grid>
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnFan2LogicSave"
-                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                                <Button Grid.Column="1" Text="Törlés" Clicked="OnFan2LogicDelete"
-                                        BackgroundColor="#444444" TextColor="White"
-                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                                <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2LogicSave"/></Border.GestureRecognizers>
+                                    <Label Text="LOGIKA MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2LogicDelete"/></Border.GestureRecognizers>
+                                    <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
                             </Grid>
                             <Label x:Name="Fan2LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
+                    </VerticalStackLayout>
             </Border>
 
             <!-- ══════════════ RELÉ 1 ══════════════ -->
             <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Relé 1" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Relé 1" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="Relay1ExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay1HeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="Relay1DetailsPanel" Spacing="10" IsVisible="False">
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Relay1TimerTab" Grid.Column="0"
@@ -427,15 +473,19 @@
                         </HorizontalStackLayout>
                         <Label Text="Időzítő slotok — be/ki esemény (max 5)" TextColor="Gray" FontSize="12"/>
                         <VerticalStackLayout x:Name="Relay1SlotsContainer" Spacing="6"/>
-                        <Button Text="+ Slot hozzáadása" x:Name="Relay1AddSlotBtn" Clicked="OnRelay1AddSlot"
-                                BackgroundColor="#444444" TextColor="White" CornerRadius="8" HeightRequest="38"/>
+                        <Border x:Name="Relay1AddSlotBtn" BackgroundColor="#444444" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1AddSlot"/></Border.GestureRecognizers>
+                            <Label Text="+ Slot hozzáadása" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE" Clicked="OnRelay1TimerSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay1TimerDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1TimerSave"/></Border.GestureRecognizers>
+                                <Label Text="MENTÉS" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1TimerDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Relay1TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
@@ -491,12 +541,14 @@
                             </Border>
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE" Clicked="OnRelay1ThermoSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay1ThermoDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1ThermoSave"/></Border.GestureRecognizers>
+                                <Label Text="TERMOSZTÁT MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1ThermoDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Relay1ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
@@ -512,24 +564,64 @@
                             </VerticalStackLayout>
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                                 <Label Grid.Row="0" Grid.Column="0" x:Name="Relay1LogicRow1" Text="K1: Nyitott · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="0" Grid.Column="1" x:Name="Relay1LogicOO"/>
+                                <Picker Grid.Row="0" Grid.Column="1" x:Name="Relay1LogicOO" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                                 <Label Grid.Row="1" Grid.Column="0" x:Name="Relay1LogicRow2" Text="K1: Nyitott · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="1" Grid.Column="1" x:Name="Relay1LogicOC"/>
+                                <Picker Grid.Row="1" Grid.Column="1" x:Name="Relay1LogicOC" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                                 <Label Grid.Row="2" Grid.Column="0" x:Name="Relay1LogicRow3" Text="K1: Zárt · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="2" Grid.Column="1" x:Name="Relay1LogicCO"/>
+                                <Picker Grid.Row="2" Grid.Column="1" x:Name="Relay1LogicCO" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                                 <Label Grid.Row="3" Grid.Column="0" x:Name="Relay1LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="3" Grid.Column="1" x:Name="Relay1LogicCC"/>
+                                <Picker Grid.Row="3" Grid.Column="1" x:Name="Relay1LogicCC" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnRelay1LogicSave"
-                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                                <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay1LogicDelete"
-                                        BackgroundColor="#444444" TextColor="White"
-                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                                <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1LogicSave"/></Border.GestureRecognizers>
+                                    <Label Text="LOGIKA MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1LogicDelete"/></Border.GestureRecognizers>
+                                    <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
                             </Grid>
                             <Label x:Name="Relay1LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- ══════════ KAPUZÁS - al-lenyíló a Relé 1 kártyán belül ══════════ -->
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                        <Label Grid.Column="0" Text="Kapuzás" FontSize="15" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="Relay1HoldExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay1HoldHeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="Relay1HoldDetailsPanel" Spacing="10" IsVisible="False">
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Bekapcsolva" TextColor="Gray" FontSize="13" VerticalOptions="Center"/>
+                            <Switch x:Name="Relay1HoldEnabled"/>
+                        </HorizontalStackLayout>
+                        <Label Text="Mód" TextColor="Gray" FontSize="12"/>
+                        <Picker x:Name="Relay1HoldMode" BackgroundColor="#3A3A3A" TextColor="White">
+                            <Picker.Items><x:String>Fix idő</x:String><x:String>Max idő</x:String></Picker.Items>
+                        </Picker>
+                        <Label Text="Időtartam (mp)" TextColor="Gray" FontSize="12"/>
+                        <Entry x:Name="Relay1HoldDuration" Text="30" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40"/>
+                        <Label Text="Zárolás módja" TextColor="Gray" FontSize="12"/>
+                        <Picker x:Name="Relay1HoldLockMode" BackgroundColor="#3A3A3A" TextColor="White">
+                            <Picker.Items><x:String>Nincs</x:String><x:String>Idő alapú</x:String><x:String>Jelváltásig</x:String></Picker.Items>
+                        </Picker>
+                        <Label Text="Zárolás ideje (mp)" TextColor="Gray" FontSize="12"/>
+                        <Entry x:Name="Relay1HoldLockDuration" Text="300" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40"/>
+                        <Label Text="Állapot (melyik irányra vonatkozzon)" TextColor="Gray" FontSize="12"/>
+                        <Picker x:Name="Relay1HoldState" BackgroundColor="#3A3A3A" TextColor="White">
+                            <Picker.Items><x:String>BE</x:String><x:String>KI</x:String><x:String>MIND</x:String></Picker.Items>
+                        </Picker>
+                        <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1HoldSave"/></Border.GestureRecognizers>
+                            <Label Text="MENTÉS" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Label x:Name="Relay1HoldStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
@@ -537,7 +629,14 @@
             <!-- ══════════════ RELÉ 2 ══════════════ -->
             <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Relé 2" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Relé 2" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="Relay2ExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay2HeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="Relay2DetailsPanel" Spacing="10" IsVisible="False">
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Relay2TimerTab" Grid.Column="0"
@@ -567,15 +666,19 @@
                         </HorizontalStackLayout>
                         <Label Text="Időzítő slotok — be/ki esemény (max 5)" TextColor="Gray" FontSize="12"/>
                         <VerticalStackLayout x:Name="Relay2SlotsContainer" Spacing="6"/>
-                        <Button Text="+ Slot hozzáadása" x:Name="Relay2AddSlotBtn" Clicked="OnRelay2AddSlot"
-                                BackgroundColor="#444444" TextColor="White" CornerRadius="8" HeightRequest="38"/>
+                        <Border x:Name="Relay2AddSlotBtn" BackgroundColor="#444444" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2AddSlot"/></Border.GestureRecognizers>
+                            <Label Text="+ Slot hozzáadása" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE" Clicked="OnRelay2TimerSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay2TimerDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2TimerSave"/></Border.GestureRecognizers>
+                                <Label Text="MENTÉS" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2TimerDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Relay2TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
@@ -631,12 +734,14 @@
                             </Border>
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE" Clicked="OnRelay2ThermoSave"
-                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay2ThermoDelete"
-                                    BackgroundColor="#444444" TextColor="White"
-                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2ThermoSave"/></Border.GestureRecognizers>
+                                <Label Text="TERMOSZTÁT MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2ThermoDelete"/></Border.GestureRecognizers>
+                                <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Border>
                         </Grid>
                         <Label x:Name="Relay2ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
@@ -652,24 +757,64 @@
                             </VerticalStackLayout>
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
                                 <Label Grid.Row="0" Grid.Column="0" x:Name="Relay2LogicRow1" Text="K1: Nyitott · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="0" Grid.Column="1" x:Name="Relay2LogicOO"/>
+                                <Picker Grid.Row="0" Grid.Column="1" x:Name="Relay2LogicOO" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                                 <Label Grid.Row="1" Grid.Column="0" x:Name="Relay2LogicRow2" Text="K1: Nyitott · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="1" Grid.Column="1" x:Name="Relay2LogicOC"/>
+                                <Picker Grid.Row="1" Grid.Column="1" x:Name="Relay2LogicOC" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                                 <Label Grid.Row="2" Grid.Column="0" x:Name="Relay2LogicRow3" Text="K1: Zárt · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="2" Grid.Column="1" x:Name="Relay2LogicCO"/>
+                                <Picker Grid.Row="2" Grid.Column="1" x:Name="Relay2LogicCO" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                                 <Label Grid.Row="3" Grid.Column="0" x:Name="Relay2LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
-                                <Switch Grid.Row="3" Grid.Column="1" x:Name="Relay2LogicCC"/>
+                                <Picker Grid.Row="3" Grid.Column="1" x:Name="Relay2LogicCC" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White"><Picker.Items><x:String>KI</x:String><x:String>BE</x:String><x:String>Termosztátot követi</x:String></Picker.Items></Picker>
                             </Grid>
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnRelay2LogicSave"
-                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
-                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
-                                <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay2LogicDelete"
-                                        BackgroundColor="#444444" TextColor="White"
-                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                                <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2LogicSave"/></Border.GestureRecognizers>
+                                    <Label Text="LOGIKA MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
+                                <Border Grid.Column="1" BackgroundColor="#444444" StrokeShape="RoundRectangle 0,40,40,0" HeightRequest="42" WidthRequest="80">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2LogicDelete"/></Border.GestureRecognizers>
+                                    <Label Text="Törlés" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Border>
                             </Grid>
                             <Label x:Name="Relay2LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- ══════════ KAPUZÁS - al-lenyíló a Relé 2 kártyán belül ══════════ -->
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                        <Label Grid.Column="0" Text="Kapuzás" FontSize="15" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="Relay2HoldExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay2HoldHeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="Relay2HoldDetailsPanel" Spacing="10" IsVisible="False">
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Bekapcsolva" TextColor="Gray" FontSize="13" VerticalOptions="Center"/>
+                            <Switch x:Name="Relay2HoldEnabled"/>
+                        </HorizontalStackLayout>
+                        <Label Text="Mód" TextColor="Gray" FontSize="12"/>
+                        <Picker x:Name="Relay2HoldMode" BackgroundColor="#3A3A3A" TextColor="White">
+                            <Picker.Items><x:String>Fix idő</x:String><x:String>Max idő</x:String></Picker.Items>
+                        </Picker>
+                        <Label Text="Időtartam (mp)" TextColor="Gray" FontSize="12"/>
+                        <Entry x:Name="Relay2HoldDuration" Text="30" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40"/>
+                        <Label Text="Zárolás módja" TextColor="Gray" FontSize="12"/>
+                        <Picker x:Name="Relay2HoldLockMode" BackgroundColor="#3A3A3A" TextColor="White">
+                            <Picker.Items><x:String>Nincs</x:String><x:String>Idő alapú</x:String><x:String>Jelváltásig</x:String></Picker.Items>
+                        </Picker>
+                        <Label Text="Zárolás ideje (mp)" TextColor="Gray" FontSize="12"/>
+                        <Entry x:Name="Relay2HoldLockDuration" Text="300" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40"/>
+                        <Label Text="Állapot (melyik irányra vonatkozzon)" TextColor="Gray" FontSize="12"/>
+                        <Picker x:Name="Relay2HoldState" BackgroundColor="#3A3A3A" TextColor="White">
+                            <Picker.Items><x:String>BE</x:String><x:String>KI</x:String><x:String>MIND</x:String></Picker.Items>
+                        </Picker>
+                        <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2HoldSave"/></Border.GestureRecognizers>
+                            <Label Text="MENTÉS" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                        <Label x:Name="Relay2HoldStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>

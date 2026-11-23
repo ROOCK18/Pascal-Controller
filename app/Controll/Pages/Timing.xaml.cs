@@ -84,6 +84,22 @@ public partial class Timing : ContentView
     }
 
     // ══════════════ VISSZA GOMB ══════════════
+    // ══════════════ LENYITHATÓ KÁRTYA-FEJLÉCEK ══════════════
+    // Alapból minden szekció (Ventilátor/Relé/Idő alapú kapcsolás) csukva
+    // van - így az oldal sokkal rövidebb, és csak azt nyitod le, amit
+    // épp be akarsz állítani.
+    private void ToggleSection(VerticalStackLayout panel, Label icon)
+    {
+        panel.IsVisible = !panel.IsVisible;
+        icon.Text = panel.IsVisible ? "▲" : "▼";
+    }
+    private void OnFan1HeaderTapped(object s, EventArgs e) => ToggleSection(Fan1DetailsPanel, Fan1ExpandIcon);
+    private void OnFan2HeaderTapped(object s, EventArgs e) => ToggleSection(Fan2DetailsPanel, Fan2ExpandIcon);
+    private void OnRelay1HeaderTapped(object s, EventArgs e) => ToggleSection(Relay1DetailsPanel, Relay1ExpandIcon);
+    private void OnRelay2HeaderTapped(object s, EventArgs e) => ToggleSection(Relay2DetailsPanel, Relay2ExpandIcon);
+    private void OnRelay1HoldHeaderTapped(object s, EventArgs e) => ToggleSection(Relay1HoldDetailsPanel, Relay1HoldExpandIcon);
+    private void OnRelay2HoldHeaderTapped(object s, EventArgs e) => ToggleSection(Relay2HoldDetailsPanel, Relay2HoldExpandIcon);
+
     private void OnBackToControlClicked(object sender, EventArgs e)
     {
         BluetoothManager.OnDataReceived -= OnTimingDataReceived;
@@ -174,8 +190,9 @@ public partial class Timing : ContentView
         {
             if (e.PropertyName == nameof(TimePicker.Time))
             {
-                slot.Hour   = timePicker.Time.Hours;
-                slot.Minute = timePicker.Time.Minutes;
+                var t = timePicker.Time ?? TimeSpan.Zero;
+                slot.Hour   = t.Hours;
+                slot.Minute = t.Minutes;
             }
         };
 
@@ -255,8 +272,9 @@ public partial class Timing : ContentView
         {
             if (e.PropertyName == nameof(TimePicker.Time))
             {
-                slot.Hour   = timePicker.Time.Hours;
-                slot.Minute = timePicker.Time.Minutes;
+                var t = timePicker.Time ?? TimeSpan.Zero;
+                slot.Hour   = t.Hours;
+                slot.Minute = t.Minutes;
             }
         };
 
@@ -331,7 +349,7 @@ public partial class Timing : ContentView
     {
         // Meghatározzuk melyik konténerhez tartozik
         VerticalStackLayout container = null;
-        Button addBtn = null;
+        Border addBtn = null;
         if (slots == _fan1Slots)   { container = Fan1SlotsContainer;   addBtn = Fan1AddSlotBtn; }
         if (slots == _fan2Slots)   { container = Fan2SlotsContainer;   addBtn = Fan2AddSlotBtn; }
         RedrawFanSlots(slots, container, addBtn);
@@ -340,13 +358,13 @@ public partial class Timing : ContentView
     private void RebuildRelaySlots(List<TimerSlot> slots, int _)
     {
         VerticalStackLayout container = null;
-        Button addBtn = null;
+        Border addBtn = null;
         if (slots == _relay1Slots) { container = Relay1SlotsContainer; addBtn = Relay1AddSlotBtn; }
         if (slots == _relay2Slots) { container = Relay2SlotsContainer; addBtn = Relay2AddSlotBtn; }
         RedrawRelaySlots(slots, container, addBtn);
     }
 
-    private void RedrawFanSlots(List<TimerSlot> slots, VerticalStackLayout container, Button addBtn)
+    private void RedrawFanSlots(List<TimerSlot> slots, VerticalStackLayout container, Border addBtn)
     {
         container.Children.Clear();
         for (int i = 0; i < slots.Count; i++)
@@ -354,7 +372,7 @@ public partial class Timing : ContentView
         if (addBtn != null) addBtn.IsEnabled = slots.Count < 5;
     }
 
-    private void RedrawRelaySlots(List<TimerSlot> slots, VerticalStackLayout container, Button addBtn)
+    private void RedrawRelaySlots(List<TimerSlot> slots, VerticalStackLayout container, Border addBtn)
     {
         container.Children.Clear();
         for (int i = 0; i < slots.Count; i++)
@@ -873,7 +891,9 @@ public partial class Timing : ContentView
         int oo = ResolveFanLogicValue(Fan1LogicOOMode, Fan1LogicOO);
         int co = ResolveFanLogicValue(Fan1LogicCOMode, Fan1LogicCO);
         int axis2Mode = _currentMode == 3 ? 2 : 0;
-        await BluetoothManager.WriteAsync($"SET_LOGIC:F1:1:{oo}:{oo}:{co}:{co}:{axis2Mode}");
+        int fOO = ParseFreq(Fan1LogicFreqOO), fOC = ParseFreq(Fan1LogicFreqOC);
+        int fCO = ParseFreq(Fan1LogicFreqCO), fCC = ParseFreq(Fan1LogicFreqCC);
+        await BluetoothManager.WriteAsync($"SET_LOGIC:F1:1:{oo}:{oo}:{co}:{co}:{axis2Mode}:{fOO}:{fOC}:{fCO}:{fCC}");
         Fan1LogicStatus.Text = "Logika elküldve";
     }
     private async void OnFan1LogicDelete(object s, EventArgs e)
@@ -888,7 +908,9 @@ public partial class Timing : ContentView
         int oo = ResolveFanLogicValue(Fan2LogicOOMode, Fan2LogicOO);
         int co = ResolveFanLogicValue(Fan2LogicCOMode, Fan2LogicCO);
         int axis2Mode = _currentMode == 3 ? 2 : 0;
-        await BluetoothManager.WriteAsync($"SET_LOGIC:F2:1:{oo}:{oo}:{co}:{co}:{axis2Mode}");
+        int fOO = ParseFreq(Fan2LogicFreqOO), fOC = ParseFreq(Fan2LogicFreqOC);
+        int fCO = ParseFreq(Fan2LogicFreqCO), fCC = ParseFreq(Fan2LogicFreqCC);
+        await BluetoothManager.WriteAsync($"SET_LOGIC:F2:1:{oo}:{oo}:{co}:{co}:{axis2Mode}:{fOO}:{fOC}:{fCO}:{fCC}");
         Fan2LogicStatus.Text = "Logika elküldve";
     }
     private async void OnFan2LogicDelete(object s, EventArgs e)
@@ -897,13 +919,20 @@ public partial class Timing : ContentView
         await BluetoothManager.WriteAsync("DEL_LOGIC:F2");
         Fan2LogicStatus.Text = "Törölve";
     }
+
+    private static int ParseFreq(Entry e) => int.TryParse(e.Text, out int v) ? Math.Clamp(v, 10, 25000) : 30;
     private async void OnRelay1LogicSave(object s, EventArgs e)
     {
         if (!CheckBLE()) { Relay1LogicStatus.Text = "Nincs BLE kapcsolat!"; return; }
-        int oo = Relay1LogicOO.IsToggled ? 1 : 0;
-        int co = Relay1LogicCO.IsToggled ? 1 : 0;
+        int oo = RelayLogicPickerValue(Relay1LogicOO);
+        int oc = RelayLogicPickerValue(Relay1LogicOC);
+        int co = RelayLogicPickerValue(Relay1LogicCO);
+        int cc = RelayLogicPickerValue(Relay1LogicCC);
         int axis2Mode = _currentMode == 3 ? 2 : 0;
-        await BluetoothManager.WriteAsync($"SET_LOGIC:R1:1:{oo}:{oo}:{co}:{co}:{axis2Mode}");
+        if (_currentMode == 3)
+            await BluetoothManager.WriteAsync($"SET_LOGIC:R1:1:{oo}:{oo}:{co}:{co}:{axis2Mode}");
+        else
+            await BluetoothManager.WriteAsync($"SET_LOGIC:R1:1:{oo}:{oc}:{co}:{cc}:{axis2Mode}");
         Relay1LogicStatus.Text = "Logika elküldve";
     }
     private async void OnRelay1LogicDelete(object s, EventArgs e)
@@ -915,10 +944,15 @@ public partial class Timing : ContentView
     private async void OnRelay2LogicSave(object s, EventArgs e)
     {
         if (!CheckBLE()) { Relay2LogicStatus.Text = "Nincs BLE kapcsolat!"; return; }
-        int oo = Relay2LogicOO.IsToggled ? 1 : 0;
-        int co = Relay2LogicCO.IsToggled ? 1 : 0;
+        int oo = RelayLogicPickerValue(Relay2LogicOO);
+        int oc = RelayLogicPickerValue(Relay2LogicOC);
+        int co = RelayLogicPickerValue(Relay2LogicCO);
+        int cc = RelayLogicPickerValue(Relay2LogicCC);
         int axis2Mode = _currentMode == 3 ? 2 : 0;
-        await BluetoothManager.WriteAsync($"SET_LOGIC:R2:1:{oo}:{oo}:{co}:{co}:{axis2Mode}");
+        if (_currentMode == 3)
+            await BluetoothManager.WriteAsync($"SET_LOGIC:R2:1:{oo}:{oo}:{co}:{co}:{axis2Mode}");
+        else
+            await BluetoothManager.WriteAsync($"SET_LOGIC:R2:1:{oo}:{oc}:{co}:{cc}:{axis2Mode}");
         Relay2LogicStatus.Text = "Logika elküldve";
     }
     private async void OnRelay2LogicDelete(object s, EventArgs e)
@@ -928,33 +962,117 @@ public partial class Timing : ContentView
         Relay2LogicStatus.Text = "Törölve";
     }
 
+    // ══════════════ IDŐ ALAPÚ RELÉKAPCSOLÁS (RHOLD) ══════════════
+    private async void OnRelay1HoldSave(object s, EventArgs e)
+    {
+        if (!CheckBLE()) { Relay1HoldStatus.Text = "Nincs BLE kapcsolat!"; return; }
+        await SendRHold("R1", Relay1HoldEnabled, Relay1HoldDuration, Relay1HoldLockDuration,
+            Relay1HoldMode, Relay1HoldLockMode, Relay1HoldState);
+        Relay1HoldStatus.Text = "Elküldve";
+    }
+    private async void OnRelay2HoldSave(object s, EventArgs e)
+    {
+        if (!CheckBLE()) { Relay2HoldStatus.Text = "Nincs BLE kapcsolat!"; return; }
+        await SendRHold("R2", Relay2HoldEnabled, Relay2HoldDuration, Relay2HoldLockDuration,
+            Relay2HoldMode, Relay2HoldLockMode, Relay2HoldState);
+        Relay2HoldStatus.Text = "Elküldve";
+    }
+
+    private async Task SendRHold(string target, Microsoft.Maui.Controls.Switch enabledSw, Entry durationEntry, Entry lockDurationEntry,
+        Picker modePicker, Picker lockModePicker, Picker statePicker)
+    {
+        int en = enabledSw.IsToggled ? 1 : 0;
+        int duration = int.TryParse(durationEntry.Text, out int d) ? Math.Clamp(d, 1, 36000) : 30;
+        int lockDuration = int.TryParse(lockDurationEntry.Text, out int ld) ? Math.Clamp(ld, 0, 36000) : 300;
+        int mode = Math.Max(modePicker.SelectedIndex, 0);
+        int lockMode = Math.Max(lockModePicker.SelectedIndex, 0);
+        int state = Math.Max(statePicker.SelectedIndex, 0);
+        await BluetoothManager.WriteAsync($"SET_RHOLD:{target}:{en}:{duration}:{lockDuration}:{mode}:{lockMode}:{state}");
+    }
+
+    // LOAD_RHOLD:<target>:<en>:<onDurationSec>:<cooldownSec>:<timerMode>:<lockMode>:<stateFilter>
+    private void ParseRHold(string raw)
+    {
+        var p = raw.Split(':');
+        if (p.Length < 7) return;
+        string target = p[0];
+        bool en = p[1] == "1";
+        int duration = int.TryParse(p[2], out int d) ? d : 30;
+        int lockDuration = int.TryParse(p[3], out int ld) ? ld : 300;
+        int mode = int.TryParse(p[4], out int m) ? m : 0;
+        int lockMode = int.TryParse(p[5], out int lm) ? lm : 1;
+        int state = int.TryParse(p[6], out int st) ? st : 2;
+
+        if (target == "R1")
+            ApplyRHoldToUi(Relay1HoldEnabled, Relay1HoldDuration, Relay1HoldLockDuration, Relay1HoldMode, Relay1HoldLockMode, Relay1HoldState, en, duration, lockDuration, mode, lockMode, state);
+        else if (target == "R2")
+            ApplyRHoldToUi(Relay2HoldEnabled, Relay2HoldDuration, Relay2HoldLockDuration, Relay2HoldMode, Relay2HoldLockMode, Relay2HoldState, en, duration, lockDuration, mode, lockMode, state);
+    }
+
+    private static void ApplyRHoldToUi(Microsoft.Maui.Controls.Switch enabledSw, Entry durationEntry, Entry lockDurationEntry,
+        Picker modePicker, Picker lockModePicker, Picker statePicker,
+        bool en, int duration, int lockDuration, int mode, int lockMode, int state)
+    {
+        enabledSw.IsToggled = en;
+        durationEntry.Text = duration.ToString();
+        lockDurationEntry.Text = lockDuration.ToString();
+        if (mode >= 0 && mode < modePicker.Items.Count) modePicker.SelectedIndex = mode;
+        if (lockMode >= 0 && lockMode < lockModePicker.Items.Count) lockModePicker.SelectedIndex = lockMode;
+        if (state >= 0 && state < statePicker.Items.Count) statePicker.SelectedIndex = state;
+    }
+
     private void ParseLogic(string raw)
     {
-        // <F1|F2|R1|R2>:<en>:<v_OO>:<v_OC>:<v_CO>:<v_CC>[:<axis2Mode>]
+        // <F1|F2|R1|R2>:<en>:<v_OO>:<v_OC>:<v_CO>:<v_CC>[:<axis2Mode>][:<f_OO>:<f_OC>:<f_CO>:<f_CC>]
         var p = raw.Split(':');
         if (p.Length < 6) return;
         string target = p[0];
         int oo = int.TryParse(p[2], out int vo) ? vo : -1;
+        int oc = int.TryParse(p[3], out int voc) ? voc : -1;
         int co = int.TryParse(p[4], out int vco) ? vco : -1;
+        int cc = int.TryParse(p[5], out int vcc) ? vcc : -1;
 
         switch (target)
         {
             case "F1":
                 if (_currentMode == 4) { Fan1LogicOO.Text = Math.Clamp(oo, 0, 100).ToString(); Fan1LogicCO.Text = Math.Clamp(co, 0, 100).ToString(); }
                 else { ApplyFanLogicValue(oo, Fan1LogicOOMode, Fan1LogicOO); ApplyFanLogicValue(co, Fan1LogicCOMode, Fan1LogicCO); }
+                if (p.Length >= 11)
+                {
+                    Fan1LogicFreqOO.Text = p[7]; Fan1LogicFreqOC.Text = p[8];
+                    Fan1LogicFreqCO.Text = p[9]; Fan1LogicFreqCC.Text = p[10];
+                }
                 break;
             case "F2":
                 if (_currentMode == 4) { Fan2LogicOO.Text = Math.Clamp(oo, 0, 100).ToString(); Fan2LogicCO.Text = Math.Clamp(co, 0, 100).ToString(); }
                 else { ApplyFanLogicValue(oo, Fan2LogicOOMode, Fan2LogicOO); ApplyFanLogicValue(co, Fan2LogicCOMode, Fan2LogicCO); }
+                if (p.Length >= 11)
+                {
+                    Fan2LogicFreqOO.Text = p[7]; Fan2LogicFreqOC.Text = p[8];
+                    Fan2LogicFreqCO.Text = p[9]; Fan2LogicFreqCC.Text = p[10];
+                }
                 break;
             case "R1":
-                Relay1LogicOO.IsToggled = oo != 0; Relay1LogicCO.IsToggled = co != 0;
+                SetRelayLogicPicker(Relay1LogicOO, oo); SetRelayLogicPicker(Relay1LogicOC, oc);
+                SetRelayLogicPicker(Relay1LogicCO, co); SetRelayLogicPicker(Relay1LogicCC, cc);
                 break;
             case "R2":
-                Relay2LogicOO.IsToggled = oo != 0; Relay2LogicCO.IsToggled = co != 0;
+                SetRelayLogicPicker(Relay2LogicOO, oo); SetRelayLogicPicker(Relay2LogicOC, oc);
+                SetRelayLogicPicker(Relay2LogicCO, co); SetRelayLogicPicker(Relay2LogicCC, cc);
                 break;
         }
     }
+
+    // v: -1="Termosztátot követi" (index2), 0="KI" (index0), 1(vagy bármi !=0)="BE" (index1)
+    private static void SetRelayLogicPicker(Picker p, int v)
+    {
+        p.SelectedIndex = v < 0 ? 2 : (v != 0 ? 1 : 0);
+    }
+
+    // A Picker kiválasztott indexéből a firmware felé küldendő érték:
+    // index0="KI"->0, index1="BE"->1, index2="Termosztátot követi"->-1
+    private static int RelayLogicPickerValue(Picker p)
+        => p.SelectedIndex switch { 1 => 1, 2 => -1, _ => 0 };
 
     // Visszatöltéskor a firmware-ből kapott értékből (-1/0/100/egyéni) beállítja
     // a megfelelő Mode picker opciót + szükség esetén az "Egyéni %" mezőt.
@@ -1021,6 +1139,8 @@ public partial class Timing : ContentView
                     ParseTherm(data.Substring(11));
                 else if (data.StartsWith("LOAD_LOGIC:"))
                     ParseLogic(data.Substring(11));
+                else if (data.StartsWith("LOAD_RHOLD:"))
+                    ParseRHold(data.Substring(11));
                 else if (data.StartsWith("STATE:"))
                 {
                     if (int.TryParse(data.Substring(6), out int m))

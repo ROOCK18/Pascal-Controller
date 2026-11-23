@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#512BD4</color>
-    <color name="colorPrimaryDark">#2B0B98</color>
-    <color name="colorAccent">#2B0B98</color>
+    <!-- colorPrimary/colorPrimaryDark: ez festi az Android státusz sávot
+         (fejléc, óra/akku ikonok háttere) - az app hátterével egyezik,
+         NEM piros, hogy ne üssön el a design-tól. -->
+    <color name="colorPrimary">#2C2C2E</color>
+    <color name="colorPrimaryDark">#2C2C2E</color>
+    <!-- colorAccent: ez festi a natív kijelölés-jelzéseket (Picker/DatePicker
+         kiválasztott elem pöttye stb.) - ez marad piros, ahogy kérted. -->
+    <color name="colorAccent">#FF453A</color>
 </resources>
