@@ -37,87 +37,20 @@ const char* MODE_NAMES[] = { "2 homero", "1 homero", "Paratartalom", "Kapcsolo+h
 
 const char* MAIN_ITEMS[] = { "Beallitasok", "RGB szin", "Ventilator 1", "Ventilator 2", "Rele 1", "Rele 2" };
 
+// A tényleges rajzolás az ui.h-ban van (LVGL) - ezek a vékony átvezetők
+// őrzik meg a menü eredeti hívási felületét.
 void drawValueList(const String &title, ValueRow rows[], int count, int cursor) {
-  tft.setFont(&FreeSans9pt7b);
-  tft.setTextSize(1); // MINDIG explicit 1-re állítva - enélkül öröklődhet egy korábbi
-                       // (pl. az idle óra) 2x méret, ami óriásira nagyítaná ezt a fontot
-  const int headerH = 20;
-  const int rowH = 20;
-  const int maxVisible = (135 - headerH) / rowH; // kb. 5 sor fér ki egyszerre
-
-  tft.fillRect(0, 0, 240, headerH, ST77XX_BLACK);
-  tft.setTextColor(ST77XX_YELLOW, ST77XX_BLACK);
-  tft.setCursor(2, 15);
-  tft.print(title);
-  tft.drawFastHLine(0, headerH, 240, ST77XX_WHITE);
-
-  // Görgetési ablak - a kurzor mindig látható marad
-  int start = 0;
-  if (count > maxVisible) {
-    start = cursor - maxVisible / 2;
-    if (start < 0) start = 0;
-    if (start > count - maxVisible) start = count - maxVisible;
-  }
-
-  // A TELJES lista-terület törlése minden rajzoláskor (nem csak soronként!) -
-  // ez akadályozza meg, hogy elemszám-csökkenéskor (pl. görbe pontok száma)
-  // a régi, hosszabb lista maradék sorai a képernyőn ragadjanak.
-  tft.fillRect(0, headerH, 240, 135 - headerH, ST77XX_BLACK);
-
-  int y = headerH;
-  for (int i = start; i < count && i < start + maxVisible; i++) {
-    uint16_t bg = (i == cursor) ? ST77XX_YELLOW : ST77XX_BLACK;
-    tft.fillRect(0, y, 240, rowH, bg);
-    tft.setCursor(4, y + 15);
-    tft.setTextColor(i == cursor ? ST77XX_BLACK : ST77XX_WHITE, bg);
-    tft.print(i == cursor ? "> " : "  ");
-    tft.print(rows[i].label);
-    if (rows[i].value.length() > 0) {
-      tft.print(": ");
-      tft.setTextColor(i == cursor ? ST77XX_BLACK : rows[i].valColor, bg);
-      tft.print(rows[i].value);
-    }
-    y += rowH;
-  }
-
-  // Görgetés-jelzők, ha van a látható ablakon kívüli tartalom
-  tft.setFont();
-  tft.setTextSize(1);
-  tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
-  if (start > 0) { tft.setCursor(230, headerH + 2); tft.print("^"); }
-  if (start + maxVisible < count) { tft.setCursor(230, 128); tft.print("v"); }
+  ui_list(title, rows, count, cursor);
 }
 
 void drawMenuList(const String &title, const char* items[], int count, int cursor) {
   ValueRow rows[8];
-  for (int i = 0; i < count && i < 8; i++) { rows[i].label = items[i]; rows[i].value = ""; rows[i].valColor = ST77XX_WHITE; }
+  for (int i = 0; i < count && i < 8; i++) { rows[i].label = items[i]; rows[i].value = ""; rows[i].valColor = UI_WHITE; }
   drawValueList(title, rows, count, cursor);
 }
 
 void drawEditScreen(const String &title, const String &line1, const String &line2) {
-  tft.setFont(&FreeSans9pt7b);
-  tft.setTextSize(1); // lásd drawValueList megjegyzése
-  tft.fillRect(0, 0, 240, 20, ST77XX_BLACK);
-  tft.setTextColor(ST77XX_YELLOW, ST77XX_BLACK);
-  tft.setCursor(2, 15);
-  tft.print(title);
-  tft.drawFastHLine(0, 20, 240, ST77XX_WHITE);
-
-  // Bőkezű, fix méretű törlés az érték-területen (nem a szöveg tényleges
-  // hosszához igazítva) - így BÁRMILYEN régi/új szöveghossz-kombináció
-  // esetén garantáltan nem marad "szellem" karakter a képernyőn.
-  tft.fillRect(0, 20, 240, 68, ST77XX_BLACK);
-  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-  tft.setCursor(4, 48);
-  tft.print(line1);
-  if (line2.length() > 0) { tft.setCursor(4, 78); tft.print(line2); }
-
-  tft.setFont();
-  tft.setTextSize(1);
-  tft.fillRect(0, 108, 240, 16, ST77XX_BLACK);
-  tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
-  tft.setCursor(2, 118);
-  tft.print("Fel/Le=ertek  Dupla=OK");
+  ui_edit(title, line1, line2);
 }
 
 // Aktuálisan szerkesztett ThermFan/ThermRelay/SwitchLogicChannel referenciák
@@ -229,10 +162,7 @@ void drawMenu() {
   // Csak akkor van TELJES képernyő-törlés, ha ténylegesen MÁSIK menü-
   // képernyőre váltottunk (más elrendezés) - ugyanannak a képernyőnek az
   // ismételt újrarajzolása NEM töröl mindent, ezért nem villódzik a kijelző.
-  if (menuScreen != lastDrawnMenuScreen) {
-    tft.fillScreen(ST77XX_BLACK);
-    lastDrawnMenuScreen = menuScreen;
-  }
+  lastDrawnMenuScreen = menuScreen;
   ValueRow rows[12];
 
   switch (menuScreen) {
@@ -258,16 +188,16 @@ void drawMenu() {
 
     case MENU_SLEEP_SEL: {
       int n = 0;
-      for (int i = 0; i < SLEEP_OPTIONS_COUNT; i++) { rows[n].label = SLEEP_NAMES[i]; rows[n].value = (i == sleepTimeoutIdx) ? "AKTIV" : ""; rows[n].valColor = ST77XX_GREEN; n++; }
-      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      for (int i = 0; i < SLEEP_OPTIONS_COUNT; i++) { rows[n].label = SLEEP_NAMES[i]; rows[n].value = (i == sleepTimeoutIdx) ? "AKTIV" : ""; rows[n].valColor = UI_GREEN; n++; }
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList("ELALVASI IDO", rows, n, menuCursor);
       break;
     }
 
     case MENU_MODE_LIST: {
       int n = 0;
-      for (int i = 0; i < 5; i++) { rows[n].label = MODE_NAMES[i]; rows[n].value = (i == currentMode) ? "AKTIV" : ""; rows[n].valColor = ST77XX_GREEN; n++; }
-      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      for (int i = 0; i < 5; i++) { rows[n].label = MODE_NAMES[i]; rows[n].value = (i == currentMode) ? "AKTIV" : ""; rows[n].valColor = UI_GREEN; n++; }
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList("MOD VALASZTAS", rows, n, menuCursor);
       break;
     }
@@ -277,14 +207,14 @@ void drawMenu() {
       // NTC-ként (hőmérőként) vannak bekötve - a DHT11-nek nincs kompenzációja.
       int n = 0;
       if (currentMode == 0) {
-        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", ST77XX_CYAN }; n++;
-        rows[n] = { "NTC2", String(tempCompNTC2, 1) + " C", ST77XX_CYAN }; n++;
+        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", UI_CYAN }; n++;
+        rows[n] = { "NTC2", String(tempCompNTC2, 1) + " C", UI_CYAN }; n++;
       } else if (currentMode == 1 || currentMode == 3) {
-        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", ST77XX_CYAN }; n++;
+        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", UI_CYAN }; n++;
       }
       // mode 2 (paratartalom, DHT11) es mode 4 (2 kapcsolo): nincs kompenzalhato NTC
-      if (n == 0) { rows[n] = { "Nincs NTC ebben a modban", "", ST77XX_WHITE }; n++; }
-      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      if (n == 0) { rows[n] = { "Nincs NTC ebben a modban", "", UI_WHITE }; n++; }
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList("KOMPENZACIO", rows, n, menuCursor);
       break;
     }
@@ -304,18 +234,18 @@ void drawMenu() {
       const char* tfNames[3] = { "O:P:MP", "O:P", "AM/PM" };
       const char* dfNames[5] = { "E/H/N", "N/H/E", "H/N/E", "H/N", "N/H" };
       const char* posNames[3] = { "KI", "BALRA", "KOZEPEN" };
-      rows[0] = { "Ev", String(yr), ST77XX_CYAN };
-      rows[1] = { "Honap", String(month), ST77XX_CYAN };
-      rows[2] = { "Nap", String(day), ST77XX_CYAN };
-      rows[3] = { "Ora", String(hr), ST77XX_CYAN };
-      rows[4] = { "Perc", String(min_t), ST77XX_CYAN };
-      rows[5] = { "Masodperc", String(sec), ST77XX_CYAN };
-      rows[6] = { "Ido formatum", tfNames[timeFormat], ST77XX_CYAN };
-      rows[7] = { "Datum formatum", dfNames[dateFormat], ST77XX_CYAN };
-      rows[8] = { "Ora megjelenites", posNames[clockPos], (uint16_t)(clockPos ? ST77XX_GREEN : ST77XX_WHITE) };
-      rows[9] = { "Datum megjelenites", posNames[datePos], (uint16_t)(datePos ? ST77XX_GREEN : ST77XX_WHITE) };
-      rows[10] = { "Nap neve megjelenites", posNames[dayNamePos], (uint16_t)(dayNamePos ? ST77XX_GREEN : ST77XX_WHITE) };
-      rows[11] = { "Vissza", "", ST77XX_WHITE };
+      rows[0] = { "Ev", String(yr), UI_CYAN };
+      rows[1] = { "Honap", String(month), UI_CYAN };
+      rows[2] = { "Nap", String(day), UI_CYAN };
+      rows[3] = { "Ora", String(hr), UI_CYAN };
+      rows[4] = { "Perc", String(min_t), UI_CYAN };
+      rows[5] = { "Masodperc", String(sec), UI_CYAN };
+      rows[6] = { "Ido formatum", tfNames[timeFormat], UI_CYAN };
+      rows[7] = { "Datum formatum", dfNames[dateFormat], UI_CYAN };
+      rows[8] = { "Ora megjelenites", posNames[clockPos], (uint16_t)(clockPos ? UI_GREEN : UI_WHITE) };
+      rows[9] = { "Datum megjelenites", posNames[datePos], (uint16_t)(datePos ? UI_GREEN : UI_WHITE) };
+      rows[10] = { "Nap neve megjelenites", posNames[dayNamePos], (uint16_t)(dayNamePos ? UI_GREEN : UI_WHITE) };
+      rows[11] = { "Vissza", "", UI_WHITE };
       drawValueList("DATUM/IDO", rows, 12, menuCursor);
       break;
     }
@@ -341,11 +271,11 @@ void drawMenu() {
 
     case MENU_RGB_LIST: {
       bool on = digitalRead(RGB_ON);
-      rows[0] = { "Allapot", on ? "BE" : "KI", (uint16_t)(on ? ST77XX_GREEN : ST77XX_RED) };
-      rows[1] = { "Piros", String(pwmR), ST77XX_CYAN };
-      rows[2] = { "Zold", String(pwmG), ST77XX_CYAN };
-      rows[3] = { "Kek", String(pwmB), ST77XX_CYAN };
-      rows[4] = { "Vissza", "", ST77XX_WHITE };
+      rows[0] = { "Allapot", on ? "BE" : "KI", (uint16_t)(on ? UI_GREEN : UI_RED) };
+      rows[1] = { "Piros", String(pwmR), UI_CYAN };
+      rows[2] = { "Zold", String(pwmG), UI_CYAN };
+      rows[3] = { "Kek", String(pwmB), UI_CYAN };
+      rows[4] = { "Vissza", "", UI_WHITE };
       drawValueList("RGB SZIN", rows, 5, menuCursor);
       break;
     }
@@ -359,20 +289,20 @@ void drawMenu() {
     case MENU_FAN_SUB: {
       int curPwm = (menuFanTarget == 1) ? pwmFan : pwmFan2;
       int curFreq = (menuFanTarget == 1) ? FAN1_PWM_FREQ : FAN2_PWM_FREQ;
-      rows[0] = { "Auto/Kezi", curFanAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curFanAuto() ? ST77XX_GREEN : ST77XX_ORANGE) };
-      rows[1] = { "Allapot", curPwm > 0 ? "BE" : "KI", (uint16_t)(curPwm > 0 ? ST77XX_GREEN : ST77XX_RED) };
-      rows[2] = { "Kezi %", String((int)round(curPwm / 2.55)) + "%", ST77XX_CYAN };
-      rows[3] = { "Frekvencia", String(curFreq) + " Hz", ST77XX_CYAN };
+      rows[0] = { "Auto/Kezi", curFanAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curFanAuto() ? UI_GREEN : UI_ORANGE) };
+      rows[1] = { "Allapot", curPwm > 0 ? "BE" : "KI", (uint16_t)(curPwm > 0 ? UI_GREEN : UI_RED) };
+      rows[2] = { "Kezi %", String((int)round(curPwm / 2.55)) + "%", UI_CYAN };
+      rows[3] = { "Frekvencia", String(curFreq) + " Hz", UI_CYAN };
       int n = 4;
       // mode3 ("1 kapcsolo+1 homero"): VAN homero ES kapcsolo is, ezert
       // mindket lehetoseg (Gorbe ES Logika) elerheto egyszerre.
       if (currentMode == 3 || !isSwitchMode()) {
-        rows[n] = { "Gorbe pontjai", curThermFan().enabled ? "BE" : "KI", (uint16_t)(curThermFan().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+        rows[n] = { "Gorbe pontjai", curThermFan().enabled ? "BE" : "KI", (uint16_t)(curThermFan().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       if (currentMode == 3 || isSwitchMode()) {
-        rows[n] = { "Logika", curLogicFan().enabled ? "BE" : "KI", (uint16_t)(curLogicFan().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+        rows[n] = { "Logika", curLogicFan().enabled ? "BE" : "KI", (uint16_t)(curLogicFan().enabled ? UI_GREEN : UI_RED) }; n++;
       }
-      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList(menuFanTarget == 1 ? "VENTILATOR 1" : "VENTILATOR 2", rows, n, menuCursor);
       break;
     }
@@ -381,37 +311,37 @@ void drawMenu() {
       break;
     case MENU_FAN_SENSOR_SEL: {
       int n = 0;
-      if (currentMode == 2) { rows[n].label = "NTC1 (Ho)"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
-                               rows[n].label = "Paratartalom"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++; }
-      else if (currentMode == 1) { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++; }
-      else { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
-             rows[n].label = "NTC2"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++; }
-      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+      if (currentMode == 2) { rows[n].label = "NTC1 (Ho)"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
+                               rows[n].label = "Paratartalom"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      else if (currentMode == 1) { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      else { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
+             rows[n].label = "NTC2"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("ERZEKELO VALASZTAS", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_CURVE_LIST: {
       ThermFan &tf = curThermFan();
       int n = 0;
-      rows[n].label = "Forras"; rows[n].value = sensorLabel(tf.sensor); rows[n].valColor = ST77XX_CYAN; n++;
-      rows[n].label = "Allapot"; rows[n].value = tf.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(tf.enabled ? ST77XX_GREEN : ST77XX_RED); n++;
-      rows[n].label = "Pontok szama"; rows[n].value = String(tf.count); rows[n].valColor = ST77XX_CYAN; n++;
+      rows[n].label = "Forras"; rows[n].value = sensorLabel(tf.sensor); rows[n].valColor = UI_CYAN; n++;
+      rows[n].label = "Allapot"; rows[n].value = tf.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(tf.enabled ? UI_GREEN : UI_RED); n++;
+      rows[n].label = "Pontok szama"; rows[n].value = String(tf.count); rows[n].valColor = UI_CYAN; n++;
       for (int i = 0; i < tf.count && n < 11; i++) {
         rows[n].label = String(i + 1) + ".";
         rows[n].value = String(tf.temp[i], 0) + "C " + String(tf.pct[i]) + "% " + String(tf.freq[i]) + "Hz";
-        rows[n].valColor = ST77XX_CYAN;
+        rows[n].valColor = UI_CYAN;
         n++;
       }
-      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("GORBE PONTJAI", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_CURVE_POINT: {
       ThermFan &tf = curThermFan();
-      rows[0] = { "Homerseklet", String(tf.temp[menuEditPoint], 0) + " C", ST77XX_CYAN };
-      rows[1] = { "PWM", String(tf.pct[menuEditPoint]) + " %", ST77XX_CYAN };
-      rows[2] = { "Frekvencia", String(tf.freq[menuEditPoint]) + " Hz", ST77XX_CYAN };
-      rows[3] = { "Vissza", "", ST77XX_WHITE };
+      rows[0] = { "Homerseklet", String(tf.temp[menuEditPoint], 0) + " C", UI_CYAN };
+      rows[1] = { "PWM", String(tf.pct[menuEditPoint]) + " %", UI_CYAN };
+      rows[2] = { "Frekvencia", String(tf.freq[menuEditPoint]) + " Hz", UI_CYAN };
+      rows[3] = { "Vissza", "", UI_WHITE };
       drawValueList("PONT " + String(menuEditPoint + 1), rows, 4, menuCursor);
       break;
     }
@@ -428,49 +358,30 @@ void drawMenu() {
       break;
     }
     case MENU_FREQ_DIGIT_EDIT: {
-      tft.setFont(&FreeSans9pt7b);
-      tft.setTextSize(1);
-      tft.fillRect(0, 0, 240, 135, ST77XX_BLACK);
-      tft.setTextColor(ST77XX_YELLOW, ST77XX_BLACK);
-      tft.setCursor(10, 25);
-      tft.print("FREKVENCIA (Hz)");
-      int startX = 30, digitW = 38;
-      for (int i = 0; i < 5; i++) {
-        bool sel = (i == freqDigitPos);
-        tft.setTextColor(sel ? ST77XX_GREEN : ST77XX_WHITE, ST77XX_BLACK);
-        tft.setCursor(startX + i * digitW, 60);
-        tft.print(String(freqDigits[i]));
-        if (sel) tft.drawFastHLine(startX + i * digitW, 82, 20, ST77XX_GREEN);
-      }
-      tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
-      tft.setTextSize(1);
-      tft.setCursor(10, 105);
-      tft.print("Hosszu Fel: digit valt");
-      tft.setCursor(10, 120);
-      tft.print("Fel/Le: ertek 0-9");
+      ui_freq(freqDigits, freqDigitPos);
       break;
     }
     case MENU_FAN_LOGIC_LIST: {
       SwitchLogicChannel &ch = curLogicFan();
       int n = 0;
-      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? ST77XX_GREEN : ST77XX_RED); n++;
+      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? UI_GREEN : UI_RED); n++;
       if (currentMode == 4) {
         const char* labels[4] = {"K1N-K2N", "K1N-K2C", "K1C-K2N", "K1C-K2C"};
-        for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], true); rows[n].valColor = ST77XX_CYAN; n++; }
+        for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], true); rows[n].valColor = UI_CYAN; n++; }
       } else {
-        rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], true); rows[n].valColor = ST77XX_CYAN; n++;
-        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], true); rows[n].valColor = ST77XX_CYAN; n++;
+        rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], true); rows[n].valColor = UI_CYAN; n++;
+        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], true); rows[n].valColor = UI_CYAN; n++;
       }
-      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("LOGIKA", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_LOGIC_EDIT: {
       SwitchLogicChannel &ch = curLogicFan();
       int v = ch.val[menuLogicIdx];
-      rows[0] = { "PWM", v < 0 ? "GORBE SZERINT" : (String(v) + " %"), ST77XX_CYAN };
-      rows[1] = { "Frekvencia", String(ch.freq[menuLogicIdx]) + " Hz", ST77XX_CYAN };
-      rows[2] = { "Vissza", "", ST77XX_WHITE };
+      rows[0] = { "PWM", v < 0 ? "GORBE SZERINT" : (String(v) + " %"), UI_CYAN };
+      rows[1] = { "Frekvencia", String(ch.freq[menuLogicIdx]) + " Hz", UI_CYAN };
+      rows[2] = { "Vissza", "", UI_WHITE };
       drawValueList("LOGIKA ERTEK", rows, 3, menuCursor);
       break;
     }
@@ -483,21 +394,21 @@ void drawMenu() {
     }
 
     case MENU_RELAY_SUB: {
-      rows[0] = { "Auto/Kezi", curRelayAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curRelayAuto() ? ST77XX_GREEN : ST77XX_ORANGE) };
+      rows[0] = { "Auto/Kezi", curRelayAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curRelayAuto() ? UI_GREEN : UI_ORANGE) };
       int pin = (menuRelayTarget == 1) ? RELAY1_PIN : RELAY2_PIN;
-      rows[1] = { "Kezi Be/Ki", digitalRead(pin) ? "BE" : "KI", (uint16_t)(digitalRead(pin) ? ST77XX_GREEN : ST77XX_RED) };
+      rows[1] = { "Kezi Be/Ki", digitalRead(pin) ? "BE" : "KI", (uint16_t)(digitalRead(pin) ? UI_GREEN : UI_RED) };
       int n = 2;
       // mode3 ("1 kapcsolo+1 homero"): VAN homero ES kapcsolo is, ezert
       // mindket lehetoseg (Termosztat ES Logika) elerheto egyszerre.
       if (currentMode == 3 || !isSwitchMode()) {
-        rows[n] = { "Termosztat", curThermRelay().enabled ? "BE" : "KI", (uint16_t)(curThermRelay().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+        rows[n] = { "Termosztat", curThermRelay().enabled ? "BE" : "KI", (uint16_t)(curThermRelay().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       if (currentMode == 3 || isSwitchMode()) {
-        rows[n] = { "Logika", curLogicRelay().enabled ? "BE" : "KI", (uint16_t)(curLogicRelay().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+        rows[n] = { "Logika", curLogicRelay().enabled ? "BE" : "KI", (uint16_t)(curLogicRelay().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       RelayTimer &curRt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
-      rows[n] = { "Kapuzas", curRt.enabled ? "BE" : "KI", (uint16_t)(curRt.enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
-      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      rows[n] = { "Kapuzas", curRt.enabled ? "BE" : "KI", (uint16_t)(curRt.enabled ? UI_GREEN : UI_RED) }; n++;
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList(menuRelayTarget == 1 ? "RELE 1" : "RELE 2", rows, n, menuCursor);
       break;
     }
@@ -505,14 +416,14 @@ void drawMenu() {
       RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
       const char* lockNames[3] = { "NINCS", "IDO ALAPU", "JELVALTASIG" };
       const char* stateNames[3] = { "BE", "KI", "MIND" };
-      rows[0] = { "Be/Ki", rt.enabled ? "BEKAPCSOLVA" : "KIKAPCSOLVA", (uint16_t)(rt.enabled ? ST77XX_GREEN : ST77XX_RED) };
-      rows[1] = { "Mod", rt.timerMode == 0 ? "FIX IDO" : "MAX IDO", ST77XX_CYAN };
-      rows[2] = { "Idotartam", String(rt.onDurationSec) + " mp", ST77XX_CYAN };
-      rows[3] = { "Zarolas", lockNames[rt.lockMode], ST77XX_CYAN };
+      rows[0] = { "Be/Ki", rt.enabled ? "BEKAPCSOLVA" : "KIKAPCSOLVA", (uint16_t)(rt.enabled ? UI_GREEN : UI_RED) };
+      rows[1] = { "Mod", rt.timerMode == 0 ? "FIX IDO" : "MAX IDO", UI_CYAN };
+      rows[2] = { "Idotartam", String(rt.onDurationSec) + " mp", UI_CYAN };
+      rows[3] = { "Zarolas", lockNames[rt.lockMode], UI_CYAN };
       int n = 4;
-      if (rt.lockMode == 1) { rows[n].label = "Zarolas ideje"; rows[n].value = String(rt.cooldownSec) + " mp"; rows[n].valColor = ST77XX_CYAN; n++; }
-      rows[n].label = "Allapot"; rows[n].value = stateNames[rt.stateFilter]; rows[n].valColor = ST77XX_CYAN; n++;
-      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      if (rt.lockMode == 1) { rows[n].label = "Zarolas ideje"; rows[n].value = String(rt.cooldownSec) + " mp"; rows[n].valColor = UI_CYAN; n++; }
+      rows[n].label = "Allapot"; rows[n].value = stateNames[rt.stateFilter]; rows[n].valColor = UI_CYAN; n++;
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList("KAPUZAS", rows, n, menuCursor);
       break;
     }
@@ -538,23 +449,23 @@ void drawMenu() {
     }
     case MENU_RELAY_SENSOR_SEL: {
       int n = 0;
-      if (currentMode == 2) { rows[n].label = "NTC1 (Ho)"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
-                               rows[n].label = "Paratartalom"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++; }
-      else if (currentMode == 1) { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++; }
-      else { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
-             rows[n].label = "NTC2"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++; }
-      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+      if (currentMode == 2) { rows[n].label = "NTC1 (Ho)"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
+                               rows[n].label = "Paratartalom"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      else if (currentMode == 1) { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      else { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
+             rows[n].label = "NTC2"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("ERZEKELO VALASZTAS", rows, n, menuCursor);
       break;
     }
     case MENU_RELAY_THERM_LIST: {
       ThermRelay &tr = curThermRelay();
       bool isHum = (tr.sensor == 3);
-      rows[0] = { "Erzekelo", sensorLabel(tr.sensor), ST77XX_CYAN };
-      rows[1] = { "Allapot", tr.enabled ? "BE" : "KI", (uint16_t)(tr.enabled ? ST77XX_GREEN : ST77XX_RED) };
-      rows[2] = { "Bekapcsol", String(tr.ton, isHum ? 0 : 1) + (isHum ? "%" : "C"), ST77XX_CYAN };
-      rows[3] = { "Kikapcsol", String(tr.toff, isHum ? 0 : 1) + (isHum ? "%" : "C"), ST77XX_CYAN };
-      rows[4] = { "Vissza", "", ST77XX_WHITE };
+      rows[0] = { "Erzekelo", sensorLabel(tr.sensor), UI_CYAN };
+      rows[1] = { "Allapot", tr.enabled ? "BE" : "KI", (uint16_t)(tr.enabled ? UI_GREEN : UI_RED) };
+      rows[2] = { "Bekapcsol", String(tr.ton, isHum ? 0 : 1) + (isHum ? "%" : "C"), UI_CYAN };
+      rows[3] = { "Kikapcsol", String(tr.toff, isHum ? 0 : 1) + (isHum ? "%" : "C"), UI_CYAN };
+      rows[4] = { "Vissza", "", UI_WHITE };
       drawValueList("RELE TERMOSZTAT", rows, 5, menuCursor);
       break;
     }
@@ -569,15 +480,15 @@ void drawMenu() {
     case MENU_RELAY_LOGIC_LIST: {
       SwitchLogicChannel &ch = curLogicRelay();
       int n = 0;
-      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? ST77XX_GREEN : ST77XX_RED); n++;
+      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? UI_GREEN : UI_RED); n++;
       if (currentMode == 4) {
         const char* labels[4] = {"K1N-K2N", "K1N-K2C", "K1C-K2N", "K1C-K2C"};
-        for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], false); rows[n].valColor = (uint16_t)(ch.val[i] > 0 ? ST77XX_GREEN : ST77XX_CYAN); n++; }
+        for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], false); rows[n].valColor = (uint16_t)(ch.val[i] > 0 ? UI_GREEN : UI_CYAN); n++; }
       } else {
-        rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], false); rows[n].valColor = (uint16_t)(ch.val[0] < 0 ? ST77XX_YELLOW : (ch.val[0] > 0 ? ST77XX_GREEN : ST77XX_CYAN)); n++;
-        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], false); rows[n].valColor = (uint16_t)(ch.val[2] < 0 ? ST77XX_YELLOW : (ch.val[2] > 0 ? ST77XX_GREEN : ST77XX_CYAN)); n++;
+        rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], false); rows[n].valColor = (uint16_t)(ch.val[0] < 0 ? UI_YELLOW : (ch.val[0] > 0 ? UI_GREEN : UI_CYAN)); n++;
+        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], false); rows[n].valColor = (uint16_t)(ch.val[2] < 0 ? UI_YELLOW : (ch.val[2] > 0 ? UI_GREEN : UI_CYAN)); n++;
       }
-      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+      rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("LOGIKA", rows, n, menuCursor);
       break;
     }
@@ -590,92 +501,42 @@ void drawMenu() {
     }
 
     case MENU_WIFI_SCANNING: {
-      tft.setTextColor(ST77XX_WHITE);
-      tft.setTextSize(2);
-      tft.setCursor(10, 50);
-      tft.println("Keresés...");
+      ui_wifi_scanning();
       break;
     }
 
     case MENU_WIFI_SCAN_LIST: {
       if (wifiMenuScanCount == 0) {
-        rows[0] = { "Nincs talalhato halozat", "", ST77XX_RED };
-        rows[1] = { "Vissza", "", ST77XX_WHITE };
+        rows[0] = { "Nincs talalhato halozat", "", UI_RED };
+        rows[1] = { "Vissza", "", UI_WHITE };
         drawValueList("WIFI HALOZATOK", rows, 2, menuCursor);
       } else {
         int n = 0;
         for (int i = 0; i < wifiMenuScanCount && n < 11; i++) {
-          rows[n].label = wifiMenuScanSsids[i]; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+          rows[n].label = wifiMenuScanSsids[i]; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
         }
-        rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+        rows[n] = { "Vissza", "", UI_WHITE }; n++;
         drawValueList("WIFI HALOZATOK", rows, n, menuCursor);
       }
       break;
     }
 
     case MENU_WIFI_PASSWORD_EDIT: {
-      tft.setTextColor(ST77XX_WHITE);
-      tft.setTextSize(1);
-      tft.setCursor(10, 5);
-      tft.print("JELSZO: "); tft.println(wifiMenuSelectedSsid);
-
-      // FONTOS: a sor tartalma (jelszó hossza + DEL/OK/egyetlen karakter)
-      // változó hosszúságú - enélkül a törlés a régi, hosszabb szöveg
-      // pixeleit (pl. a "DEL" feliratból megmaradt "L" betűket) a
-      // képernyőn hagyná, mert csak a ténylegesen most kiírt karakterek
-      // háttere törlődne automatikusan.
-      tft.fillRect(0, 28, 240, 22, ST77XX_BLACK);
-
-      // a begépelt jelszó karakterei direktben látszanak (nincs elrejtve
-      // csillagokkal, mert ez a kijelző csak helyben, fizikailag
-      // hozzáférhető eszközön látszik), utána a kiválasztás alatt álló
-      // karakter kiemelve (zöld háttér) mutatja, mit ír be a SELECT gomb.
-      tft.setTextSize(2);
-      tft.setCursor(10, 30);
-      tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-      for (int i = 0; i < wifiPwLen; i++) tft.print(wifiPwBuf[i]);
-
-      tft.setTextColor(ST77XX_BLACK, ST77XX_GREEN);
+      // a begépelt jelszó karakterei direktben látszanak (nincs elrejtve,
+      // mert ez a kijelző csak helyben, fizikailag hozzáférhető eszközön
+      // látszik); a kiválasztás alatt álló karakter külön "chip"-ben van.
+      String typed = "";
+      for (int i = 0; i < wifiPwLen; i++) typed += wifiPwBuf[i];
       char cur = WIFI_CHARSET[wifiPwCharIdx];
-      if (cur == '<') tft.print("DEL");
-      else tft.print(cur == ' ' ? '_' : cur);
-
-      tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
-      tft.setTextSize(1);
-      tft.setCursor(10, 90);
-      tft.println("Fel/Le: karakter valt");
-      tft.setCursor(10, 105);
-      tft.println("Mindket gomb: beir");
-      tft.setCursor(10, 120);
-      tft.println("Hosszan mindket: csatlakozas");
+      String chip = (cur == '<') ? String("DEL") : String(cur == ' ' ? '_' : cur);
+      ui_wifi_password(wifiMenuSelectedSsid, typed.c_str(), chip.c_str());
       break;
     }
 
     case MENU_WIFI_CONNECTING: {
-      tft.setTextColor(ST77XX_WHITE);
-      tft.setTextSize(2);
-      tft.setCursor(10, 40);
-      if (wifiConnectPending) {
-        tft.println("Csatlakozas...");
-      } else if (WiFi.status() == WL_CONNECTED) {
-        tft.setTextColor(ST77XX_GREEN);
-        tft.println("Sikeres!");
-        tft.setTextSize(1);
-        tft.setTextColor(ST77XX_WHITE);
-        tft.setCursor(10, 70);
-        tft.println(WiFi.localIP().toString());
-      } else {
-        tft.setTextColor(ST77XX_RED);
-        tft.println("Sikertelen");
-        tft.setTextSize(1);
-        tft.setTextColor(ST77XX_WHITE);
-        tft.setCursor(10, 70);
-        tft.println("Ellenorizd a jelszot");
-      }
-      tft.setTextSize(1);
-      tft.setTextColor(ST77XX_CYAN);
-      tft.setCursor(10, 115);
-      tft.println("Barmelyik gomb: vissza");
+      if (wifiConnectPending) ui_wifi_result(0, "");
+      else if (WiFi.status() == WL_CONNECTED) ui_wifi_result(1, WiFi.localIP().toString());
+      else ui_wifi_result(2, "");
       break;
     }
 

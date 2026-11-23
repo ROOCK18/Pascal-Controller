@@ -224,9 +224,11 @@ void handleOtaUrl(const String &body) {
   // állapota a kijelzőn (progress bar) továbbra is valós időben követhető.
   drawOtaStatus("MEMORIA FELSZAB.", "BLE leallitasa...");
   deviceConnected = false; // notifyLine() mostantól biztonságosan no-op lesz
-  if (pServer != nullptr) pServer->disconnect(0);
+  if (pServer != nullptr) {
+    for (uint16_t h : pServer->getPeerDevices()) pServer->disconnect(h);
+  }
   delay(200);
-  BLEDevice::deinit(true);
+  NimBLEDevice::deinit(true);
   delay(200);
   Serial.printf("BLE leallitva letoltes elott. Szabad memoria: %u byte\n", ESP.getFreeHeap());
   drawOtaStatus("LETOLTES...", downloadLabel);
@@ -313,12 +315,7 @@ void handleOtaUrl(const String &body) {
         if (pct != lastPct) {
           lastPct = pct;
           notifyLine("OTA_PROGRESS:" + String(pct));
-          int barWidth = (pct * 220) / 100;
-          tft.fillRect(10, 80, 220, 20, ST77XX_BLACK);
-          tft.fillRect(10, 80, barWidth, 20, ST77XX_GREEN);
-          tft.fillRect(10, 105, 220, 20, ST77XX_BLUE);
-          tft.setCursor(10, 105);
-          tft.printf("%d%%", pct);
+          ui_ota_progress(pct);
         }
       }
     } else {

@@ -4,13 +4,7 @@
 #pragma once
 
 void drawOtaStatus(const char* line1, const String &line2) {
-  tft.fillScreen(ST77XX_BLACK);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(2);
-  tft.setCursor(10, 10);
-  tft.println(line1);
-  tft.setCursor(10, 40);
-  tft.println(line2);
+  ui_ota_status(line1, line2);
 }
 
 // ============================================================
@@ -51,12 +45,7 @@ void processOtaQueue() {
     int pct = fullSize > 0 ? (int)((currentSize * 100) / fullSize) : 0;
     if (pct != lastOtaPct) {
       lastOtaPct = pct;
-      int barWidth = (pct * 220) / 100;
-      tft.fillRect(10, 80, 220, 20, ST77XX_BLACK);
-      tft.fillRect(10, 80, barWidth, 20, ST77XX_GREEN);
-      tft.fillRect(10, 105, 220, 20, ST77XX_BLUE);
-      tft.setCursor(10, 105);
-      tft.printf("%d%%", pct);
+      ui_ota_progress(pct);
     }
 
     if (currentSize >= fullSize) {

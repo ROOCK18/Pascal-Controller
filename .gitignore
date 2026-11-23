@@ -33,3 +33,6 @@ build/
 *.zip
 Thumbs.db
 desktop.ini
+
+# PlatformIO
+.pio/

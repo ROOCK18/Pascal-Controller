@@ -4,12 +4,12 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v4.9.0** + a hozzá tartozó app.
+**Aktuális verzió:** firmware **v5.0.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
 ```
-firmware/PascalController/   firmware forrás (Arduino, modulokra bontva)
+firmware/                    PlatformIO projekt (platformio.ini, partitions.csv, include/lv_conf.h, src/)
 app/                         .NET 10 MAUI alkalmazás (Controll.sln)
 ```
 
@@ -18,20 +18,19 @@ A lefordított `.bin` fájlok nem ebben a repóban vannak, hanem a külön publi
 repó Releases-ében, hogy az app és az eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware
+## Firmware (v5.0.0)
 
-- Kártya: ESP32 (TTGO T-Display, ST7789 kijelző), 16 MB flash
-- Arduino beállítások: `esp32:esp32:esp32`, Flash Mode **DIO**, partíciós séma `min_spiffs`
-  (OTA-hoz két app partíció kell)
-- Könyvtárak: Adafruit GFX, Adafruit ST7789; BLE, WiFi és HTTPClient az ESP32 core része
-- BLE név: `Pascal-Controller`, Nordic UART UUID-k (`6E400001-…`)
-- Funkciók: 5 szenzor-üzemmód, ventilátor-görbe, relé-termosztát, kapcsoló-logika, kapuzás,
-  időzítők, NVS tárolás (`Storage.h`), kijelzős menü WiFi-beállítással,
-  BLE OTA és WiFi OTA GitHub Releases-ből (`WifiOTA.h`, `OTA_URL:<ver>:<url>`)
+- Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
+  `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
+- Partíciók (`partitions.csv`, 16 MB): két 6 MB-os OTA slot + ~3,9 MB SPIFFS.
+- BLE: NimBLE (a Bluedroid helyett, ~490 KB flash megtakarítás), UUID-k és protokoll változatlan.
+- Kijelző: LovyanGFX (ST7789 meghajtó) + LVGL 9.2, a menü logikája (`Menu.h`) változatlan, a megjelenítés az `ui.h`-ban és a `Display.h`-ban van.
+- Méret: firmware.bin ~1,74 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
+  Az új partíciós tábla csak USB-s teljes flash-eléssel (`firmware.factory.bin`) kerül fel.
 
-Megnyitás: Arduino IDE-ben a `firmware/PascalController/PascalController.ino`. A mappa összes
-`.h` fájlja a sketch része. Az első feltöltés USB-n megy, utána OTA-n is frissíthető
-(Arduino IDE: *Sketch → Export Compiled Binary*, a sima `.ino.bin` kell, nem a merged).
+**Még NINCS hardveren kipróbálva.** Ellenőrizendő: a kijelző elforgatása és eltolása (`lgfx_setup.h`, `setRotation(3)`, `offset_x/y`),
+a BLE-kapcsolat az appal, a gombok és a WiFi OTA. A kijelző kinézetét PC-s szimulátorral még nem sikerült képként ellenőrizni.
+A szövegek ékezet nélküliek (az LVGL beépített betűi csak ASCII-t tartalmaznak).
 
 ## Alkalmazás
 

@@ -1,3 +1,4 @@
+#include <Arduino.h>
 // ============================================================
 // Pascal-Controller firmware v3.5.0
 //
@@ -26,14 +27,8 @@
 // kezeli, ha a mappa neve megegyezik a .ino fájl nevével).
 // ============================================================
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7789.h>
-#include <Fonts/FreeSans9pt7b.h>
 #include <SPI.h>
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
+#include <NimBLEDevice.h>
 #include <math.h>
 #include <string.h>
 #include <Update.h>
@@ -48,6 +43,7 @@
 #include "Globals.h"
 #include "DataTypes.h"
 #include "Prototypes.h"
+#include "ui.h"
 #include "Comm.h"
 #include "Sensors.h"
 #include "PWMControl.h"
@@ -69,10 +65,7 @@ void setup() {
   Serial.begin(115200);
   randomSeed(analogRead(0));
 
-  SPI.begin(TFT_SCLK, -1, TFT_MOSI);
-  tft.init(135, 240);
-  tft.setRotation(3);
-  tft.fillScreen(ST77XX_BLACK);
+  ui_init(); // LovyanGFX + LVGL, indító képernyő
 
   analogReadResolution(12);
   analogSetAttenuation(ADC_11db);
@@ -166,13 +159,12 @@ void loop() {
   static unsigned long lastWifiConnectingRedraw = 0;
   if (menuScreen == MENU_WIFI_CONNECTING && now - lastWifiConnectingRedraw > 300) {
     lastWifiConnectingRedraw = now;
-    tft.fillScreen(ST77XX_BLACK);
     drawMenu();
   }
 
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
-    pServer->startAdvertising();
+    NimBLEDevice::startAdvertising();
     oldDeviceConnected = deviceConnected;
   }
   if (deviceConnected && !oldDeviceConnected) {
@@ -261,5 +253,6 @@ void loop() {
     lastSettingsSave = now;
   }
 
+  ui_tick(); // LVGL: animációk és változott területek kirajzolása
   delay(1);
 }

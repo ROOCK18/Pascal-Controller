@@ -6,12 +6,12 @@
 // ============================================================
 // BLE CALLBACKS
 // ============================================================
-class MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* s) {
+class MyServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer* s, NimBLEConnInfo& connInfo) override {
     deviceConnected = true;
     Serial.println("BLE eszkoz csatlakozott");
   }
-  void onDisconnect(BLEServer* s) {
+  void onDisconnect(NimBLEServer* s, NimBLEConnInfo& connInfo, int reason) override {
     deviceConnected = false;
     if (otaInProgress) {
       Update.abort();
@@ -24,14 +24,15 @@ class MyServerCallbacks : public BLEServerCallbacks {
       ESP.restart();
     }
     Serial.println("BLE eszkoz szetkapcsolodott");
-    s->getAdvertising()->start();
+    NimBLEDevice::startAdvertising();
   }
 };
 
-class MyCallbacks : public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic *pCharacteristic) {
-    uint8_t* data = pCharacteristic->getData();
-    size_t len = pCharacteristic->getLength();
+class MyCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo& connInfo) override {
+    NimBLEAttValue rxValue = pCharacteristic->getValue();
+    const uint8_t* data = rxValue.data();
+    size_t len = rxValue.size();
     if (len == 0) return;
 
     // ---------------- OTA bináris adat: csak queue-ba másolás ----------------
@@ -293,8 +294,8 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 };
 
 void setupBLE() {
-  BLEDevice::init("Pascal-Controller");
-  BLEDevice::setMTU(517); // engedjük a nagy MTU-t az app RequestMtuAsync(517) híváshoz
+  NimBLEDevice::init("Pascal-Controller");
+  NimBLEDevice::setMTU(517); // engedjük a nagy MTU-t az app RequestMtuAsync(517) híváshoz
 
   // FONTOS: itt SZÁNDÉKOSAN nincs BLESecurity/bonding beállítva, ÉS nincs
   // külön klasszikus Bluetooth (BluetoothSerial) réteg sem. Mindkettőt
@@ -310,25 +311,24 @@ void setupBLE() {
   // (titkosítás nélküli) GATT kapcsolattal - az app saját BLE-keresésével
   // (nem a telefon általános Bluetooth-listájából) érhető el és csatlakoztatható.
 
-  pServer = BLEDevice::createServer();
+  pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+  NimBLEService *pService = pServer->createService(SERVICE_UUID);
 
   pTxCharacteristic = pService->createCharacteristic(
-    CHARACTERISTIC_UUID_TX, BLECharacteristic::PROPERTY_NOTIFY);
-  pTxCharacteristic->addDescriptor(new BLE2902());
+    CHARACTERISTIC_UUID_TX, NIMBLE_PROPERTY::NOTIFY); // a CCCD (0x2902) leírót a NimBLE automatikusan létrehozza
 
   // FONTOS: WRITE_NR is kell, mert az app OTA alatt WithoutResponse
   // (fire-and-forget) írást használ - enélkül a chunkok elvesznek/lassulnak.
   pRxCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID_RX,
-    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
+    NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
   pRxCharacteristic->setCallbacks(new MyCallbacks());
 
-  pService->start();
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pServer->start(); // NimBLE 2.x: a szolgáltatások indítása a szerverrel együtt
+  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
-  BLEDevice::startAdvertising();
+  pAdvertising->enableScanResponse(true);
+  NimBLEDevice::startAdvertising();
 }

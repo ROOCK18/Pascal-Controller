@@ -3,7 +3,18 @@
 // ============================================================
 #pragma once
 
-#define FW_VERSION "4.9.0"
+#define FW_VERSION "5.0.0"
+
+// --- Régi RGB565 színkonstansok (ValueRow.valColor); az ui.h a palettára képezi le ---
+#define UI_BLACK   0x0000
+#define UI_WHITE   0xFFFF
+#define UI_RED     0xF800
+#define UI_GREEN   0x07E0
+#define UI_BLUE    0x001F
+#define UI_CYAN    0x07FF
+#define UI_MAGENTA 0xF81F
+#define UI_YELLOW  0xFFE0
+#define UI_ORANGE  0xFC00
 
 // --- TFT kijelző lábkiosztás (TTGO T-Display) ---
 #define TFT_MOSI 19
@@ -79,7 +90,7 @@ const float NTC_T0 = 298.15;
 const float NTC_BETA = 3950.0;
 
 // --- BLE ---
-BLEServer *pServer = NULL;
+NimBLEServer *pServer = NULL;
 
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 

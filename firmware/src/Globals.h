@@ -3,8 +3,6 @@
 // ============================================================
 #pragma once
 
-Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-
 int FAN1_PWM_FREQ = 30;
 
 // Auto/Kézi mód csatornánként: ha true (alapértelmezett), a termosztát/görbe/
@@ -14,9 +12,9 @@ bool fan1Auto = false, fan2Auto = false, relay1Auto = false, relay2Auto = false;
 
 int FAN2_PWM_FREQ = 30;
 
-BLECharacteristic *pTxCharacteristic;
+NimBLECharacteristic *pTxCharacteristic;
 
-BLECharacteristic *pRxCharacteristic;
+NimBLECharacteristic *pRxCharacteristic;
 
 bool deviceConnected = false;
 
