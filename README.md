@@ -75,9 +75,10 @@ Releases API-t használja token nélkül, ezért a release-eknek **publikus** re
 Az `app/` a v4.9.0 firmware-hez tartozó .NET 10-es változat (WiFi panel, GitHub Releases
 alapú frissítés, séma-mentés `.pcscheme` fájlba, Kapuzás, kijelző- és dátumbeállítások).
 
-**Teendő:** a `app/Controll/Services/GitHubUpdateService.cs` 29–30. sorában a
-`GitHubOwner` / `GitHubRepo` még sablonszöveg, ki kell tölteni, különben a firmware-frissítés
-verzióválasztója nem működik. A repónak publikusnak kell lennie (token nincs implementálva).
+**Fontos:** a `app/Controll/Services/GitHubUpdateService.cs` a `ROOCK18/Pascal-Controller`
+repó Releases-ét kérdezi le. Mivel az app tokent nem használ, a repónak **publikusnak** kell lennie,
+különben a verzióválasztó (és az eszköz WiFi OTA-ja) nem működik. Ha a repó privát marad,
+a `.bin` release-eket egy külön publikus repóba kell tenni, és a két konstanst átírni.
 
 ## Alkalmazás (`app/`)
 
