@@ -25,10 +25,10 @@ public class FirmwareRelease
 // .bin release-eket fel fogod tölteni (pl. "sajatfelhasznalonev/PascalController").
 public static class GitHubUpdateService
 {
-    // A repónak PUBLIKUSNAK kell lennie (token nincs implementálva), különben az
-    // API 404-et ad. Ha a release-ek külön publikus repóba kerülnek, itt kell átírni.
+    // Külön PUBLIKUS repó, csak a .bin release-ekkel (token nincs implementálva,
+    // privát repónál az API 404-et ad). A forrás a privát Pascal-Controller repóban van.
     public const string GitHubOwner = "ROOCK18";
-    public const string GitHubRepo = "Pascal-Controller";
+    public const string GitHubRepo = "Pascal-Controller-firmware";
 
     private static readonly HttpClient _http = new HttpClient
     {

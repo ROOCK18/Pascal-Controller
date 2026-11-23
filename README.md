@@ -13,8 +13,9 @@ firmware/PascalController/   firmware forrás (Arduino, modulokra bontva)
 app/                         .NET 10 MAUI alkalmazás (Controll.sln)
 ```
 
-A lefordított `.bin` fájlok nem ebben a repóban vannak, hanem egy külön publikus
-release-repóban, hogy az app és az eszköz token nélkül le tudja tölteni őket.
+A lefordított `.bin` fájlok nem ebben a repóban vannak, hanem a külön publikus
+[ROOCK18/Pascal-Controller-firmware](https://github.com/ROOCK18/Pascal-Controller-firmware)
+repó Releases-ében, hogy az app és az eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
 ## Firmware
