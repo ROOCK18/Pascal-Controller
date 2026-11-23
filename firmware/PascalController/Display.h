@@ -67,11 +67,6 @@ void drawFanCircleBar(int cx, int topY, int w, int pct) {
   tft.printf("%d%%", pct);
 }
 
-void drawBtIcon(int x, int y) {
-  tft.fillCircle(x, y, 5, deviceConnected ? ST77XX_GREEN : ST77XX_RED);
-  tft.drawCircle(x, y, 5, ST77XX_WHITE);
-}
-
 void drawRgbSwatch(int cx, int cy, int r) {
   uint16_t col = digitalRead(RGB_ON) ? tft.color565(pwmR, pwmG, pwmB) : 0x0000;
   tft.fillCircle(cx, cy, r, col);
@@ -93,17 +88,54 @@ void drawBar(int x, int y, int w, int h, int pct, uint16_t color) {
 // "Utoljára kirajzolt" értékek - csak akkor írunk a kijelzőre, ha a
 // ténylegesen megjelenő érték változott. Ez jelentősen csökkenti az SPI
 // forgalmat, ami a villódzás/szemcsézés fő oka volt.
-int lastShownSec = -1, lastShownMin = -1, lastShownHr = -1;
-bool lastShownBt = false;
-uint16_t lastShownRgb = 0xFFFF;
-int lastShownMode = -1;
-float lastShownT1 = -999, lastShownT2 = -999, lastShownHum = -999;
-bool lastShownSw1 = false, lastShownSw2 = false;
-int lastShownFan1Pct = -1, lastShownFan2Pct = -1;
-bool lastShownR1 = false, lastShownR2 = false;
+// (a lastShown* állapot-változók a Globals.h-ban vannak deklarálva, mert a
+// Menu.h - ami korábban települ, mint ez a fájl - is hivatkozik rájuk)
 
 // Rövid mód-kódok a bal felső sarokba
 const char* MODE_SHORT[] = { "2Ho", "1Ho", "Ho+Pa", "Ho+K1", "2K" };
+// Nap nevek (dayOfWeekIdx() sorrendjében: 0=Vasarnap...6=Szombat)
+const char* DOW_NAMES[] = { "Vas", "Het", "Ked", "Sze", "Csu", "Pen", "Szo" };
+
+// Sakamoto-algoritmus: a hét napja (0=Vasarnap...6=Szombat)
+int dayOfWeekIdx(uint16_t y, uint8_t m, uint8_t d) {
+  static const int t[] = {0,3,2,5,0,3,5,1,4,6,2,4};
+  if (m < 3) y -= 1;
+  return (y + y / 4 - y / 100 + y / 400 + t[m - 1] + d) % 7;
+}
+
+// Dátum szövege a Beallitasokban kiválasztott formátum szerint
+// 0=É/H/N, 1=N/H/É, 2=H/N/É, 3=H/N (év nélkül), 4=N/H (év nélkül)
+String buildDateString() {
+  char buf[14];
+  if (dateFormat == 1) snprintf(buf, sizeof(buf), "%02d/%02d/%04d", day, month, yr);       // N/H/É
+  else if (dateFormat == 2) snprintf(buf, sizeof(buf), "%02d/%02d/%04d", month, day, yr);  // H/N/É
+  else if (dateFormat == 3) snprintf(buf, sizeof(buf), "%02d/%02d", month, day);           // H/N
+  else if (dateFormat == 4) snprintf(buf, sizeof(buf), "%02d/%02d", day, month);           // N/H
+  else snprintf(buf, sizeof(buf), "%04d/%02d/%02d", yr, month, day);                       // É/H/N
+  return String(buf);
+}
+
+// Az óra szövege a Beallitasokban kiválasztott formátum szerint
+String buildClockText() {
+  char buf[16];
+  if (timeFormat == 1) snprintf(buf, sizeof(buf), "%02d:%02d", hr, min_t);
+  else if (timeFormat == 2) {
+    int h12 = hr % 12; if (h12 == 0) h12 = 12;
+    snprintf(buf, sizeof(buf), "%d:%02d%s", h12, min_t, hr < 12 ? "AM" : "PM");
+  } else snprintf(buf, sizeof(buf), "%02d:%02d:%02d", hr, min_t, sec);
+  return String(buf);
+}
+
+// Egy adott pozícióhoz (1=Balra, 2=Kozepen) tartozó teljes szöveg - MINDIG
+// rögzített sorrendben: Dátum, majd Óra, majd Nap neve (amelyik oda van
+// állítva), pl. "2026/08/21 14:35:22 Csutortok".
+String buildPositionText(uint8_t pos) {
+  String s = "";
+  if (datePos == pos) s += buildDateString();
+  if (clockPos == pos) { if (s.length() > 0) s += " "; s += buildClockText(); }
+  if (dayNamePos == pos) { if (s.length() > 0) s += " "; s += String(DOW_NAMES[dayOfWeekIdx(yr, month, day)]); }
+  return s;
+}
 
 #define BOX_X   28
 #define BOX_Y   15
@@ -121,37 +153,61 @@ void displayInfo() {
     tft.drawRoundRect(BOX_X, BOX_Y, BOX_W, BOX_H, 4, ST77XX_WHITE);
     tft.drawFastHLine(0, 75, 240, ST77XX_WHITE);
 
-    lastShownSec = -1; lastShownMode = -1; lastShownBt = !deviceConnected;
+    lastLeftText = "\x01"; lastCenterText = "\x01"; lastShownBt = !deviceConnected; lastShownMode = -1; lastShownWifi = !(WiFi.status() == WL_CONNECTED);
     lastShownRgb = 0xFFFF; lastShownT1 = -999; lastShownT2 = -999; lastShownHum = -999;
     lastShownSw1 = !isSwitchClosed(NTC1_PIN); lastShownSw2 = !isSwitchClosed(NTC2_PIN);
     lastShownFan1Pct = -1; lastShownFan2Pct = -1;
     lastShownR1 = !digitalRead(RELAY1_PIN); lastShownR2 = !digitalRead(RELAY2_PIN);
   }
 
-  // Mód rövid kódja (bal felül) - csak mód-váltáskor
-  if (currentMode != lastShownMode) {
-    lastShownMode = currentMode;
-    tft.fillRect(0, 0, 60, 12, ST77XX_BLACK);
+  // Fejléc bal + közép terület (csak dátum/idő/napnév - a mód mostantól
+  // mindig a jobb felső sarokban látszik, lásd lejjebb) - csak akkor rajzol
+  // újra, ha a tényleges megjelenítendő szöveg változott.
+  String leftText = buildPositionText(1);
+  String centerText = buildPositionText(2);
+
+  if (leftText != lastLeftText || centerText != lastCenterText) {
+    lastLeftText = leftText; lastCenterText = centerText;
+    tft.fillRect(0, 0, 148, 12, ST77XX_BLACK);
     tft.setTextSize(1);
     tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
     tft.setCursor(2, 2);
-    tft.print(MODE_SHORT[currentMode]);
+    tft.print(leftText);
+    if (centerText.length() > 0) {
+      int cw = centerText.length() * 6; // beépített font: ~6px/karakter méret 1-nél
+      int cx = 120 - cw / 2; // a TELJES 240px széles kijelző valódi közepe, nem egy szűkebb zóna
+      if (cx < (int)(leftText.length() * 6) + 6) cx = (int)(leftText.length() * 6) + 6; // ne fedje a bal szöveget
+      tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+      tft.setCursor(cx, 2);
+      tft.print(centerText);
+    }
   }
 
-  // Óra középen - csak percváltáskor
-  if (min_t != lastShownMin || hr != lastShownHr) {
-    lastShownSec = sec; lastShownMin = min_t; lastShownHr = hr;
-    tft.fillRect(85, 0, 90, 12, ST77XX_BLACK);
+  // Jobb felső sarok: a mód rövid kódja MINDIG látszik, ha van BT
+  // kapcsolat egy kék pötty jelenik meg tőle balra, ha van WiFi kapcsolat
+  // egy apró fehér "jel-sáv" ikon jelenik meg még balrébb.
+  bool wifiNowConnected = (WiFi.status() == WL_CONNECTED);
+  if (currentMode != lastShownMode || deviceConnected != lastShownBt || wifiNowConnected != lastShownWifi) {
+    lastShownMode = currentMode; lastShownBt = deviceConnected; lastShownWifi = wifiNowConnected;
+    tft.fillRect(150, 0, 90, 12, ST77XX_BLACK);
+    String modeTxt = String(MODE_SHORT[currentMode]);
+    int tw = modeTxt.length() * 6;
+    int tx = 236 - tw;
     tft.setTextSize(1);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-    tft.setCursor(95, 2);
-    tft.printf("%02d:%02d", hr, min_t);
-  }
-
-  // BT jelzőpont - csak állapotváltáskor
-  if (deviceConnected != lastShownBt) {
-    lastShownBt = deviceConnected;
-    drawBtIcon(228, 6);
+    tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
+    tft.setCursor(tx, 2);
+    tft.print(modeTxt);
+    int btX = tx - 6;
+    if (deviceConnected) {
+      tft.fillCircle(btX, 6, 3, ST77XX_BLUE);
+    }
+    if (wifiNowConnected) {
+      int wifiRight = btX - 14;
+      // Klasszikus WiFi-jel: alul egy pötty, fölötte egy ívelt "csík"
+      // (a kör felső negyedei két különböző sugárral).
+      tft.fillCircle(wifiRight, 10, 1, ST77XX_WHITE);
+      tft.drawCircleHelper(wifiRight, 10, 4, 3, ST77XX_WHITE); // 3 = felső-bal + felső-jobb negyed
+    }
   }
 
   // Relé állapotok a bal sávban - csak változáskor
@@ -268,7 +324,7 @@ void displayInfo() {
   }
 
   // Alsó sor: ventilátor1 kör+sáv, ventilátor2 kör+sáv, RGB kör
-  int f1pct = (int)(pwmFan / 2.55), f2pct = (int)(pwmFan2 / 2.55);
+  int f1pct = (int)round(pwmFan / 2.55), f2pct = (int)round(pwmFan2 / 2.55);
   if (f1pct != lastShownFan1Pct) { lastShownFan1Pct = f1pct; drawFanCircleBar(40, 92, 76, f1pct); }
   if (f2pct != lastShownFan2Pct) { lastShownFan2Pct = f2pct; drawFanCircleBar(122, 92, 76, f2pct); }
 

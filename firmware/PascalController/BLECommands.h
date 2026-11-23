@@ -17,7 +17,11 @@ class MyServerCallbacks : public BLEServerCallbacks {
       Update.abort();
       otaInProgress = false;
       clearOtaQueue();
-      Serial.println("OTA megszakadt: BLE lecsatlakozott");
+      Serial.println("OTA megszakadt: BLE lecsatlakozott - ujrainditas");
+      // Ugyanaz az elv, mint minden más OTA-hibánál: tiszta újraindulás,
+      // ne ragadjon be az eszköz részleges/összezavarodott állapotban.
+      delay(1000);
+      ESP.restart();
     }
     Serial.println("BLE eszkoz szetkapcsolodott");
     s->getAdvertising()->start();
@@ -73,6 +77,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       pwmG = (int)strtol(receivedString.substring(3, 5).c_str(), NULL, 16);
       pwmB = (int)strtol(receivedString.substring(5, 7).c_str(), NULL, 16);
       updatePWMOutputs();
+      markDirty();
     }
     else if (receivedString.startsWith("F1P") && receivedString.length() == 7) {
       long f = strtol(receivedString.substring(3, 7).c_str(), NULL, 16);
@@ -81,6 +86,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
         FAN1_PWM_FREQ = f;
         ledcAttach(FAN1_PWM_PIN, FAN1_PWM_FREQ, PWM_RESOLUTION);
         setPWM(3, pwmFan);
+        markDirty();
       }
     }
     else if (receivedString.startsWith("F2P") && receivedString.length() == 7) {
@@ -90,6 +96,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
         FAN2_PWM_FREQ = f;
         ledcAttach(FAN2_PWM_PIN, FAN2_PWM_FREQ, PWM_RESOLUTION);
         setPWM(4, pwmFan2);
+        markDirty();
       }
     }
     else if (receivedString.startsWith("F") && receivedString.length() == 5) {
@@ -97,27 +104,30 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       pwmFan2 = (int)strtol(receivedString.substring(3, 5).c_str(), NULL, 16);
       setPWM(3, pwmFan);
       setPWM(4, pwmFan2);
+      markDirty();
     }
-    else if (receivedString == "RGB_1") digitalWrite(RGB_ON, HIGH);
-    else if (receivedString == "RGB_0") digitalWrite(RGB_ON, LOW);
-    else if (receivedString == "F1_1")  digitalWrite(FAN1_ON, HIGH);
-    else if (receivedString == "F1_0")  digitalWrite(FAN1_ON, LOW);
-    else if (receivedString == "F2_1")  digitalWrite(FAN2_ON, HIGH);
-    else if (receivedString == "F2_0")  digitalWrite(FAN2_ON, LOW);
-    else if (receivedString == "R1_1")  digitalWrite(RELAY1_PIN, HIGH);
-    else if (receivedString == "R1_0")  digitalWrite(RELAY1_PIN, LOW);
-    else if (receivedString == "R2_1")  digitalWrite(RELAY2_PIN, HIGH);
-    else if (receivedString == "R2_0")  digitalWrite(RELAY2_PIN, LOW);
+    else if (receivedString == "RGB_1") { digitalWrite(RGB_ON, HIGH); markDirty(); }
+    else if (receivedString == "RGB_0") { digitalWrite(RGB_ON, LOW); markDirty(); }
+    else if (receivedString == "F1_1")  { digitalWrite(FAN1_ON, HIGH); markDirty(); }
+    else if (receivedString == "F1_0")  { digitalWrite(FAN1_ON, LOW); markDirty(); }
+    else if (receivedString == "F2_1")  { digitalWrite(FAN2_ON, HIGH); markDirty(); }
+    else if (receivedString == "F2_0")  { digitalWrite(FAN2_ON, LOW); markDirty(); }
+    else if (receivedString == "R1_1")  { digitalWrite(RELAY1_PIN, HIGH); markDirty(); }
+    else if (receivedString == "R1_0")  { digitalWrite(RELAY1_PIN, LOW); markDirty(); }
+    else if (receivedString == "R2_1")  { digitalWrite(RELAY2_PIN, HIGH); markDirty(); }
+    else if (receivedString == "R2_0")  { digitalWrite(RELAY2_PIN, LOW); markDirty(); }
     else if (receivedString.startsWith("TIME:")) {
       hr    = receivedString.substring(5, 7).toInt();
       min_t = receivedString.substring(8, 10).toInt();
       sec   = receivedString.substring(11, 13).toInt();
+      markDirty();
     }
     else if (receivedString.startsWith("SET_MODE:")) {
       // Szenzor-elrendezés választó (Settings ModePicker) - ezen a hardveren
       // fixen 2 NTC van, de tároljuk/visszaigazoljuk, ha mégis állítanák.
       currentMode = receivedString.substring(9).toInt();
       idleNeedsFullClear = true; // ne maradjon az előző mód kijelzés-maradványa
+      markDirty();
       notifyLine("MODE_OK");
     }
     else if (receivedString == "GET_STATE") {
@@ -149,6 +159,11 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       handleGetLogic("F2");
       handleGetLogic("R1");
       handleGetLogic("R2");
+      handleGetRHold("R1");
+      handleGetRHold("R2");
+      handleGetComp();
+      handleGetDisplay();
+      handleGetDatePos();
     }
     else if (receivedString.startsWith("SET_THERM:")) {
       handleSetTherm(receivedString.substring(10));
@@ -188,6 +203,60 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       String t = receivedString.substring(11);
       notifyLine(buildLoadTimer("LOAD_RTIMER:", t, (t == "R1") ? rtimerR1 : rtimerR2));
     }
+    else if (receivedString.startsWith("SET_RHOLD:")) {
+      handleSetRHold(receivedString.substring(10));
+    }
+    else if (receivedString.startsWith("GET_RHOLD:")) {
+      handleGetRHold(receivedString.substring(10));
+    }
+    else if (receivedString.startsWith("SET_COMP:")) {
+      handleSetComp(receivedString.substring(9));
+    }
+    else if (receivedString == "GET_COMP") {
+      handleGetComp();
+    }
+    else if (receivedString.startsWith("SET_DISPLAY:")) {
+      handleSetDisplay(receivedString.substring(12));
+    }
+    else if (receivedString == "GET_DISPLAY") {
+      handleGetDisplay();
+    }
+    else if (receivedString.startsWith("SET_DATEPOS:")) {
+      handleSetDatePos(receivedString.substring(12));
+    }
+    else if (receivedString == "GET_DATEPOS") {
+      handleGetDatePos();
+    }
+    else if (receivedString.startsWith("SET_DATE:")) {
+      handleSetDate(receivedString.substring(9));
+    }
+    else if (receivedString == "FACTORY_RESET") {
+      notifyLine("FACTORY_OK");
+      delay(100);
+      factoryReset(); // ujraindul - nem ter vissza
+    }
+    else if (receivedString.startsWith("SET_WIFI:")) {
+      handleSetWifi(receivedString.substring(9));
+    }
+    else if (receivedString == "GET_WIFI_STATUS") {
+      handleGetWifiStatus();
+    }
+    else if (receivedString == "WIFI_SCAN") {
+      handleWifiScan();
+    }
+    else if (receivedString == "WIFI_DISCONNECT") {
+      handleWifiDisconnect();
+    }
+    else if (receivedString == "WIFI_FORGET") {
+      handleWifiForget();
+    }
+    else if (receivedString.startsWith("OTA_URL:")) {
+      // A tényleges letöltés/flash-írás blokkoló művelet - NEM itt, a BLE
+      // callback taskban indítjuk (az watchdog-reset-et okozhatna), hanem
+      // csak jelezzük, és a loop() indítja el a következő ciklusban.
+      pendingOtaUrl = receivedString.substring(8);
+      otaUrlPending = true;
+    }
     else if (receivedString == "GET_RGB") {
       char buf[32];
       snprintf(buf, sizeof(buf), "RGB|#%02X%02X%02X|%d", pwmR, pwmG, pwmB, digitalRead(RGB_ON));
@@ -214,8 +283,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
         bool en = body.substring(c + 1).toInt() != 0;
         if (target == "F1") fan1Auto = en;
         else if (target == "F2") fan2Auto = en;
-        else if (target == "R1") relay1Auto = en;
-        else if (target == "R2") relay2Auto = en;
+        else if (target == "R1") { if (en && !relay1Auto) { relayTimerR1.timedActive = false; relayTimerR1.cooldownActive = false; relayTimerR1.waitingForReversal = false; } relay1Auto = en; }
+        else if (target == "R2") { if (en && !relay2Auto) { relayTimerR2.timedActive = false; relayTimerR2.cooldownActive = false; relayTimerR2.waitingForReversal = false; } relay2Auto = en; }
+        markDirty();
         notifyLine("AUTO_OK:" + target + ":" + String(en ? 1 : 0));
       }
     }
@@ -225,6 +295,20 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 void setupBLE() {
   BLEDevice::init("Pascal-Controller");
   BLEDevice::setMTU(517); // engedjük a nagy MTU-t az app RequestMtuAsync(517) híváshoz
+
+  // FONTOS: itt SZÁNDÉKOSAN nincs BLESecurity/bonding beállítva, ÉS nincs
+  // külön klasszikus Bluetooth (BluetoothSerial) réteg sem. Mindkettőt
+  // kipróbáltuk:
+  //   - BLESecurity (Just Works bonding): párosítható lett, de utána a
+  //     BLE GATT csatlakozás megbízhatatlanná vált (Android GATT error 133).
+  //   - BluetoothSerial (klasszikus BT láthatóság a BLE mellett): ha a
+  //     felhasználó ezen keresztül párosította az eszközt, az Android a
+  //     közös azonosító miatt a BLE kapcsolatot is "bond-oltnak" tekintette,
+  //     és titkosítást várt - amit a BLE szerver nem biztosított -> ugyanaz
+  //     a GATT error 133 hiba, csatlakozáskor.
+  // A megbízható működés érdekében az eszköz TISZTÁN BLE-only marad, nyitott
+  // (titkosítás nélküli) GATT kapcsolattal - az app saját BLE-keresésével
+  // (nem a telefon általános Bluetooth-listájából) érhető el és csatlakoztatható.
 
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());

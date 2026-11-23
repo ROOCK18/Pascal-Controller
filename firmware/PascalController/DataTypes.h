@@ -4,6 +4,7 @@
 #pragma once
 
 struct ThermRelay;
+struct RelayTimer;
 
 struct TimerSlot;
 
@@ -33,9 +34,44 @@ struct ThermRelay {
   bool state = false;
 };
 
+// Idő alapú relékapcsolás ("impulzus" logika): ha enabled, akkor amikor az
+// automatika (termosztát/logika) az AKTUÁLIS kimenettől ELTÉRŐ állapotot
+// kér (tehát ténylegesen VÁLTANI akarna), a relé a kért új állapotot
+// PONTOSAN onDurationSec másodpercig tartja, majd MAGÁTÓL VISSZAÁLL arra
+// az állapotra, ami a váltás ELŐTT volt (nem feltétlenül KI!). Ezután
+// cooldownSec másodpercig SEMMILYEN automatika nem válthat újra, a relé a
+// visszaállt állapotban marad. Ez MINDEN automatikánál elsőbbséget élvez -
+// kivéve a Kézi üzemmódot, ami ezt a mechanizmust teljesen megkerüli
+// (lásd setRelayAutomation).
+struct RelayTimer {
+  bool enabled = false;
+  uint8_t timerMode = 0;       // 0=Fix ido (mindig pontosan ennyi ideig tart), 1=Max ido (koveti a jelet, csak felulrol korlatozva)
+  // Melyik irányra vonatkozzon a mechanizmus:
+  //   0 = BE  - csak akkor lép életbe, ha a relé BE-re kapcsolna
+  //   1 = KI  - csak akkor lép életbe, ha a relé KI-re kapcsolna
+  //   2 = MIND - mindkét irányú váltásra érvényes
+  // A NEM felügyelt irányú váltás azonnal, korlátozás nélkül végrehajtódik.
+  uint8_t stateFilter = 2;
+  uint16_t onDurationSec = 30;
+  // Zárolás a szakasz vége (lejárat/kényszerített visszaállás) UTÁN:
+  //   0 = Nincs zárolás - azonnal újra reagálhat
+  //   1 = Idő alapú - cooldownSec másodpercig nem reagál
+  //   2 = Jelváltásig - addig nem reagál, amíg a forrás (termosztát/logika)
+  //       akár egy pillanatra is vissza nem kéri a szakasz ELŐTTI állapotot
+  //       (tehát amíg "meg nem akarja valami visszaváltani")
+  uint8_t lockMode = 1;
+  uint16_t cooldownSec = 300;  // csak lockMode==1 esetén használt
+  bool timedActive = false;        // jelenleg az impulzus/kitérés szakaszban van
+  bool cooldownActive = false;     // jelenleg az idő alapú zárolásban van (lockMode==1)
+  bool waitingForReversal = false; // jelenleg a "jelváltásig" zárolásban van (lockMode==2)
+  bool priorState = false;         // az állapot, amire a szakasz végén vissza kell állni
+  unsigned long phaseStart = 0;
+};
+
 ThermFan   thermF1, thermF2;
 
 ThermRelay thermR1, thermR2;
+RelayTimer relayTimerR1, relayTimerR2;
 
 // ============================================================
 // KAPCSOLÓ(+HŐMÉRSÉKLET)-LOGIKA (mode=3 vagy mode=4), CSATORNÁNKÉNT
@@ -51,6 +87,7 @@ ThermRelay thermR1, thermR2;
 struct SwitchLogicChannel {
   bool enabled = false;
   int val[4] = {-1, -1, -1, -1};
+  uint16_t freq[4] = {30, 30, 30, 30}; // csak ventilátor-logikánál használt, állapotonkénti PWM frekvencia
   uint8_t axis2Mode = 0;
 };
 
@@ -68,24 +105,42 @@ TimerSet ftimerF1, ftimerF2, rtimerR1, rtimerR2;
 
 int lastAppliedMinute = -1;
 
-enum ButtonEvent : uint8_t { BTN_NONE, BTN_DOWN, BTN_UP, BTN_SELECT, BTN_BACK };
+enum ButtonEvent : uint8_t { BTN_NONE, BTN_DOWN, BTN_UP, BTN_SELECT, BTN_BACK, BTN_LONG_UP, BTN_LONG_SELECT };
 
 struct ButtonState {
   bool stable = false, raw = false;
   unsigned long changeT = 0, pressT = 0;
   bool longFired = false, consumedBySelect = false, wasDown = false;
+  unsigned long lastRepeatT = 0; // hosszú nyomás közbeni automatikus ismétléshez
 };
 
 ButtonState btnL, btnR;
 
+// Ha true, a MENU_*_EDIT (érték-szerkesztő) képernyőkön vagyunk: ilyenkor a
+// LE gomb hosszú nyomása NEM lép ki a menüből (BTN_BACK), hanem 2 mp után
+// automatikusan, ismételve csökkenti/növeli az értéket - lásd Buttons.h.
+bool menuAllowsHoldRepeat = false;
+
+// Ha true, a mindkét-gomb-együtt (SELECT) esemény csak akkor tüzel rövid
+// SELECT-ként, ha RÖVIDEN engedik el - ha HOSSZAN (>~1,2mp) tartják nyomva
+// mindkettőt, BTN_LONG_SELECT tüzel helyette. Ezt a WiFi jelszó-szerkesztő
+// használja: rövid = karakter beírása, hosszú = csatlakozás indítása.
+bool menuUsesLongSelect = false;
+
 // ── Menü állapot ──
 enum MenuScreen {
-  MENU_NONE, MENU_MAIN, MENU_MODE_SET, MENU_TIME_SET,
+  MENU_NONE, MENU_MAIN,
+  MENU_SETTINGS_SUB, MENU_MODE_LIST, MENU_COMP_LIST, MENU_COMP_EDIT,
+  MENU_DISPLAY_SUB, MENU_BRIGHTNESS_EDIT, MENU_SLEEP_SEL, MENU_FACTORY_CONFIRM,
+  MENU_TIME_LIST, MENU_TIME_EDIT, MENU_TIMEFORMAT_SEL, MENU_DATEFORMAT_SEL,
   MENU_RGB_LIST, MENU_RGB_EDIT,
   MENU_FAN_SUB, MENU_FAN_MANUAL_PCT, MENU_FAN_SENSOR_SEL,
-  MENU_FAN_CURVE_LIST, MENU_FAN_CURVE_POINT, MENU_FAN_LOGIC_LIST, MENU_FAN_LOGIC_EDIT,
-  MENU_RELAY_SUB, MENU_RELAY_MANUAL, MENU_RELAY_SENSOR_SEL,
-  MENU_RELAY_THERM_LIST, MENU_RELAY_THERM_EDIT, MENU_RELAY_LOGIC_LIST, MENU_RELAY_LOGIC_EDIT
+  MENU_FAN_CURVE_LIST, MENU_FAN_CURVE_POINT, MENU_FAN_CURVE_FIELD_EDIT, MENU_FAN_LOGIC_LIST, MENU_FAN_LOGIC_EDIT, MENU_FAN_LOGIC_VAL_EDIT,
+  MENU_FREQ_PRESET_SEL, MENU_FREQ_DIGIT_EDIT,
+  MENU_RELAY_SUB, MENU_RELAY_SENSOR_SEL,
+  MENU_RELAY_THERM_LIST, MENU_RELAY_THERM_EDIT, MENU_RELAY_LOGIC_LIST, MENU_RELAY_LOGIC_EDIT,
+  MENU_RELAY_HOLD_LIST, MENU_RELAY_HOLD_EDIT, MENU_RELAY_LOCKMODE_SEL, MENU_RELAY_STATE_SEL,
+  MENU_WIFI_SCANNING, MENU_WIFI_SCAN_LIST, MENU_WIFI_PASSWORD_EDIT, MENU_WIFI_CONNECTING
 };
 
 // ── Generikus "cimke: ertek" lista sor + rajzoló ──

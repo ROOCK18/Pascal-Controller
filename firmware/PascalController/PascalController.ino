@@ -1,5 +1,5 @@
 // ============================================================
-// Pascal-Controller firmware v3.4.0
+// Pascal-Controller firmware v3.5.0
 //
 // Ez a fájl a fő .ino, ami csak az #include-okat és a setup()/
 // loop() függvényeket tartalmazza. A tényleges logika külön
@@ -14,13 +14,14 @@
 //   Thermostat.h    - ventilátor-görbe + relé-termosztát
 //   SwitchLogic.h   - kapcsoló-alapú logika
 //   Timers.h        - napi időzítők
+//   Storage.h       - beállítások mentése/betöltése (NVS), factory reset
 //   Buttons.h       - fizikai gombok kezelése
 //   Menu.h          - on-device menürendszer
 //   Display.h       - alap (idle) kijelző
 //   OTA.h           - BLE OTA frissítés
 //   BLECommands.h   - BLE parancsok fogadása + szerver indítás
 //
-// FONTOS: mind a 15 fájlnak UGYANABBAN a mappában kell lennie,
+// FONTOS: mind a 16 fájlnak UGYANABBAN a mappában kell lennie,
 // mint ennek a .ino fájlnak (Arduino IDE ezt automatikusan
 // kezeli, ha a mappa neve megegyezik a .ino fájl nevével).
 // ============================================================
@@ -37,6 +38,10 @@
 #include <string.h>
 #include <Update.h>
 #include <queue>
+#include <Preferences.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 
 
 #include "Config.h"
@@ -49,10 +54,12 @@
 #include "Thermostat.h"
 #include "SwitchLogic.h"
 #include "Timers.h"
+#include "Storage.h"
 #include "Buttons.h"
 #include "Menu.h"
 #include "Display.h"
 #include "OTA.h"
+#include "WifiOTA.h"
 #include "BLECommands.h"
 
 // ============================================================
@@ -61,9 +68,6 @@
 void setup() {
   Serial.begin(115200);
   randomSeed(analogRead(0));
-
-  pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, HIGH);
 
   SPI.begin(TFT_SCLK, -1, TFT_MOSI);
   tft.init(135, 240);
@@ -92,6 +96,21 @@ void setup() {
   digitalWrite(RELAY2_PIN, LOW);
 
   setupPWM();
+  loadAllSettings(); // mentett beállítások visszatöltése (áramszünet utáni állapot-visszaállítás)
+  if (wifiSsid.length() > 0) {
+    // Ha van mentett WiFi hálózat, induláskor automatikusan próbáljon
+    // csatlakozni hozzá (a loop() indítja el, ugyanúgy, mint SET_WIFI után).
+    wifiConnectRequested = true;
+  }
+  // A setupPWM() még az alapértelmezett (30Hz) frekvenciával csatolta a
+  // ventilátor PWM csatornákat - most, hogy a mentett érték betöltődött,
+  // újra kell csatolni a TÉNYLEGES frekvenciával.
+  ledcDetach(FAN1_PWM_PIN); ledcAttach(FAN1_PWM_PIN, FAN1_PWM_FREQ, PWM_RESOLUTION);
+  ledcDetach(FAN2_PWM_PIN); ledcAttach(FAN2_PWM_PIN, FAN2_PWM_FREQ, PWM_RESOLUTION);
+  updatePWMOutputs(); // a betöltött RGB/ventilátor értékek ténylegesen ki is íródjanak
+  applyBacklight();   // a betöltött fényerő ténylegesen alkalmazva
+  lastUserActivity = millis();
+  WiFi.onEvent(onWifiEvent); // valós idejű WiFi csatlakozás-visszajelzésekhez (jelszó-hiba stb.)
   setupBLE();
 
   Serial.printf("Pascal-Controller firmware v%s kesz.\n", FW_VERSION);
@@ -106,8 +125,50 @@ void loop() {
     return;
   }
 
+  if (otaUrlPending) {
+    // A WiFi-OTA indítása itt, a fő loop()-ban történik (nem a BLE callback
+    // taskban) - ez egy hosszú, blokkoló művelet (WiFi csatlakozás + letöltés),
+    // amit a BLE stack callback taskjában futtatva watchdog-reset-et okozna.
+    otaUrlPending = false;
+    handleOtaUrl(pendingOtaUrl);
+    return;
+  }
+
+  if (wifiConnectRequested) {
+    wifiConnectRequested = false;
+    startWifiConnect();
+  }
+  if (wifiConnectPending && millis() - wifiConnectStartTime > 15000) {
+    wifiConnectPending = false;
+    WiFi.disconnect(true, false); // ne próbálkozzon tovább a háttérben, hogy a scan újra tisztán működjön
+    notifyLine("WIFI_FAILED:Idotullepes - router nem elerheto vagy tavol van");
+  }
+
+  if (wifiScanRequested) {
+    wifiScanRequested = false;
+    doWifiScan();
+    return;
+  }
+
+  if (wifiMenuScanRequested) {
+    wifiMenuScanRequested = false;
+    drawMenu(); // "Keresés..." felirat előbb, hogy ne fagyottnak tűnjön a keresés alatt
+    doWifiScanForMenu();
+    return;
+  }
+
   updateClock();
   unsigned long now = millis();
+
+  // A WiFi-csatlakozás állapota gombnyomás nélkül, aszinkron módon
+  // változhat (WiFi.onEvent) - ezért ezen a képernyőn gombesemény nélkül is
+  // rendszeresen újra kell rajzolni, hogy lásd a valós idejű állapotot.
+  static unsigned long lastWifiConnectingRedraw = 0;
+  if (menuScreen == MENU_WIFI_CONNECTING && now - lastWifiConnectingRedraw > 300) {
+    lastWifiConnectingRedraw = now;
+    tft.fillScreen(ST77XX_BLACK);
+    drawMenu();
+  }
 
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
@@ -126,11 +187,11 @@ void loop() {
     // ami az aktuális módban ténylegesen NTC-ként van bekötve.
     switch (currentMode) {
       case 0: // 2 hőmérő
-        ntc1Temperature = readNTCTemperature(NTC1_PIN);
-        ntc2Temperature = readNTCTemperature(NTC2_PIN);
+        ntc1Temperature = readNTCTemperature(NTC1_PIN) + tempCompNTC1;
+        ntc2Temperature = readNTCTemperature(NTC2_PIN) + tempCompNTC2;
         break;
       case 1: // 1 hőmérő
-        ntc1Temperature = readNTCTemperature(NTC1_PIN);
+        ntc1Temperature = readNTCTemperature(NTC1_PIN) + tempCompNTC1;
         break;
       case 2: { // páratartalom - DHT11 az NTC2_PIN lábon (min. 1mp a mérések közt)
         static unsigned long lastDhtRead = 0;
@@ -138,14 +199,14 @@ void loop() {
           lastDhtRead = now;
           float dhtT, dhtH;
           if (readDHT11(NTC2_PIN, dhtT, dhtH)) {
-            ntc1Temperature = dhtT; // a DHT11 saját hőmérséklete lesz a "Hőmérséklet (NTC1)" forrás
+            ntc1Temperature = dhtT; // a DHT11-hez nincs kompenzáció (nem NTC)
             humidity = dhtH;
           }
         }
         break;
       }
       case 3: // 1 kapcsoló+1 hőmérő - csak NTC1 analóg, NTC2 a K1 kapcsoló
-        ntc1Temperature = readNTCTemperature(NTC1_PIN);
+        ntc1Temperature = readNTCTemperature(NTC1_PIN) + tempCompNTC1;
         break;
       case 4: // 2 kapcsoló - egyik láb sem analóg hőmérő
         break;
@@ -158,6 +219,13 @@ void loop() {
 
   // ── Gombok: menü navigáció, vagy idle képernyőn belépés a menübe ──
   ButtonEvent btnEv = pollButtons();
+  if (btnEv != BTN_NONE) {
+    bool wasAsleep = displayAsleep;
+    wakeDisplay(); // bármilyen gombnyomás felébreszti a kijelzőt és nullázza az inaktivitás-időzítőt
+    if (wasAsleep) btnEv = BTN_NONE; // az első gombnyomás alvó kijelzőnél CSAK ébreszt, nem hajt végre semmit
+  }
+  checkDisplaySleep(); // ha letelt a beállított elalvási idő, kikapcsolja a háttérvilágítást
+
   if (menuScreen == MENU_NONE) {
     if (btnEv == BTN_SELECT) enterMenu(); // dupla gombnyomás = belépés a menübe
   } else {
@@ -182,6 +250,15 @@ void loop() {
     // időzítő-vezérelt villódzás, amikor a felhasználó csak néz egy képernyőt.
     drawMenu();
     menuDirty = false;
+  }
+
+  // Beállítások mentése flash-be - ÖSSZEVONVA, legfeljebb 5 másodpercenként
+  // (nem minden apró változásnál azonnal), hogy ne kopjon feleslegesen a
+  // flash, de áramkimaradás esetén se vesszen el a legutóbbi állapot.
+  if (settingsDirty && now - lastSettingsSave >= 5000) {
+    saveAllSettings();
+    settingsDirty = false;
+    lastSettingsSave = now;
   }
 
   delay(1);

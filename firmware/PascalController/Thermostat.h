@@ -66,6 +66,14 @@ void applyFanFromCurve(ThermFan &tf, int channelNum) {
 }
 
 void applyThermostat() {
+  // Mód-guard: a hőmérő-alapú görbe/termosztát CSAK akkor fusson, ha az
+  // aktuális módban ténylegesen van hőmérő (mode 0/1/2/3). Mode 4-ben
+  // ("2 kapcsoló") NINCS hőmérő - ott mindkét láb kapcsolóként van bekötve,
+  // ezért egy esetlegesen korábbi módból "ittmaradt" bekapcsolt görbe/
+  // termosztát ne tudjon értelmetlen (kapcsoló-jelből számolt "hőfok")
+  // adat alapján beavatkozni.
+  if (currentMode == 4) return;
+
   // Minden csatorna a saját SET_THERM "enabled" flag-je ÉS a saját Auto/Kézi
   // (fan1Auto/fan2Auto/relay1Auto/relay2Auto) állapota alapján fut. Kézi
   // módban a Ctrl oldal direkt parancsai döntenek, az automatika szünetel.
@@ -77,25 +85,31 @@ void applyThermostat() {
   // --- Relék: hiszterézises BE/KI kapcsolás ---
   // Ha ton < toff: FŰTÉS logika (BE ha hideg, KI ha túl meleg).
   // Ha ton >= toff: HŰTÉS logika (BE ha meleg, KI ha hideg).
+  // FONTOS: a relé lábat SOSEM írjuk közvetlenül - mindig setRelayAutomation()-
+  // on keresztül, MINDEN ciklusban (nemcsak állapotváltáskor), hogy az idő
+  // alapú BE-tartás/tiltás (RelayTimer) folyamatosan érvényesülhessen akkor
+  // is, ha a hiszterézis "gondolata" időközben nem változik.
   if (thermR1.enabled && relay1Auto) {
     float t = getSensorTemp(thermR1.sensor);
     if (thermR1.ton < thermR1.toff) { // fűtés
-      if (!thermR1.state && t <= thermR1.ton)  { thermR1.state = true;  digitalWrite(RELAY1_PIN, HIGH); }
-      if (thermR1.state  && t >= thermR1.toff) { thermR1.state = false; digitalWrite(RELAY1_PIN, LOW); }
+      if (!thermR1.state && t <= thermR1.ton)  thermR1.state = true;
+      if (thermR1.state  && t >= thermR1.toff) thermR1.state = false;
     } else { // hűtés
-      if (!thermR1.state && t >= thermR1.ton)  { thermR1.state = true;  digitalWrite(RELAY1_PIN, HIGH); }
-      if (thermR1.state  && t <= thermR1.toff) { thermR1.state = false; digitalWrite(RELAY1_PIN, LOW); }
+      if (!thermR1.state && t >= thermR1.ton)  thermR1.state = true;
+      if (thermR1.state  && t <= thermR1.toff) thermR1.state = false;
     }
+    setRelayAutomation(1, thermR1.state);
   }
   if (thermR2.enabled && relay2Auto) {
     float t = getSensorTemp(thermR2.sensor);
     if (thermR2.ton < thermR2.toff) { // fűtés
-      if (!thermR2.state && t <= thermR2.ton)  { thermR2.state = true;  digitalWrite(RELAY2_PIN, HIGH); }
-      if (thermR2.state  && t >= thermR2.toff) { thermR2.state = false; digitalWrite(RELAY2_PIN, LOW); }
+      if (!thermR2.state && t <= thermR2.ton)  thermR2.state = true;
+      if (thermR2.state  && t >= thermR2.toff) thermR2.state = false;
     } else { // hűtés
-      if (!thermR2.state && t >= thermR2.ton)  { thermR2.state = true;  digitalWrite(RELAY2_PIN, HIGH); }
-      if (thermR2.state  && t <= thermR2.toff) { thermR2.state = false; digitalWrite(RELAY2_PIN, LOW); }
+      if (!thermR2.state && t >= thermR2.ton)  thermR2.state = true;
+      if (thermR2.state  && t <= thermR2.toff) thermR2.state = false;
     }
+    setRelayAutomation(2, thermR2.state);
   }
 }
 
@@ -154,7 +168,8 @@ void handleSetTherm(const String &body) {
       tf.freq[i] = (uint16_t)constrain(f, 10, 25000);
     }
     sortFanCurve(tf, cnt);
-    notifyLine("THERM_OK");
+    markDirty();
+  notifyLine("THERM_OK");
   }
   else if (target == "R1" || target == "R2") {
     if (n < 5) return;
@@ -164,7 +179,8 @@ void handleSetTherm(const String &body) {
     uint8_t sensor = tok[4].toInt(); if (sensor < 1 || sensor > 3) sensor = 1;
     ThermRelay &tr = (target == "R1") ? thermR1 : thermR2;
     tr.enabled = en; tr.ton = v1; tr.toff = v2; tr.sensor = sensor;
-    notifyLine("THERM_OK");
+    markDirty();
+  notifyLine("THERM_OK");
   }
 }
 
@@ -191,5 +207,6 @@ void handleDelTherm(const String &target) {
   else if (target == "R1") thermR1 = ThermRelay();
   else if (target == "R2") thermR2 = ThermRelay();
   else return;
+  markDirty();
   notifyLine("THERM_OK");
 }

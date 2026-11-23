@@ -4,7 +4,7 @@
 #pragma once
 
 void drawOtaStatus(const char* line1, const String &line2) {
-  tft.fillScreen(ST77XX_BLUE);
+  tft.fillScreen(ST77XX_BLACK);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
   tft.setCursor(10, 10);
@@ -23,6 +23,12 @@ void otaFail(const String &reason) {
   clearOtaQueue();
   notifyLine("ERROR:" + reason);
   drawOtaStatus("OTA HIBA!", reason);
+  // Bármilyen OTA-hiba után az eszköz újraindul - enélkül a menü/kijelző
+  // egy részleges, összezavarodott állapotban ragadhat (pl. csak egy
+  // frissült érték látszik, a többi eltűnik), amíg valaki kézzel nem
+  // indítja újra. Tiszta, kiszámítható állapotból induljon mindig.
+  delay(2500);
+  ESP.restart();
 }
 
 void processOtaQueue() {

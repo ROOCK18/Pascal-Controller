@@ -31,19 +31,46 @@ void applyLogicChannel(SwitchLogicChannel &ch, bool isFan, int channelNum) {
       applyFanFromCurve(tf, channelNum);
     } else {
       int pwm = constrain((int)(v * 2.55), 0, 255);
+      uint16_t freq = ch.freq[idx];
+      int pin = (channelNum == 1) ? FAN1_PWM_PIN : FAN2_PWM_PIN;
+      int &curFreq = (channelNum == 1) ? FAN1_PWM_FREQ : FAN2_PWM_FREQ;
+      if (freq != curFreq && freq >= 10 && freq <= 25000) {
+        ledcDetach(pin);
+        curFreq = freq;
+        ledcAttach(pin, curFreq, PWM_RESOLUTION);
+      }
       if (channelNum == 1) { pwmFan = pwm; setPWM(3, pwmFan); }
       else                 { pwmFan2 = pwm; setPWM(4, pwmFan2); }
     }
   } else {
-    // Kapcsolós módban a relé-logika TISZTÁN BE/KI: v!=0 -> mindig húz,
-    // v==0 -> mindig elenged. (Nincs "termosztát dönt" köztes állapot -
-    // 2 kapcsoló módban nincs is hőmérséklet-alapú termosztát koncepció.)
-    int pin = (channelNum == 1) ? RELAY1_PIN : RELAY2_PIN;
-    digitalWrite(pin, v != 0 ? HIGH : LOW);
+    // Relé-logika HÁROM lehetséges érték: v==-1 -> "Termosztátot követi"
+    // (nem nyúlunk a relé lábhoz, azt applyThermostat() már eldöntötte -
+    // ez csak mode3-ban értelmezhető, ahol VAN is termosztát); v==0 -> mindig
+    // KI; v>0 -> mindig BE. A tényleges lábírás setRelayAutomation()-on át
+    // megy, hogy az idő alapú BE-tartás/tiltás (ha be van kapcsolva) itt is
+    // érvényesüljön.
+    if (v < 0) {
+      // "Termosztátot követi" - csak mode3-ban értelmezhető (ott van
+      // termosztát is). Mode4-ben (nincs termosztát) biztonsági okból KI-t
+      // jelent, nehogy határozatlan (előző, esetleg véletlenszerű) állapotban
+      // maradjon a relé.
+      if (currentMode != 3) setRelayAutomation(channelNum, false);
+      // mode3-ban szándékosan nem írunk semmit - a relé állapotát az
+      // applyThermostat() hiszterézise már beállította.
+    } else {
+      setRelayAutomation(channelNum, v != 0);
+    }
   }
 }
 
 void applySwitchLogic() {
+  // Mód-guard: a kapcsoló-alapú logika CSAK mode 3/4-ben fusson (ott van
+  // ténylegesen kapcsoló bekötve). Mode 0/1/2-ben az NTC1/NTC2 lábak
+  // hőmérőként vannak használva - egy esetlegesen "ittmaradt" bekapcsolt
+  // logika ne tudjon a hőmérséklet analóg értékéből "kapcsoló-állapotot"
+  // értelmezve beavatkozni.
+  if (currentMode != 3 && currentMode != 4) return;
+
   if (fan1Auto)    applyLogicChannel(logicF1, true, 1);
   if (fan2Auto)    applyLogicChannel(logicF2, true, 2);
   if (relay1Auto)  applyLogicChannel(logicR1, false, 1);
@@ -57,10 +84,12 @@ SwitchLogicChannel &getLogicChannel(const String &target) {
   return logicR1; // "R1" és minden más esetben (védelem)
 }
 
-// Parancs: SET_LOGIC:<F1|F2|R1|R2>:<0/1>:<v_OO>:<v_OC>:<v_CO>:<v_CC>:<axis2Mode>
+// Parancs: SET_LOGIC:<F1|F2|R1|R2>:<0/1>:<v_OO>:<v_OC>:<v_CO>:<v_CC>:<axis2Mode>[:<f_OO>:<f_OC>:<f_CO>:<f_CC>]
+// A freki mezők csak ventilátor (F1/F2) célnál értelmezettek. Relénél a v
+// mostantól -1 is lehet: "Termosztátot követi" (csak mode3-ban értelmes).
 void handleSetLogic(const String &body) {
-  String tok[7]; int n = 0, start = 0;
-  while (n < 7) {
+  String tok[11]; int n = 0, start = 0;
+  while (n < 11) {
     int c = body.indexOf(':', start);
     if (c < 0) { tok[n++] = body.substring(start); break; }
     tok[n++] = body.substring(start, c);
@@ -75,23 +104,30 @@ void handleSetLogic(const String &body) {
   ch.enabled = tok[1].toInt() != 0;
   for (int i = 0; i < 4; i++) {
     int v = tok[2 + i].toInt();
-    ch.val[i] = isFan ? (v < 0 ? -1 : constrain(v, 0, 100)) : (v != 0 ? 1 : 0);
+    ch.val[i] = isFan ? (v < 0 ? -1 : constrain(v, 0, 100)) : (v < 0 ? -1 : (v != 0 ? 1 : 0));
   }
   ch.axis2Mode = (n >= 7) ? (uint8_t)tok[6].toInt() : 0;
+  if (isFan && n >= 11) {
+    for (int i = 0; i < 4; i++) ch.freq[i] = (uint16_t)constrain(tok[7 + i].toInt(), 10, 25000);
+  }
+  markDirty();
   notifyLine("LOGIC_OK");
 }
 
 void handleGetLogic(const String &target) {
   if (target != "F1" && target != "F2" && target != "R1" && target != "R2") return;
   SwitchLogicChannel &ch = getLogicChannel(target);
+  bool isFan = (target == "F1" || target == "F2");
   String out = "LOAD_LOGIC:" + target + ":" + String(ch.enabled ? 1 : 0);
   for (int i = 0; i < 4; i++) out += ":" + String(ch.val[i]);
   out += ":" + String(ch.axis2Mode);
+  if (isFan) for (int i = 0; i < 4; i++) out += ":" + String(ch.freq[i]);
   notifyLine(out);
 }
 
 void handleDelLogic(const String &target) {
   if (target != "F1" && target != "F2" && target != "R1" && target != "R2") return;
   getLogicChannel(target) = SwitchLogicChannel();
+  markDirty();
   notifyLine("LOGIC_OK");
 }

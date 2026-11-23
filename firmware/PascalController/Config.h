@@ -3,7 +3,7 @@
 // ============================================================
 #pragma once
 
-#define FW_VERSION "3.4.0"
+#define FW_VERSION "4.9.0"
 
 // --- TFT kijelző lábkiosztás (TTGO T-Display) ---
 #define TFT_MOSI 19
@@ -64,6 +64,10 @@ const int RGB_ON = 25;
 
 const int LED_PWM_FREQ = 250;
 
+// Kijelző háttérvilágítás PWM frekvenciája - magasabb, mint a RGB/ventilátor
+// csatornáké, hogy ne legyen látható villódzás a háttérvilágításon.
+const int BACKLIGHT_PWM_FREQ = 5000;
+
 const int PWM_RESOLUTION = 8;
 
 // --- NTC paraméterek ---
@@ -72,7 +76,7 @@ const float ADC_MAX = 4095.0;
 const float R_FIXED = 10000.0;
 const float NTC_R0 = 10000.0;
 const float NTC_T0 = 298.15;
-const float NTC_BETA = 3977.0;
+const float NTC_BETA = 3950.0;
 
 // --- BLE ---
 BLEServer *pServer = NULL;
@@ -102,7 +106,16 @@ BLEServer *pServer = NULL;
 #define BTN_DEBOUNCE_MS 30
 
 #define BTN_LONG_MS     600
+#define BTN_HOLD_REPEAT_START_MS 2000 // ennyi ideig kell nyomva tartani, mire elkezd automatikusan ismételni
+#define BTN_LONG_SELECT_MS 1200 // ennyi ideig kell EGYÜTT nyomva tartani mindkét gombot a "hosszú SELECT"-hez (pl. WiFi csatlakozás indítása)
+#define BTN_HOLD_REPEAT_INTERVAL_MS 120 // ilyen gyakran ismétel, amíg nyomva van
 
 #define MENU_TIMEOUT_MS 30000
 
-const int MAIN_COUNT = 7;
+const int MAIN_COUNT = 6;
+
+// Kijelző elalvási idő előre definiált lehetőségei (ms-ben). Az utolsó elem
+// (0) jelenti a "Soha" opciót - ekkor a háttérvilágítás sosem kapcsol ki.
+const unsigned long SLEEP_TIMES_MS[] = { 10000UL, 30000UL, 60000UL, 180000UL, 300000UL, 600000UL, 1800000UL, 3600000UL, 0UL };
+const char* SLEEP_NAMES[] = { "10mp", "30mp", "1p", "3p", "5p", "10p", "30p", "1o", "Soha" };
+const int SLEEP_OPTIONS_COUNT = 9;

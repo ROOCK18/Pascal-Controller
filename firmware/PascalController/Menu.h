@@ -7,7 +7,8 @@ MenuScreen menuScreen = MENU_NONE;
 
 MenuScreen lastDrawnMenuScreen = MENU_NONE; // csak akkor fillScreen, ha ez eltér a menuScreen-től
 
-bool idleNeedsFullClear = true; // egyszeri teljes törlés kell, mielőtt az idle képernyőt rajzoljuk
+// (idleNeedsFullClear a Globals.h-ban van deklarálva, mert a Timers.h - ami
+// korábban települ - is hivatkozik rá)
 
 bool menuDirty = true; // igaz: a menüt újra kell rajzolni (KIZÁRÓLAG tényleges gombesemény után)
 
@@ -21,9 +22,12 @@ int menuEditPoint = 0;     // görbe-pont szerkesztésénél az aktuális pont i
 
 int menuEditField = 0;     // 0=T,1=%,2=Hz (görbe) VAGY 0=BE,1=KI (relé termosztát) VAGY 0=R,1=G,2=B (RGB)
 
-int menuTimeField = 0;     // 0=óra,1=perc
-
 int menuLogicIdx = 0;      // a ténylegesen szerkesztett val[] index (0-3)
+
+// Frekvencia digit-szerkesztő állapota
+int menuFreqTargetType = 0;  // 0 = kezi ventilátor frekvencia (FAN1/2_PWM_FREQ), 1 = göbre pont frekvenciája
+uint8_t freqDigits[5] = {0, 0, 0, 3, 0}; // 5 jegyű kijelzés (pl. 00030 = 30Hz)
+int freqDigitPos = 0;      // melyik digit van épp kiválasztva (0=legbal, 4=legjobb)
 
 unsigned long lastMenuActivity = 0;
 
@@ -31,10 +35,12 @@ void menuTouch() { lastMenuActivity = millis(); }
 
 const char* MODE_NAMES[] = { "2 homero", "1 homero", "Paratartalom", "Kapcsolo+ho", "2 kapcsolo" };
 
-const char* MAIN_ITEMS[] = { "Mod", "Ido", "RGB szin", "Ventilator 1", "Ventilator 2", "Rele 1", "Rele 2" };
+const char* MAIN_ITEMS[] = { "Beallitasok", "RGB szin", "Ventilator 1", "Ventilator 2", "Rele 1", "Rele 2" };
 
 void drawValueList(const String &title, ValueRow rows[], int count, int cursor) {
   tft.setFont(&FreeSans9pt7b);
+  tft.setTextSize(1); // MINDIG explicit 1-re állítva - enélkül öröklődhet egy korábbi
+                       // (pl. az idle óra) 2x méret, ami óriásira nagyítaná ezt a fontot
   const int headerH = 20;
   const int rowH = 20;
   const int maxVisible = (135 - headerH) / rowH; // kb. 5 sor fér ki egyszerre
@@ -90,6 +96,7 @@ void drawMenuList(const String &title, const char* items[], int count, int curso
 
 void drawEditScreen(const String &title, const String &line1, const String &line2) {
   tft.setFont(&FreeSans9pt7b);
+  tft.setTextSize(1); // lásd drawValueList megjegyzése
   tft.fillRect(0, 0, 240, 20, ST77XX_BLACK);
   tft.setTextColor(ST77XX_YELLOW, ST77XX_BLACK);
   tft.setCursor(2, 15);
@@ -139,8 +146,51 @@ uint8_t nextSensorForMode(uint8_t cur) {
 
 String sensorLabel(uint8_t s) { return s == 3 ? "Paratartalom" : (s == 2 ? "NTC2" : "NTC1"); }
 
+// A digit-tömbből (5 jegy) összeállítja a tényleges Hz értéket
+uint16_t freqDigitsToValue() {
+  uint32_t v = 0;
+  for (int i = 0; i < 5; i++) v = v * 10 + freqDigits[i];
+  return (uint16_t)constrain((long)v, 0, 65535);
+}
+
+// A digit-tömböt feltölti egy meglévő Hz érték számjegyeivel
+void freqValueToDigits(uint16_t val) {
+  for (int i = 4; i >= 0; i--) { freqDigits[i] = val % 10; val /= 10; }
+}
+
+// A frekvencia tényleges alkalmazása - vagy a kézi ventilátor PWM
+// frekvenciájára (CSAK Kézi módban hat), vagy egy görbe-pont frekvenciájára
+// (görbe-pontok mindig szerkeszthetők, azok automatika-konfigurációnak
+// számítanak, nem "kézi" beavatkozásnak).
+void applyFrequencyValue(uint16_t freq) {
+  if (menuFreqTargetType == 0 && curFanAuto()) return; // kezi freki csak Kezi modban hat
+  freq = (uint16_t)constrain((int)freq, 10, 25000);
+  if (menuFreqTargetType == 0) {
+    int pin = (menuFanTarget == 1) ? FAN1_PWM_PIN : FAN2_PWM_PIN;
+    int &f = (menuFanTarget == 1) ? FAN1_PWM_FREQ : FAN2_PWM_FREQ;
+    if (f != (int)freq) {
+      ledcDetach(pin);
+      f = freq;
+      ledcAttach(pin, f, PWM_RESOLUTION); // real-time alkalmazás
+    }
+  } else if (menuFreqTargetType == 1) {
+    curThermFan().freq[menuEditPoint] = freq;
+  } else {
+    curLogicFan().freq[menuLogicIdx] = freq;
+  }
+  markDirty();
+}
+
+// Visszalépés a frekvencia-szerkesztőből a hívó képernyőre
+void exitFreqEdit() {
+  if (menuFreqTargetType == 0) { menuScreen = MENU_FAN_SUB; menuCursor = 3; }
+  else if (menuFreqTargetType == 1) { menuScreen = MENU_FAN_CURVE_POINT; menuCursor = 2; }
+  else { menuScreen = MENU_FAN_LOGIC_EDIT; menuCursor = 1; }
+}
+
 String logicValLabel(int v, bool isFan) {
   if (isFan) return v < 0 ? "GORBE" : (String(v) + "%");
+  if (v < 0) return "TERMOSZTAT";
   return v != 0 ? "BE" : "KI";
 }
 
@@ -158,6 +208,24 @@ void exitMenuToIdle() {
 }
 
 void drawMenu() {
+  // Hosszú nyomás automatikus ismétlése CSAK az érték-szerkesztő
+  // képernyőkön engedélyezett (itt a LE gomb hosszú nyomása NEM lép ki a
+  // menüből, hanem 2 mp után elkezd automatikusan léptetni). A
+  // MENU_FREQ_DIGIT_EDIT szándékosan KIMARAD, mert ott a FEL gomb hosszú
+  // nyomása a digit-pozíció váltására szolgál, azt nem szabad felülírni.
+  menuAllowsHoldRepeat =
+    (menuScreen == MENU_COMP_EDIT) ||
+    (menuScreen == MENU_BRIGHTNESS_EDIT) ||
+    (menuScreen == MENU_RGB_EDIT) ||
+    (menuScreen == MENU_FAN_MANUAL_PCT) ||
+    (menuScreen == MENU_FAN_CURVE_FIELD_EDIT) ||
+    (menuScreen == MENU_FAN_LOGIC_VAL_EDIT) ||
+    (menuScreen == MENU_RELAY_HOLD_EDIT) ||
+    (menuScreen == MENU_TIME_EDIT) ||
+    (menuScreen == MENU_WIFI_PASSWORD_EDIT);
+
+  menuUsesLongSelect = (menuScreen == MENU_WIFI_PASSWORD_EDIT);
+
   // Csak akkor van TELJES képernyő-törlés, ha ténylegesen MÁSIK menü-
   // képernyőre váltottunk (más elrendezés) - ugyanannak a képernyőnek az
   // ismételt újrarajzolása NEM töröl mindent, ezért nem villódzik a kijelző.
@@ -165,26 +233,115 @@ void drawMenu() {
     tft.fillScreen(ST77XX_BLACK);
     lastDrawnMenuScreen = menuScreen;
   }
-  ValueRow rows[8];
+  ValueRow rows[12];
 
   switch (menuScreen) {
     case MENU_MAIN:
       drawMenuList("FOMENU", MAIN_ITEMS, MAIN_COUNT, menuCursor);
       break;
 
-    case MENU_MODE_SET:
-      drawEditScreen("MOD VALASZTAS", String(currentMode) + ": " + MODE_NAMES[currentMode]);
+    case MENU_SETTINGS_SUB: {
+      const char* items[7] = { "Mod", "Datum/Ido", "Kompenzacio", "Kijelzo", "WiFi", "Factory reset", "Vissza" };
+      drawMenuList("BEALLITASOK", items, 7, menuCursor);
+      break;
+    }
+
+    case MENU_DISPLAY_SUB: {
+      const char* items[3] = { "Fenyero", "Elalvasi ido", "Vissza" };
+      drawMenuList("KIJELZO", items, 3, menuCursor);
+      break;
+    }
+
+    case MENU_BRIGHTNESS_EDIT:
+      drawEditScreen("FENYERO", String(displayBrightness) + " %");
       break;
 
-    case MENU_TIME_SET:
-      drawEditScreen("IDO BEALLITAS",
-        String(menuTimeField == 0 ? "[" : "") + (hr < 10 ? "0" : "") + String(hr) + String(menuTimeField == 0 ? "]" : "") + ":" +
-        String(menuTimeField == 1 ? "[" : "") + (min_t < 10 ? "0" : "") + String(min_t) + String(menuTimeField == 1 ? "]" : ""));
+    case MENU_SLEEP_SEL: {
+      int n = 0;
+      for (int i = 0; i < SLEEP_OPTIONS_COUNT; i++) { rows[n].label = SLEEP_NAMES[i]; rows[n].value = (i == sleepTimeoutIdx) ? "AKTIV" : ""; rows[n].valColor = ST77XX_GREEN; n++; }
+      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      drawValueList("ELALVASI IDO", rows, n, menuCursor);
       break;
+    }
+
+    case MENU_MODE_LIST: {
+      int n = 0;
+      for (int i = 0; i < 5; i++) { rows[n].label = MODE_NAMES[i]; rows[n].value = (i == currentMode) ? "AKTIV" : ""; rows[n].valColor = ST77XX_GREEN; n++; }
+      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      drawValueList("MOD VALASZTAS", rows, n, menuCursor);
+      break;
+    }
+
+    case MENU_COMP_LIST: {
+      // Csak azok a szenzorok jelennek meg, amik az AKTUÁLIS módban tényleg
+      // NTC-ként (hőmérőként) vannak bekötve - a DHT11-nek nincs kompenzációja.
+      int n = 0;
+      if (currentMode == 0) {
+        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", ST77XX_CYAN }; n++;
+        rows[n] = { "NTC2", String(tempCompNTC2, 1) + " C", ST77XX_CYAN }; n++;
+      } else if (currentMode == 1 || currentMode == 3) {
+        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", ST77XX_CYAN }; n++;
+      }
+      // mode 2 (paratartalom, DHT11) es mode 4 (2 kapcsolo): nincs kompenzalhato NTC
+      if (n == 0) { rows[n] = { "Nincs NTC ebben a modban", "", ST77XX_WHITE }; n++; }
+      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      drawValueList("KOMPENZACIO", rows, n, menuCursor);
+      break;
+    }
+
+    case MENU_COMP_EDIT: {
+      float val = (menuEditField == 0) ? tempCompNTC1 : tempCompNTC2;
+      String title = (menuEditField == 0) ? "NTC1 KOMPENZACIO" : "NTC2 KOMPENZACIO";
+      drawEditScreen(title, String(val, 1) + " C");
+      break;
+    }
+
+    case MENU_FACTORY_CONFIRM:
+      drawEditScreen("GYARI VISSZAALLITAS", "Biztos, hogy visszaallitja", "a gyari beallitasokat?");
+      break;
+
+    case MENU_TIME_LIST: {
+      const char* tfNames[3] = { "O:P:MP", "O:P", "AM/PM" };
+      const char* dfNames[5] = { "E/H/N", "N/H/E", "H/N/E", "H/N", "N/H" };
+      const char* posNames[3] = { "KI", "BALRA", "KOZEPEN" };
+      rows[0] = { "Ev", String(yr), ST77XX_CYAN };
+      rows[1] = { "Honap", String(month), ST77XX_CYAN };
+      rows[2] = { "Nap", String(day), ST77XX_CYAN };
+      rows[3] = { "Ora", String(hr), ST77XX_CYAN };
+      rows[4] = { "Perc", String(min_t), ST77XX_CYAN };
+      rows[5] = { "Masodperc", String(sec), ST77XX_CYAN };
+      rows[6] = { "Ido formatum", tfNames[timeFormat], ST77XX_CYAN };
+      rows[7] = { "Datum formatum", dfNames[dateFormat], ST77XX_CYAN };
+      rows[8] = { "Ora megjelenites", posNames[clockPos], (uint16_t)(clockPos ? ST77XX_GREEN : ST77XX_WHITE) };
+      rows[9] = { "Datum megjelenites", posNames[datePos], (uint16_t)(datePos ? ST77XX_GREEN : ST77XX_WHITE) };
+      rows[10] = { "Nap neve megjelenites", posNames[dayNamePos], (uint16_t)(dayNamePos ? ST77XX_GREEN : ST77XX_WHITE) };
+      rows[11] = { "Vissza", "", ST77XX_WHITE };
+      drawValueList("DATUM/IDO", rows, 12, menuCursor);
+      break;
+    }
+
+    case MENU_TIME_EDIT: {
+      const char* names[6] = { "EV", "HONAP", "NAP", "ORA", "PERC", "MASODPERC" };
+      int vals[6] = { yr, month, day, hr, min_t, sec };
+      drawEditScreen(names[menuEditField], String(vals[menuEditField]));
+      break;
+    }
+
+    case MENU_TIMEFORMAT_SEL: {
+      const char* items[4] = { "O:P:MP", "O:P", "AM/PM (angol)", "Vissza" };
+      drawMenuList("IDO FORMATUM", items, 4, menuCursor);
+      break;
+    }
+
+    case MENU_DATEFORMAT_SEL: {
+      const char* items[6] = { "Ev/Honap/Nap", "Nap/Honap/Ev", "Honap/Nap/Ev", "Honap/Nap", "Nap/Honap", "Vissza" };
+      drawMenuList("DATUM FORMATUM", items, 6, menuCursor);
+      break;
+    }
 
     case MENU_RGB_LIST: {
       bool on = digitalRead(RGB_ON);
-      rows[0] = { "Be/Ki", on ? "BEKAPCSOLVA" : "KIKAPCSOLVA", (uint16_t)(on ? ST77XX_GREEN : ST77XX_RED) };
+      rows[0] = { "Allapot", on ? "BE" : "KI", (uint16_t)(on ? ST77XX_GREEN : ST77XX_RED) };
       rows[1] = { "Piros", String(pwmR), ST77XX_CYAN };
       rows[2] = { "Zold", String(pwmG), ST77XX_CYAN };
       rows[3] = { "Kek", String(pwmB), ST77XX_CYAN };
@@ -200,20 +357,27 @@ void drawMenu() {
     }
 
     case MENU_FAN_SUB: {
+      int curPwm = (menuFanTarget == 1) ? pwmFan : pwmFan2;
+      int curFreq = (menuFanTarget == 1) ? FAN1_PWM_FREQ : FAN2_PWM_FREQ;
       rows[0] = { "Auto/Kezi", curFanAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curFanAuto() ? ST77XX_GREEN : ST77XX_ORANGE) };
-      rows[1] = { "Kezi %", String((int)((menuFanTarget == 1 ? pwmFan : pwmFan2) / 2.55)) + "%", ST77XX_CYAN };
-      if (isSwitchMode()) {
-        rows[2] = { "Logika", curLogicFan().enabled ? "BEALLITVA" : "NINCS", (uint16_t)(curLogicFan().enabled ? ST77XX_GREEN : ST77XX_WHITE) };
-      } else {
-        rows[2] = { "Gorbe pontjai", curThermFan().enabled ? (String(curThermFan().count) + " pont") : "NINCS",
-                    (uint16_t)(curThermFan().enabled ? ST77XX_GREEN : ST77XX_WHITE) };
+      rows[1] = { "Allapot", curPwm > 0 ? "BE" : "KI", (uint16_t)(curPwm > 0 ? ST77XX_GREEN : ST77XX_RED) };
+      rows[2] = { "Kezi %", String((int)round(curPwm / 2.55)) + "%", ST77XX_CYAN };
+      rows[3] = { "Frekvencia", String(curFreq) + " Hz", ST77XX_CYAN };
+      int n = 4;
+      // mode3 ("1 kapcsolo+1 homero"): VAN homero ES kapcsolo is, ezert
+      // mindket lehetoseg (Gorbe ES Logika) elerheto egyszerre.
+      if (currentMode == 3 || !isSwitchMode()) {
+        rows[n] = { "Gorbe pontjai", curThermFan().enabled ? "BE" : "KI", (uint16_t)(curThermFan().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
       }
-      rows[3] = { "Vissza", "", ST77XX_WHITE };
-      drawValueList(menuFanTarget == 1 ? "VENTILATOR 1" : "VENTILATOR 2", rows, 4, menuCursor);
+      if (currentMode == 3 || isSwitchMode()) {
+        rows[n] = { "Logika", curLogicFan().enabled ? "BE" : "KI", (uint16_t)(curLogicFan().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+      }
+      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      drawValueList(menuFanTarget == 1 ? "VENTILATOR 1" : "VENTILATOR 2", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_MANUAL_PCT:
-      drawEditScreen("KEZI FORDULATSZAM", String((int)((menuFanTarget == 1 ? pwmFan : pwmFan2) / 2.55)) + " %");
+      drawEditScreen("KEZI FORDULATSZAM", String((int)round((menuFanTarget == 1 ? pwmFan : pwmFan2) / 2.55)) + " %");
       break;
     case MENU_FAN_SENSOR_SEL: {
       int n = 0;
@@ -230,8 +394,9 @@ void drawMenu() {
       ThermFan &tf = curThermFan();
       int n = 0;
       rows[n].label = "Forras"; rows[n].value = sensorLabel(tf.sensor); rows[n].valColor = ST77XX_CYAN; n++;
+      rows[n].label = "Allapot"; rows[n].value = tf.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(tf.enabled ? ST77XX_GREEN : ST77XX_RED); n++;
       rows[n].label = "Pontok szama"; rows[n].value = String(tf.count); rows[n].valColor = ST77XX_CYAN; n++;
-      for (int i = 0; i < tf.count && n < 7; i++) {
+      for (int i = 0; i < tf.count && n < 11; i++) {
         rows[n].label = String(i + 1) + ".";
         rows[n].value = String(tf.temp[i], 0) + "C " + String(tf.pct[i]) + "% " + String(tf.freq[i]) + "Hz";
         rows[n].valColor = ST77XX_CYAN;
@@ -243,15 +408,52 @@ void drawMenu() {
     }
     case MENU_FAN_CURVE_POINT: {
       ThermFan &tf = curThermFan();
-      String fieldName = menuEditField == 0 ? "Homerseklet (C)" : (menuEditField == 1 ? "Fordulatszam (%)" : "Frekvencia (Hz)");
-      String val = menuEditField == 0 ? String(tf.temp[menuEditPoint], 1) :
-                   (menuEditField == 1 ? String(tf.pct[menuEditPoint]) : String(tf.freq[menuEditPoint]));
-      drawEditScreen("PONT " + String(menuEditPoint + 1), fieldName, val);
+      rows[0] = { "Homerseklet", String(tf.temp[menuEditPoint], 0) + " C", ST77XX_CYAN };
+      rows[1] = { "PWM", String(tf.pct[menuEditPoint]) + " %", ST77XX_CYAN };
+      rows[2] = { "Frekvencia", String(tf.freq[menuEditPoint]) + " Hz", ST77XX_CYAN };
+      rows[3] = { "Vissza", "", ST77XX_WHITE };
+      drawValueList("PONT " + String(menuEditPoint + 1), rows, 4, menuCursor);
+      break;
+    }
+    case MENU_FAN_CURVE_FIELD_EDIT: {
+      ThermFan &tf = curThermFan();
+      String title = menuEditField == 0 ? "HOMERSEKLET" : "PWM";
+      String val = menuEditField == 0 ? (String(tf.temp[menuEditPoint], 0) + " C") : (String(tf.pct[menuEditPoint]) + " %");
+      drawEditScreen(title, val);
+      break;
+    }
+    case MENU_FREQ_PRESET_SEL: {
+      const char* items[4] = { "Kezi ertek", "30 Hz", "20000 Hz", "Vissza" };
+      drawMenuList("FREKVENCIA", items, 4, menuCursor);
+      break;
+    }
+    case MENU_FREQ_DIGIT_EDIT: {
+      tft.setFont(&FreeSans9pt7b);
+      tft.setTextSize(1);
+      tft.fillRect(0, 0, 240, 135, ST77XX_BLACK);
+      tft.setTextColor(ST77XX_YELLOW, ST77XX_BLACK);
+      tft.setCursor(10, 25);
+      tft.print("FREKVENCIA (Hz)");
+      int startX = 30, digitW = 38;
+      for (int i = 0; i < 5; i++) {
+        bool sel = (i == freqDigitPos);
+        tft.setTextColor(sel ? ST77XX_GREEN : ST77XX_WHITE, ST77XX_BLACK);
+        tft.setCursor(startX + i * digitW, 60);
+        tft.print(String(freqDigits[i]));
+        if (sel) tft.drawFastHLine(startX + i * digitW, 82, 20, ST77XX_GREEN);
+      }
+      tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
+      tft.setTextSize(1);
+      tft.setCursor(10, 105);
+      tft.print("Hosszu Fel: digit valt");
+      tft.setCursor(10, 120);
+      tft.print("Fel/Le: ertek 0-9");
       break;
     }
     case MENU_FAN_LOGIC_LIST: {
       SwitchLogicChannel &ch = curLogicFan();
       int n = 0;
+      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? ST77XX_GREEN : ST77XX_RED); n++;
       if (currentMode == 4) {
         const char* labels[4] = {"K1N-K2N", "K1N-K2C", "K1C-K2N", "K1C-K2C"};
         for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], true); rows[n].valColor = ST77XX_CYAN; n++; }
@@ -264,9 +466,19 @@ void drawMenu() {
       break;
     }
     case MENU_FAN_LOGIC_EDIT: {
+      SwitchLogicChannel &ch = curLogicFan();
+      int v = ch.val[menuLogicIdx];
+      rows[0] = { "PWM", v < 0 ? "GORBE SZERINT" : (String(v) + " %"), ST77XX_CYAN };
+      rows[1] = { "Frekvencia", String(ch.freq[menuLogicIdx]) + " Hz", ST77XX_CYAN };
+      rows[2] = { "Vissza", "", ST77XX_WHITE };
+      drawValueList("LOGIKA ERTEK", rows, 3, menuCursor);
+      break;
+    }
+    case MENU_FAN_LOGIC_VAL_EDIT: {
       int v = curLogicFan().val[menuLogicIdx];
       String val = v < 0 ? "GORBE SZERINT" : (String(v) + " %");
-      drawEditScreen("LOGIKA ERTEK", val, "(-1=gorbe, 0-100=fix %)");
+      String hint = (currentMode == 3) ? "(-1=gorbe, 0-100=fix %)" : "(0-100=fix %)";
+      drawEditScreen("PWM ERTEK", val, hint);
       break;
     }
 
@@ -274,18 +486,54 @@ void drawMenu() {
       rows[0] = { "Auto/Kezi", curRelayAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curRelayAuto() ? ST77XX_GREEN : ST77XX_ORANGE) };
       int pin = (menuRelayTarget == 1) ? RELAY1_PIN : RELAY2_PIN;
       rows[1] = { "Kezi Be/Ki", digitalRead(pin) ? "BE" : "KI", (uint16_t)(digitalRead(pin) ? ST77XX_GREEN : ST77XX_RED) };
-      if (isSwitchMode()) {
-        rows[2] = { "Logika", curLogicRelay().enabled ? "BEALLITVA" : "NINCS", (uint16_t)(curLogicRelay().enabled ? ST77XX_GREEN : ST77XX_WHITE) };
-      } else {
-        rows[2] = { "Termosztat", curThermRelay().enabled ? "BEALLITVA" : "NINCS", (uint16_t)(curThermRelay().enabled ? ST77XX_GREEN : ST77XX_WHITE) };
+      int n = 2;
+      // mode3 ("1 kapcsolo+1 homero"): VAN homero ES kapcsolo is, ezert
+      // mindket lehetoseg (Termosztat ES Logika) elerheto egyszerre.
+      if (currentMode == 3 || !isSwitchMode()) {
+        rows[n] = { "Termosztat", curThermRelay().enabled ? "BE" : "KI", (uint16_t)(curThermRelay().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
       }
-      rows[3] = { "Vissza", "", ST77XX_WHITE };
-      drawValueList(menuRelayTarget == 1 ? "RELE 1" : "RELE 2", rows, 4, menuCursor);
+      if (currentMode == 3 || isSwitchMode()) {
+        rows[n] = { "Logika", curLogicRelay().enabled ? "BE" : "KI", (uint16_t)(curLogicRelay().enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+      }
+      RelayTimer &curRt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      rows[n] = { "Kapuzas", curRt.enabled ? "BE" : "KI", (uint16_t)(curRt.enabled ? ST77XX_GREEN : ST77XX_RED) }; n++;
+      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      drawValueList(menuRelayTarget == 1 ? "RELE 1" : "RELE 2", rows, n, menuCursor);
       break;
     }
-    case MENU_RELAY_MANUAL: {
-      int pin = (menuRelayTarget == 1) ? RELAY1_PIN : RELAY2_PIN;
-      drawEditScreen("KEZI RELE", digitalRead(pin) ? "BEKAPCSOLVA" : "KIKAPCSOLVA");
+    case MENU_RELAY_HOLD_LIST: {
+      RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      const char* lockNames[3] = { "NINCS", "IDO ALAPU", "JELVALTASIG" };
+      const char* stateNames[3] = { "BE", "KI", "MIND" };
+      rows[0] = { "Be/Ki", rt.enabled ? "BEKAPCSOLVA" : "KIKAPCSOLVA", (uint16_t)(rt.enabled ? ST77XX_GREEN : ST77XX_RED) };
+      rows[1] = { "Mod", rt.timerMode == 0 ? "FIX IDO" : "MAX IDO", ST77XX_CYAN };
+      rows[2] = { "Idotartam", String(rt.onDurationSec) + " mp", ST77XX_CYAN };
+      rows[3] = { "Zarolas", lockNames[rt.lockMode], ST77XX_CYAN };
+      int n = 4;
+      if (rt.lockMode == 1) { rows[n].label = "Zarolas ideje"; rows[n].value = String(rt.cooldownSec) + " mp"; rows[n].valColor = ST77XX_CYAN; n++; }
+      rows[n].label = "Allapot"; rows[n].value = stateNames[rt.stateFilter]; rows[n].valColor = ST77XX_CYAN; n++;
+      rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+      drawValueList("KAPUZAS", rows, n, menuCursor);
+      break;
+    }
+    case MENU_RELAY_LOCKMODE_SEL: {
+      const char* items[4] = { "Nincs zarolas", "Ido alapu", "Jelvaltasig", "Vissza" };
+      drawMenuList("ZAROLAS MODJA", items, 4, menuCursor);
+      break;
+    }
+    case MENU_RELAY_STATE_SEL: {
+      const char* items[4] = { "BE (csak bekapcsolasra)", "KI (csak kikapcsolasra)", "MIND (mindket iranyra)", "Vissza" };
+      drawMenuList("ALLAPOT VALASZTAS", items, 4, menuCursor);
+      break;
+    }
+    case MENU_RELAY_HOLD_EDIT: {
+      RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      String title = menuEditField == 0 ? "IDOTARTAM" : "ZAROLAS IDEJE";
+      int val = menuEditField == 0 ? rt.onDurationSec : rt.cooldownSec;
+      String hint = menuEditField == 0
+        ? (rt.timerMode == 0 ? "(fix ideig tart)" : "(max ennyi ideig tarthat)")
+        : "(a szakasz vege utan)";
+      drawEditScreen(title, String(val) + " masodperc", hint);
       break;
     }
     case MENU_RELAY_SENSOR_SEL: {
@@ -303,10 +551,11 @@ void drawMenu() {
       ThermRelay &tr = curThermRelay();
       bool isHum = (tr.sensor == 3);
       rows[0] = { "Erzekelo", sensorLabel(tr.sensor), ST77XX_CYAN };
-      rows[1] = { "Bekapcsol", String(tr.ton, isHum ? 0 : 1) + (isHum ? "%" : "C"), ST77XX_CYAN };
-      rows[2] = { "Kikapcsol", String(tr.toff, isHum ? 0 : 1) + (isHum ? "%" : "C"), ST77XX_CYAN };
-      rows[3] = { "Vissza", "", ST77XX_WHITE };
-      drawValueList("RELE TERMOSZTAT", rows, 4, menuCursor);
+      rows[1] = { "Allapot", tr.enabled ? "BE" : "KI", (uint16_t)(tr.enabled ? ST77XX_GREEN : ST77XX_RED) };
+      rows[2] = { "Bekapcsol", String(tr.ton, isHum ? 0 : 1) + (isHum ? "%" : "C"), ST77XX_CYAN };
+      rows[3] = { "Kikapcsol", String(tr.toff, isHum ? 0 : 1) + (isHum ? "%" : "C"), ST77XX_CYAN };
+      rows[4] = { "Vissza", "", ST77XX_WHITE };
+      drawValueList("RELE TERMOSZTAT", rows, 5, menuCursor);
       break;
     }
     case MENU_RELAY_THERM_EDIT: {
@@ -320,12 +569,13 @@ void drawMenu() {
     case MENU_RELAY_LOGIC_LIST: {
       SwitchLogicChannel &ch = curLogicRelay();
       int n = 0;
+      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? ST77XX_GREEN : ST77XX_RED); n++;
       if (currentMode == 4) {
         const char* labels[4] = {"K1N-K2N", "K1N-K2C", "K1C-K2N", "K1C-K2C"};
-        for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], false); rows[n].valColor = (uint16_t)(ch.val[i] ? ST77XX_GREEN : ST77XX_CYAN); n++; }
+        for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], false); rows[n].valColor = (uint16_t)(ch.val[i] > 0 ? ST77XX_GREEN : ST77XX_CYAN); n++; }
       } else {
-        rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], false); rows[n].valColor = (uint16_t)(ch.val[0] ? ST77XX_GREEN : ST77XX_CYAN); n++;
-        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], false); rows[n].valColor = (uint16_t)(ch.val[2] ? ST77XX_GREEN : ST77XX_CYAN); n++;
+        rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], false); rows[n].valColor = (uint16_t)(ch.val[0] < 0 ? ST77XX_YELLOW : (ch.val[0] > 0 ? ST77XX_GREEN : ST77XX_CYAN)); n++;
+        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], false); rows[n].valColor = (uint16_t)(ch.val[2] < 0 ? ST77XX_YELLOW : (ch.val[2] > 0 ? ST77XX_GREEN : ST77XX_CYAN)); n++;
       }
       rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
       drawValueList("LOGIKA", rows, n, menuCursor);
@@ -333,9 +583,102 @@ void drawMenu() {
     }
     case MENU_RELAY_LOGIC_EDIT: {
       int v = curLogicRelay().val[menuLogicIdx];
-      drawEditScreen("LOGIKA ERTEK", v != 0 ? "BEKAPCSOLVA" : "KIKAPCSOLVA");
+      String val = v < 0 ? "TERMOSZTATOT KOVETI" : (v != 0 ? "BEKAPCSOLVA" : "KIKAPCSOLVA");
+      String hint = (currentMode == 3) ? "(Fel/Le: KI/BE/Termosztat)" : "(Fel/Le: KI/BE)";
+      drawEditScreen("LOGIKA ERTEK", val, hint);
       break;
     }
+
+    case MENU_WIFI_SCANNING: {
+      tft.setTextColor(ST77XX_WHITE);
+      tft.setTextSize(2);
+      tft.setCursor(10, 50);
+      tft.println("Keresés...");
+      break;
+    }
+
+    case MENU_WIFI_SCAN_LIST: {
+      if (wifiMenuScanCount == 0) {
+        rows[0] = { "Nincs talalhato halozat", "", ST77XX_RED };
+        rows[1] = { "Vissza", "", ST77XX_WHITE };
+        drawValueList("WIFI HALOZATOK", rows, 2, menuCursor);
+      } else {
+        int n = 0;
+        for (int i = 0; i < wifiMenuScanCount && n < 11; i++) {
+          rows[n].label = wifiMenuScanSsids[i]; rows[n].value = ""; rows[n].valColor = ST77XX_WHITE; n++;
+        }
+        rows[n] = { "Vissza", "", ST77XX_WHITE }; n++;
+        drawValueList("WIFI HALOZATOK", rows, n, menuCursor);
+      }
+      break;
+    }
+
+    case MENU_WIFI_PASSWORD_EDIT: {
+      tft.setTextColor(ST77XX_WHITE);
+      tft.setTextSize(1);
+      tft.setCursor(10, 5);
+      tft.print("JELSZO: "); tft.println(wifiMenuSelectedSsid);
+
+      // FONTOS: a sor tartalma (jelszó hossza + DEL/OK/egyetlen karakter)
+      // változó hosszúságú - enélkül a törlés a régi, hosszabb szöveg
+      // pixeleit (pl. a "DEL" feliratból megmaradt "L" betűket) a
+      // képernyőn hagyná, mert csak a ténylegesen most kiírt karakterek
+      // háttere törlődne automatikusan.
+      tft.fillRect(0, 28, 240, 22, ST77XX_BLACK);
+
+      // a begépelt jelszó karakterei direktben látszanak (nincs elrejtve
+      // csillagokkal, mert ez a kijelző csak helyben, fizikailag
+      // hozzáférhető eszközön látszik), utána a kiválasztás alatt álló
+      // karakter kiemelve (zöld háttér) mutatja, mit ír be a SELECT gomb.
+      tft.setTextSize(2);
+      tft.setCursor(10, 30);
+      tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+      for (int i = 0; i < wifiPwLen; i++) tft.print(wifiPwBuf[i]);
+
+      tft.setTextColor(ST77XX_BLACK, ST77XX_GREEN);
+      char cur = WIFI_CHARSET[wifiPwCharIdx];
+      if (cur == '<') tft.print("DEL");
+      else tft.print(cur == ' ' ? '_' : cur);
+
+      tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
+      tft.setTextSize(1);
+      tft.setCursor(10, 90);
+      tft.println("Fel/Le: karakter valt");
+      tft.setCursor(10, 105);
+      tft.println("Mindket gomb: beir");
+      tft.setCursor(10, 120);
+      tft.println("Hosszan mindket: csatlakozas");
+      break;
+    }
+
+    case MENU_WIFI_CONNECTING: {
+      tft.setTextColor(ST77XX_WHITE);
+      tft.setTextSize(2);
+      tft.setCursor(10, 40);
+      if (wifiConnectPending) {
+        tft.println("Csatlakozas...");
+      } else if (WiFi.status() == WL_CONNECTED) {
+        tft.setTextColor(ST77XX_GREEN);
+        tft.println("Sikeres!");
+        tft.setTextSize(1);
+        tft.setTextColor(ST77XX_WHITE);
+        tft.setCursor(10, 70);
+        tft.println(WiFi.localIP().toString());
+      } else {
+        tft.setTextColor(ST77XX_RED);
+        tft.println("Sikertelen");
+        tft.setTextSize(1);
+        tft.setTextColor(ST77XX_WHITE);
+        tft.setCursor(10, 70);
+        tft.println("Ellenorizd a jelszot");
+      }
+      tft.setTextSize(1);
+      tft.setTextColor(ST77XX_CYAN);
+      tft.setCursor(10, 115);
+      tft.println("Barmelyik gomb: vissza");
+      break;
+    }
+
     default: break;
   }
 }
@@ -351,83 +694,240 @@ void handleMenuInput(ButtonEvent ev) {
       else if (ev == BTN_BACK) exitMenuToIdle();
       else if (ev == BTN_SELECT) {
         switch (menuCursor) {
-          case 0: menuScreen = MENU_MODE_SET; break;
-          case 1: menuScreen = MENU_TIME_SET; menuTimeField = 0; break;
-          case 2: menuScreen = MENU_RGB_LIST; menuCursor = 0; break;
-          case 3: menuFanTarget = 1; menuScreen = MENU_FAN_SUB; menuCursor = 0; break;
-          case 4: menuFanTarget = 2; menuScreen = MENU_FAN_SUB; menuCursor = 0; break;
-          case 5: menuRelayTarget = 1; menuScreen = MENU_RELAY_SUB; menuCursor = 0; break;
-          case 6: menuRelayTarget = 2; menuScreen = MENU_RELAY_SUB; menuCursor = 0; break;
+          case 0: menuScreen = MENU_SETTINGS_SUB; menuCursor = 0; break;
+          case 1: menuScreen = MENU_RGB_LIST; menuCursor = 0; break;
+          case 2: menuFanTarget = 1; menuScreen = MENU_FAN_SUB; menuCursor = 0; break;
+          case 3: menuFanTarget = 2; menuScreen = MENU_FAN_SUB; menuCursor = 0; break;
+          case 4: menuRelayTarget = 1; menuScreen = MENU_RELAY_SUB; menuCursor = 0; break;
+          case 5: menuRelayTarget = 2; menuScreen = MENU_RELAY_SUB; menuCursor = 0; break;
         }
       }
       break;
 
-    case MENU_MODE_SET:
-      if (ev == BTN_UP) currentMode = (currentMode + 1) % 5;
-      else if (ev == BTN_DOWN) currentMode = (currentMode + 4) % 5;
-      else if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 0; }
+    case MENU_SETTINGS_SUB:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 7;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 7) % 7;
+      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 0; }
+      else if (ev == BTN_SELECT) {
+        switch (menuCursor) {
+          case 0: menuScreen = MENU_MODE_LIST; menuCursor = currentMode; break;
+          case 1: menuScreen = MENU_TIME_LIST; menuCursor = 0; break;
+          case 2: menuScreen = MENU_COMP_LIST; menuCursor = 0; break;
+          case 3: menuScreen = MENU_DISPLAY_SUB; menuCursor = 0; break;
+          case 4:
+            // WiFi hálózatok keresése - a tényleges (blokkoló) keresést a
+            // loop() indítja, ne itt fusson (BTN_SELECT feldolgozás közben).
+            menuScreen = MENU_WIFI_SCANNING;
+            wifiMenuScanRequested = true;
+            break;
+          case 5: menuScreen = MENU_FACTORY_CONFIRM; break;
+          case 6: menuScreen = MENU_MAIN; menuCursor = 0; break;
+        }
+      }
       break;
 
-    case MENU_TIME_SET:
-      if (ev == BTN_UP) { if (menuTimeField == 0) hr = (hr + 1) % 24; else min_t = (min_t + 1) % 60; }
-      else if (ev == BTN_DOWN) { if (menuTimeField == 0) hr = (hr + 23) % 24; else min_t = (min_t + 59) % 60; }
+    case MENU_DISPLAY_SUB:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 3;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 3) % 3;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 3; }
       else if (ev == BTN_SELECT) {
-        if (menuTimeField == 0) { menuTimeField = 1; }
-        else { sec = 0; menuScreen = MENU_MAIN; menuCursor = 1; }
+        if (menuCursor == 0) menuScreen = MENU_BRIGHTNESS_EDIT;
+        else if (menuCursor == 1) { menuScreen = MENU_SLEEP_SEL; menuCursor = sleepTimeoutIdx; }
+        else { menuScreen = MENU_SETTINGS_SUB; menuCursor = 3; }
       }
-      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 1; }
+      break;
+
+    case MENU_BRIGHTNESS_EDIT:
+      if (ev == BTN_UP) { displayBrightness = (uint8_t)constrain((int)displayBrightness + 5, 1, 100); applyBacklight(); markDirty(); }
+      else if (ev == BTN_DOWN) { displayBrightness = (uint8_t)constrain((int)displayBrightness - 5, 1, 100); applyBacklight(); markDirty(); }
+      else if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_DISPLAY_SUB; menuCursor = 0; }
+      break;
+
+    case MENU_SLEEP_SEL:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % (SLEEP_OPTIONS_COUNT + 1);
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + SLEEP_OPTIONS_COUNT + 1) % (SLEEP_OPTIONS_COUNT + 1);
+      else if (ev == BTN_BACK) { menuScreen = MENU_DISPLAY_SUB; menuCursor = 1; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < SLEEP_OPTIONS_COUNT) { sleepTimeoutIdx = (uint8_t)menuCursor; markDirty(); lastUserActivity = millis(); }
+        menuScreen = MENU_DISPLAY_SUB; menuCursor = 1;
+      }
+      break;
+
+    case MENU_MODE_LIST:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 6;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 6) % 6;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 0; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < 5 && menuCursor != currentMode) {
+          currentMode = menuCursor;
+          idleNeedsFullClear = true; // mód-váltás -> idle képernyő teljes törlése (nincs ottmaradt korábbi elem)
+          markDirty();
+        }
+        menuScreen = MENU_SETTINGS_SUB; menuCursor = 0;
+      }
+      break;
+
+    case MENU_COMP_LIST: {
+      // Csak azokat a sorokat mutatjuk, amik az aktuális módban valós NTC-t
+      // jelentenek (ugyanaz a logika, mint a draw-ágban).
+      int n = 0;
+      if (currentMode == 0) n = 2;
+      else if (currentMode == 1 || currentMode == 3) n = 1;
+      int count = (n == 0 ? 1 : n) + 1; // (+"Nincs NTC" hely VAGY a sorok) + Vissza
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 2; }
+      else if (ev == BTN_SELECT) {
+        if (n > 0 && menuCursor == 0) { menuEditField = 0; menuScreen = MENU_COMP_EDIT; }
+        else if (n > 1 && menuCursor == 1) { menuEditField = 1; menuScreen = MENU_COMP_EDIT; }
+        else { menuScreen = MENU_SETTINGS_SUB; menuCursor = 2; }
+      }
+      break;
+    }
+
+    case MENU_COMP_EDIT: {
+      float &val = (menuEditField == 0) ? tempCompNTC1 : tempCompNTC2;
+      if (ev == BTN_UP) val = constrain(val + 0.1f, -20.0f, 20.0f);
+      else if (ev == BTN_DOWN) val = constrain(val - 0.1f, -20.0f, 20.0f);
+      else if (ev == BTN_SELECT || ev == BTN_BACK) { markDirty(); menuScreen = MENU_COMP_LIST; menuCursor = menuEditField; }
+      break;
+    }
+
+    case MENU_FACTORY_CONFIRM:
+      if (ev == BTN_SELECT) { factoryReset(); /* nem tér vissza - ujraindul */ }
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 5; }
+      break;
+
+    case MENU_TIME_LIST:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 12;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 12) % 12;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 1; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor <= 5) { menuEditField = menuCursor; menuScreen = MENU_TIME_EDIT; }
+        else if (menuCursor == 6) { menuScreen = MENU_TIMEFORMAT_SEL; menuCursor = timeFormat; }
+        else if (menuCursor == 7) { menuScreen = MENU_DATEFORMAT_SEL; menuCursor = dateFormat; }
+        else if (menuCursor == 8) { clockPos = (clockPos + 1) % 3; markDirty(); idleNeedsFullClear = true; }
+        else if (menuCursor == 9) { datePos = (datePos + 1) % 3; markDirty(); idleNeedsFullClear = true; }
+        else if (menuCursor == 10) { dayNamePos = (dayNamePos + 1) % 3; markDirty(); idleNeedsFullClear = true; }
+        else { menuScreen = MENU_SETTINGS_SUB; menuCursor = 1; }
+      }
+      break;
+
+    case MENU_TIME_EDIT: {
+      int dir = (ev == BTN_UP) ? 1 : (ev == BTN_DOWN ? -1 : 0);
+      if (dir != 0) {
+        switch (menuEditField) {
+          case 0: yr = (uint16_t)constrain((int)yr + dir, 2000, 2099); if (day > daysInMonth(month, yr)) day = daysInMonth(month, yr); break;
+          case 1: month = (uint8_t)(((int)month - 1 + dir + 12) % 12 + 1); if (day > daysInMonth(month, yr)) day = daysInMonth(month, yr); break;
+          case 2: day = (uint8_t)(((int)day - 1 + dir + daysInMonth(month, yr)) % daysInMonth(month, yr) + 1); break;
+          case 3: hr = (hr + dir + 24) % 24; break;
+          case 4: min_t = (min_t + dir + 60) % 60; break;
+          case 5: sec = (sec + dir + 60) % 60; break;
+        }
+      } else if (ev == BTN_SELECT || ev == BTN_BACK) {
+        markDirty();
+        idleNeedsFullClear = true;
+        menuScreen = MENU_TIME_LIST; menuCursor = menuEditField;
+      }
+      break;
+    }
+
+    case MENU_TIMEFORMAT_SEL:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
+      else if (ev == BTN_BACK) { menuScreen = MENU_TIME_LIST; menuCursor = 6; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < 3) { timeFormat = (uint8_t)menuCursor; markDirty(); }
+        menuScreen = MENU_TIME_LIST; menuCursor = 6;
+      }
+      break;
+
+    case MENU_DATEFORMAT_SEL:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 6;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 6) % 6;
+      else if (ev == BTN_BACK) { menuScreen = MENU_TIME_LIST; menuCursor = 7; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < 5) { dateFormat = (uint8_t)menuCursor; markDirty(); idleNeedsFullClear = true; }
+        menuScreen = MENU_TIME_LIST; menuCursor = 7;
+      }
       break;
 
     case MENU_RGB_LIST:
       if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 5;
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 5) % 5;
-      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 2; }
+      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 1; }
       else if (ev == BTN_SELECT) {
         switch (menuCursor) {
-          case 0: digitalWrite(RGB_ON, digitalRead(RGB_ON) ? LOW : HIGH); break;
+          case 0: digitalWrite(RGB_ON, digitalRead(RGB_ON) ? LOW : HIGH); markDirty(); break;
           case 1: menuEditField = 0; menuScreen = MENU_RGB_EDIT; break;
           case 2: menuEditField = 1; menuScreen = MENU_RGB_EDIT; break;
           case 3: menuEditField = 2; menuScreen = MENU_RGB_EDIT; break;
-          case 4: menuScreen = MENU_MAIN; menuCursor = 2; break;
+          case 4: menuScreen = MENU_MAIN; menuCursor = 1; break;
         }
       }
       break;
 
     case MENU_RGB_EDIT: {
-      int delta = (ev == BTN_UP) ? 5 : (ev == BTN_DOWN ? -5 : 0);
+      int delta = (ev == BTN_UP) ? 1 : (ev == BTN_DOWN ? -1 : 0);
       if (delta != 0) {
         if (menuEditField == 0) pwmR = constrain(pwmR + delta, 0, 255);
         else if (menuEditField == 1) pwmG = constrain(pwmG + delta, 0, 255);
         else pwmB = constrain(pwmB + delta, 0, 255);
         updatePWMOutputs();
+        markDirty();
       }
       else if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_RGB_LIST; menuCursor = 1 + menuEditField; }
       break;
     }
 
-    case MENU_FAN_SUB:
-      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
-      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
-      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = (menuFanTarget == 1) ? 3 : 4; }
+    case MENU_FAN_SUB: {
+      // mode3-ban ("1 kapcsolo+1 homero") MINDKET lehetoseg elerheto.
+      bool hasCurve = (currentMode == 3 || !isSwitchMode());
+      bool hasLogic = (currentMode == 3 || isSwitchMode());
+      int idxCurve = hasCurve ? 4 : -1;
+      int idxLogic = hasCurve ? (hasLogic ? 5 : -1) : (hasLogic ? 4 : -1);
+      int idxBack = 4 + (hasCurve ? 1 : 0) + (hasLogic ? 1 : 0);
+      int count = idxBack + 1;
+
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
+      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = (menuFanTarget == 1) ? 2 : 3; }
       else if (ev == BTN_SELECT) {
-        switch (menuCursor) {
-          case 0: curFanAuto() = !curFanAuto(); break;
-          case 1: menuScreen = MENU_FAN_MANUAL_PCT; break;
-          case 2:
-            if (isSwitchMode()) { menuScreen = MENU_FAN_LOGIC_LIST; menuCursor = 0; }
-            else { menuScreen = MENU_FAN_CURVE_LIST; menuCursor = 0; }
-            break;
-          case 3: menuScreen = MENU_MAIN; menuCursor = (menuFanTarget == 1) ? 3 : 4; break;
+        if (menuCursor == 0) { curFanAuto() = !curFanAuto(); markDirty(); }
+        else if (menuCursor == 1) {
+          // Allapot: CSAK Kézi módban hat - Automatában a görbe/logika dönt.
+          if (!curFanAuto()) {
+            int &pwm = (menuFanTarget == 1) ? pwmFan : pwmFan2;
+            int newPwm = (pwm > 0) ? 0 : 128; // ha KI volt, 50%-ra kapcsol BE; ha BE volt, KI-ra
+            setPWM(menuFanTarget == 1 ? 3 : 4, newPwm);
+            markDirty();
+          }
         }
+        else if (menuCursor == 2) { menuScreen = MENU_FAN_MANUAL_PCT; }
+        else if (menuCursor == 3) {
+          menuFreqTargetType = 0;
+          freqValueToDigits(menuFanTarget == 1 ? FAN1_PWM_FREQ : FAN2_PWM_FREQ);
+          menuScreen = MENU_FREQ_PRESET_SEL; menuCursor = 0;
+        }
+        else if (menuCursor == idxCurve) { menuScreen = MENU_FAN_CURVE_LIST; menuCursor = 0; }
+        else if (menuCursor == idxLogic) { menuScreen = MENU_FAN_LOGIC_LIST; menuCursor = 0; }
+        else { menuScreen = MENU_MAIN; menuCursor = (menuFanTarget == 1) ? 2 : 3; }
       }
       break;
+    }
 
     case MENU_FAN_MANUAL_PCT: {
-      int &pwm = (menuFanTarget == 1) ? pwmFan : pwmFan2;
-      if (ev == BTN_UP) pwm = constrain(pwm + 13, 0, 255);
-      else if (ev == BTN_DOWN) pwm = constrain(pwm - 13, 0, 255);
-      if (ev == BTN_UP || ev == BTN_DOWN) setPWM(menuFanTarget == 1 ? 3 : 4, pwm);
-      if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_FAN_SUB; menuCursor = 1; }
+      // CSAK Kézi módban hat - Automatában a kijelzett % az automatika által
+      // beállított tényleges értéket mutatja, de gombnyomásra nem változik.
+      if ((ev == BTN_UP || ev == BTN_DOWN) && !curFanAuto()) {
+        int &pwm = (menuFanTarget == 1) ? pwmFan : pwmFan2;
+        int pct = (int)round(pwm / 2.55); // a jelenlegi % (kerekítve)
+        pct = constrain(pct + (ev == BTN_UP ? 1 : -1), 0, 100); // 1%-os lépés
+        int newPwm = (int)round(pct * 2.55);
+        setPWM(menuFanTarget == 1 ? 3 : 4, newPwm); // real-time alkalmazás minden gombnyomásnál
+        markDirty();
+      }
+      if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_FAN_SUB; menuCursor = 2; }
       break;
     }
 
@@ -440,6 +940,7 @@ void handleMenuInput(ButtonEvent ev) {
         if (currentMode == 1) curThermFan().sensor = 1;
         else if (menuCursor == 0) curThermFan().sensor = 1;
         else if (menuCursor == 1) curThermFan().sensor = (currentMode == 2) ? 3 : 2;
+        markDirty();
         menuScreen = MENU_FAN_CURVE_LIST; menuCursor = 0;
       }
       break;
@@ -447,91 +948,245 @@ void handleMenuInput(ButtonEvent ev) {
 
     case MENU_FAN_CURVE_LIST: {
       ThermFan &tf = curThermFan();
-      int n = tf.count + 3; // Forras + Pontok szama + N pont + Vissza
+      int n = tf.count + 4; // Forras + Allapot + Pontok szama + N pont + Vissza
       if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % n;
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + n) % n;
-      else if (ev == BTN_BACK) { menuScreen = MENU_FAN_SUB; menuCursor = 2; }
+      else if (ev == BTN_BACK) { menuScreen = MENU_FAN_SUB; menuCursor = 4; }
       else if (ev == BTN_SELECT) {
         if (menuCursor == 0) { menuScreen = MENU_FAN_SENSOR_SEL; menuCursor = 0; }
-        else if (menuCursor == 1) { tf.count = (tf.count % FAN_CURVE_MAX_POINTS) + 1; }
-        else if (menuCursor == n - 1) { tf.enabled = true; menuScreen = MENU_FAN_SUB; menuCursor = 2; }
-        else { menuEditPoint = menuCursor - 2; menuEditField = 0; menuScreen = MENU_FAN_CURVE_POINT; }
+        else if (menuCursor == 1) { tf.enabled = !tf.enabled; markDirty(); }
+        else if (menuCursor == 2) { tf.count = (tf.count % FAN_CURVE_MAX_POINTS) + 1; markDirty(); }
+        else if (menuCursor == n - 1) { menuScreen = MENU_FAN_SUB; menuCursor = 4; }
+        else { menuEditPoint = menuCursor - 3; menuScreen = MENU_FAN_CURVE_POINT; menuCursor = 0; }
       }
       break;
     }
 
-    case MENU_FAN_CURVE_POINT: {
-      ThermFan &tf = curThermFan();
-      if (ev == BTN_UP || ev == BTN_DOWN) {
-        int dir = (ev == BTN_UP) ? 1 : -1;
-        if (menuEditField == 0) tf.temp[menuEditPoint] = constrain(tf.temp[menuEditPoint] + dir, -40, 120);
-        else if (menuEditField == 1) tf.pct[menuEditPoint] = (uint8_t)constrain((int)tf.pct[menuEditPoint] + dir * 5, 0, 100);
-        else tf.freq[menuEditPoint] = (uint16_t)constrain((int)tf.freq[menuEditPoint] + dir * 10, 10, 25000);
-      }
-      else if (ev == BTN_SELECT) {
-        if (menuEditField < 2) menuEditField++;
-        else {
-          sortFanCurve(tf, tf.count);
-          tf.enabled = true;
-          menuScreen = MENU_FAN_CURVE_LIST; menuCursor = menuEditPoint + 2;
-        }
-      }
-      else if (ev == BTN_BACK) {
-        sortFanCurve(tf, tf.count);
-        menuScreen = MENU_FAN_CURVE_LIST; menuCursor = menuEditPoint + 2;
-      }
-      break;
-    }
-
-    case MENU_FAN_LOGIC_LIST: {
-      int n = (currentMode == 4) ? 5 : 3;
-      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % n;
-      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + n) % n;
-      else if (ev == BTN_BACK) { menuScreen = MENU_FAN_SUB; menuCursor = 2; }
-      else if (ev == BTN_SELECT) {
-        if (menuCursor == n - 1) { menuScreen = MENU_FAN_SUB; menuCursor = 2; }
-        else {
-          menuLogicIdx = (currentMode == 4) ? menuCursor : (menuCursor == 0 ? 0 : 2);
-          curLogicFan().axis2Mode = (currentMode == 4) ? 0 : 2;
-          curLogicFan().enabled = true;
-          menuScreen = MENU_FAN_LOGIC_EDIT;
-        }
-      }
-      break;
-    }
-
-    case MENU_FAN_LOGIC_EDIT: {
-      int &v = curLogicFan().val[menuLogicIdx];
-      if (ev == BTN_UP) v = (v >= 100) ? 100 : (v < 0 ? 0 : v + 5);
-      else if (ev == BTN_DOWN) v = (v <= 0) ? -1 : v - 5;
-      else if (ev == BTN_SELECT || ev == BTN_BACK) {
-        menuScreen = MENU_FAN_LOGIC_LIST;
-        menuCursor = (currentMode == 4) ? menuLogicIdx : (menuLogicIdx == 0 ? 0 : 1);
-      }
-      break;
-    }
-
-    case MENU_RELAY_SUB:
+    case MENU_FAN_CURVE_POINT:
       if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
-      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = (menuRelayTarget == 1) ? 5 : 6; }
+      else if (ev == BTN_BACK) { menuScreen = MENU_FAN_CURVE_LIST; menuCursor = menuEditPoint + 3; }
       else if (ev == BTN_SELECT) {
-        switch (menuCursor) {
-          case 0: curRelayAuto() = !curRelayAuto(); break;
-          case 1: menuScreen = MENU_RELAY_MANUAL; break;
-          case 2:
-            if (isSwitchMode()) { menuScreen = MENU_RELAY_LOGIC_LIST; menuCursor = 0; }
-            else { menuScreen = MENU_RELAY_THERM_LIST; menuCursor = 0; }
-            break;
-          case 3: menuScreen = MENU_MAIN; menuCursor = (menuRelayTarget == 1) ? 5 : 6; break;
+        if (menuCursor == 0) { menuEditField = 0; menuScreen = MENU_FAN_CURVE_FIELD_EDIT; }
+        else if (menuCursor == 1) { menuEditField = 1; menuScreen = MENU_FAN_CURVE_FIELD_EDIT; }
+        else if (menuCursor == 2) {
+          menuFreqTargetType = 1;
+          freqValueToDigits(curThermFan().freq[menuEditPoint]);
+          menuScreen = MENU_FREQ_PRESET_SEL; menuCursor = 0;
+        }
+        else { menuScreen = MENU_FAN_CURVE_LIST; menuCursor = menuEditPoint + 3; }
+      }
+      break;
+
+    case MENU_FAN_CURVE_FIELD_EDIT: {
+      ThermFan &tf = curThermFan();
+      int dir = (ev == BTN_UP) ? 1 : (ev == BTN_DOWN ? -1 : 0);
+      if (dir != 0) {
+        if (menuEditField == 0) tf.temp[menuEditPoint] = constrain(tf.temp[menuEditPoint] + dir, -40, 120);
+        else tf.pct[menuEditPoint] = (uint8_t)constrain((int)tf.pct[menuEditPoint] + dir, 0, 100); // 1%-os lepes
+        markDirty();
+      } else if (ev == BTN_SELECT || ev == BTN_BACK) {
+        if (menuEditField == 0) sortFanCurve(curThermFan(), curThermFan().count);
+        markDirty();
+        menuScreen = MENU_FAN_CURVE_POINT; menuCursor = menuEditField;
+      }
+      break;
+    }
+
+    case MENU_FREQ_PRESET_SEL:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
+      else if (ev == BTN_BACK) { exitFreqEdit(); }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 0) { freqDigitPos = 0; menuScreen = MENU_FREQ_DIGIT_EDIT; }
+        else if (menuCursor == 1) { applyFrequencyValue(30); exitFreqEdit(); }
+        else if (menuCursor == 2) { applyFrequencyValue(20000); exitFreqEdit(); }
+        else { exitFreqEdit(); }
+      }
+      break;
+
+    case MENU_FREQ_DIGIT_EDIT:
+      if (ev == BTN_LONG_UP) {
+        freqDigitPos = (freqDigitPos + 1) % 5;
+      } else if (ev == BTN_UP) {
+        freqDigits[freqDigitPos] = (freqDigits[freqDigitPos] + 1) % 10;
+        applyFrequencyValue(freqDigitsToValue());
+      } else if (ev == BTN_DOWN) {
+        freqDigits[freqDigitPos] = (freqDigits[freqDigitPos] + 9) % 10;
+        applyFrequencyValue(freqDigitsToValue());
+      } else if (ev == BTN_SELECT || ev == BTN_BACK) {
+        exitFreqEdit();
+      }
+      break;
+
+    case MENU_FAN_LOGIC_LIST: {
+      int n = (currentMode == 4) ? 6 : 4;
+      int backCursor = (currentMode == 3) ? 5 : 4; // mode3: Gorbe(4)+Logika(5), mode4: csak Logika(4)
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % n;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + n) % n;
+      else if (ev == BTN_BACK) { menuScreen = MENU_FAN_SUB; menuCursor = backCursor; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 0) { curLogicFan().enabled = !curLogicFan().enabled; markDirty(); }
+        else if (menuCursor == n - 1) { menuScreen = MENU_FAN_SUB; menuCursor = backCursor; }
+        else {
+          int stateIdx = menuCursor - 1;
+          menuLogicIdx = (currentMode == 4) ? stateIdx : (stateIdx == 0 ? 0 : 2);
+          curLogicFan().axis2Mode = (currentMode == 4) ? 0 : 2;
+          menuScreen = MENU_FAN_LOGIC_EDIT; menuCursor = 0;
+        }
+      }
+      break;
+    }
+
+    case MENU_FAN_LOGIC_EDIT:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 3;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 3) % 3;
+      else if (ev == BTN_BACK) {
+        menuScreen = MENU_FAN_LOGIC_LIST;
+        menuCursor = ((currentMode == 4) ? menuLogicIdx : (menuLogicIdx == 0 ? 0 : 1)) + 1;
+      }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 0) { menuScreen = MENU_FAN_LOGIC_VAL_EDIT; }
+        else if (menuCursor == 1) {
+          menuFreqTargetType = 2;
+          freqValueToDigits(curLogicFan().freq[menuLogicIdx]);
+          menuScreen = MENU_FREQ_PRESET_SEL; menuCursor = 0;
+        }
+        else {
+          menuScreen = MENU_FAN_LOGIC_LIST;
+          menuCursor = ((currentMode == 4) ? menuLogicIdx : (menuLogicIdx == 0 ? 0 : 1)) + 1;
         }
       }
       break;
 
-    case MENU_RELAY_MANUAL: {
-      int pin = (menuRelayTarget == 1) ? RELAY1_PIN : RELAY2_PIN;
-      if (ev == BTN_UP || ev == BTN_DOWN) digitalWrite(pin, digitalRead(pin) ? LOW : HIGH);
-      if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_RELAY_SUB; menuCursor = 1; }
+    case MENU_FAN_LOGIC_VAL_EDIT: {
+      int &v = curLogicFan().val[menuLogicIdx];
+      // mode4-ben NINCS görbe (nincs hőmérő) - csak 0-100 közötti fix % állítható.
+      // mode3-ban a -1 ("görbe szerint") is elérhető, mert ott van hőmérő/görbe.
+      int minVal = (currentMode == 4) ? 0 : -1;
+      if (ev == BTN_UP) v = (v >= 100) ? 100 : v + 1;
+      else if (ev == BTN_DOWN) v = (v <= minVal) ? minVal : v - 1;
+      else if (ev == BTN_SELECT || ev == BTN_BACK) {
+        markDirty();
+        menuScreen = MENU_FAN_LOGIC_EDIT; menuCursor = 0;
+      }
+      break;
+    }
+
+    case MENU_RELAY_SUB: {
+      bool hasTherm = (currentMode == 3 || !isSwitchMode());
+      bool hasLogic = (currentMode == 3 || isSwitchMode());
+      int idxTherm = hasTherm ? 2 : -1;
+      int idxLogic = hasTherm ? (hasLogic ? 3 : -1) : (hasLogic ? 2 : -1);
+      int idxHold = 2 + (hasTherm ? 1 : 0) + (hasLogic ? 1 : 0);
+      int count = idxHold + 2; // + Kapuzas + Vissza
+
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
+      else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = (menuRelayTarget == 1) ? 4 : 5; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 0) {
+          bool wasAuto = curRelayAuto();
+          curRelayAuto() = !wasAuto;
+          if (!wasAuto) { // most kapcsolt Auto-ra -> friss RelayTimer ciklus
+            RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+            rt.timedActive = false; rt.cooldownActive = false; rt.waitingForReversal = false;
+          }
+          markDirty();
+        }
+        else if (menuCursor == 1) {
+          // Kezi Be/Ki: CSAK Kézi módban hat - Automatában a termosztát/logika dönt.
+          if (!curRelayAuto()) {
+            int pin = (menuRelayTarget == 1) ? RELAY1_PIN : RELAY2_PIN;
+            digitalWrite(pin, digitalRead(pin) ? LOW : HIGH);
+            markDirty();
+          }
+        }
+        else if (menuCursor == idxTherm) { menuScreen = MENU_RELAY_THERM_LIST; menuCursor = 0; }
+        else if (menuCursor == idxLogic) { menuScreen = MENU_RELAY_LOGIC_LIST; menuCursor = 0; }
+        else if (menuCursor == idxHold) { menuScreen = MENU_RELAY_HOLD_LIST; menuCursor = 0; }
+        else { menuScreen = MENU_MAIN; menuCursor = (menuRelayTarget == 1) ? 4 : 5; }
+      }
+      break;
+    }
+
+    case MENU_RELAY_HOLD_LIST: {
+      RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      // Sor-indexek: 0=Be/Ki,1=Mod,2=Idotartam,3=Zarolas,[4=Zarolas ideje ha lockMode==1],
+      // utana Allapot, majd Vissza.
+      int idxHoldTime = (rt.lockMode == 1) ? 4 : -1;
+      int idxState = (rt.lockMode == 1) ? 5 : 4;
+      int idxBack  = idxState + 1;
+      int count = idxBack + 1;
+      int relaySubBackCursor = (currentMode == 3) ? 4 : 3; // mode3-ban Termosztat+Logika miatt eggyel arrébb van a Kapuzas
+
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
+      else if (ev == BTN_BACK) { menuScreen = MENU_RELAY_SUB; menuCursor = relaySubBackCursor; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 0) {
+          bool wasEnabled = rt.enabled;
+          rt.enabled = !rt.enabled;
+          if (rt.enabled && !wasEnabled) { rt.timedActive = false; rt.cooldownActive = false; rt.waitingForReversal = false; }
+          markDirty();
+        } else if (menuCursor == 1) {
+          rt.timerMode = (rt.timerMode == 0) ? 1 : 0;
+          rt.timedActive = false; rt.cooldownActive = false; rt.waitingForReversal = false; // váltáskor friss ciklus
+          markDirty();
+        } else if (menuCursor == 2) {
+          menuEditField = 0; menuScreen = MENU_RELAY_HOLD_EDIT;
+        } else if (menuCursor == 3) {
+          menuScreen = MENU_RELAY_LOCKMODE_SEL; menuCursor = rt.lockMode;
+        } else if (menuCursor == idxHoldTime) {
+          menuEditField = 1; menuScreen = MENU_RELAY_HOLD_EDIT;
+        } else if (menuCursor == idxState) {
+          menuScreen = MENU_RELAY_STATE_SEL; menuCursor = rt.stateFilter;
+        } else {
+          menuScreen = MENU_RELAY_SUB; menuCursor = relaySubBackCursor;
+        }
+      }
+      break;
+    }
+
+    case MENU_RELAY_LOCKMODE_SEL: {
+      RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
+      else if (ev == BTN_BACK) { menuScreen = MENU_RELAY_HOLD_LIST; menuCursor = 3; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < 3) {
+          rt.lockMode = (uint8_t)menuCursor;
+          rt.cooldownActive = false; rt.waitingForReversal = false;
+          markDirty();
+        }
+        menuScreen = MENU_RELAY_HOLD_LIST; menuCursor = 3;
+      }
+      break;
+    }
+
+    case MENU_RELAY_STATE_SEL: {
+      RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
+      else if (ev == BTN_BACK) { menuScreen = MENU_RELAY_HOLD_LIST; menuCursor = (rt.lockMode == 1) ? 5 : 4; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < 3) {
+          rt.stateFilter = (uint8_t)menuCursor;
+          rt.timedActive = false; rt.cooldownActive = false; rt.waitingForReversal = false;
+          markDirty();
+        }
+        menuScreen = MENU_RELAY_HOLD_LIST; menuCursor = (rt.lockMode == 1) ? 5 : 4;
+      }
+      break;
+    }
+
+    case MENU_RELAY_HOLD_EDIT: {
+      RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
+      uint16_t &val = (menuEditField == 0) ? rt.onDurationSec : rt.cooldownSec;
+      int step = (menuEditField == 0) ? 5 : 30; // időtartam 5mp, zárolás 30mp lépésekben
+      if (ev == BTN_UP) { val = (uint16_t)constrain((int)val + step, 1, 36000); markDirty(); }
+      else if (ev == BTN_DOWN) { val = (uint16_t)constrain((int)val - step, 1, 36000); markDirty(); }
+      else if (ev == BTN_SELECT || ev == BTN_BACK) { menuScreen = MENU_RELAY_HOLD_LIST; menuCursor = (menuEditField == 0) ? 2 : 4; }
       break;
     }
 
@@ -544,21 +1199,23 @@ void handleMenuInput(ButtonEvent ev) {
         if (currentMode == 1) curThermRelay().sensor = 1;
         else if (menuCursor == 0) curThermRelay().sensor = 1;
         else if (menuCursor == 1) curThermRelay().sensor = (currentMode == 2) ? 3 : 2;
+        markDirty();
         menuScreen = MENU_RELAY_THERM_LIST; menuCursor = 0;
       }
       break;
     }
 
     case MENU_RELAY_THERM_LIST:
-      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
-      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 5;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 5) % 5;
       else if (ev == BTN_BACK) { menuScreen = MENU_RELAY_SUB; menuCursor = 2; }
       else if (ev == BTN_SELECT) {
         switch (menuCursor) {
           case 0: menuScreen = MENU_RELAY_SENSOR_SEL; menuCursor = 0; break;
-          case 1: menuEditField = 0; menuScreen = MENU_RELAY_THERM_EDIT; break;
-          case 2: menuEditField = 1; menuScreen = MENU_RELAY_THERM_EDIT; break;
-          case 3: curThermRelay().enabled = true; menuScreen = MENU_RELAY_SUB; menuCursor = 2; break;
+          case 1: curThermRelay().enabled = !curThermRelay().enabled; markDirty(); break;
+          case 2: menuEditField = 0; menuScreen = MENU_RELAY_THERM_EDIT; break;
+          case 3: menuEditField = 1; menuScreen = MENU_RELAY_THERM_EDIT; break;
+          case 4: menuScreen = MENU_RELAY_SUB; menuCursor = 2; break;
         }
       }
       break;
@@ -572,23 +1229,25 @@ void handleMenuInput(ButtonEvent ev) {
         else tr.toff = constrain(tr.toff + dir, isHum ? 0 : -40, isHum ? 100 : 120);
       }
       else if (ev == BTN_SELECT || ev == BTN_BACK) {
-        tr.enabled = true;
-        menuScreen = MENU_RELAY_THERM_LIST; menuCursor = 1 + menuEditField;
+        markDirty();
+        menuScreen = MENU_RELAY_THERM_LIST; menuCursor = 2 + menuEditField;
       }
       break;
     }
 
     case MENU_RELAY_LOGIC_LIST: {
-      int n = (currentMode == 4) ? 5 : 3;
+      int n = (currentMode == 4) ? 6 : 4;
+      int backCursor = (currentMode == 3) ? 3 : 2; // mode3: Termosztat(2)+Logika(3), mode4: csak Logika(2)
       if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % n;
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + n) % n;
-      else if (ev == BTN_BACK) { menuScreen = MENU_RELAY_SUB; menuCursor = 2; }
+      else if (ev == BTN_BACK) { menuScreen = MENU_RELAY_SUB; menuCursor = backCursor; }
       else if (ev == BTN_SELECT) {
-        if (menuCursor == n - 1) { menuScreen = MENU_RELAY_SUB; menuCursor = 2; }
+        if (menuCursor == 0) { curLogicRelay().enabled = !curLogicRelay().enabled; markDirty(); }
+        else if (menuCursor == n - 1) { menuScreen = MENU_RELAY_SUB; menuCursor = backCursor; }
         else {
-          menuLogicIdx = (currentMode == 4) ? menuCursor : (menuCursor == 0 ? 0 : 2);
+          int stateIdx = menuCursor - 1;
+          menuLogicIdx = (currentMode == 4) ? stateIdx : (stateIdx == 0 ? 0 : 2);
           curLogicRelay().axis2Mode = (currentMode == 4) ? 0 : 2;
-          curLogicRelay().enabled = true;
           menuScreen = MENU_RELAY_LOGIC_EDIT;
         }
       }
@@ -597,13 +1256,96 @@ void handleMenuInput(ButtonEvent ev) {
 
     case MENU_RELAY_LOGIC_EDIT: {
       SwitchLogicChannel &ch = curLogicRelay();
-      if (ev == BTN_UP || ev == BTN_DOWN) ch.val[menuLogicIdx] = ch.val[menuLogicIdx] ? 0 : 1;
+      int &v = ch.val[menuLogicIdx];
+      if (ev == BTN_UP || ev == BTN_DOWN) {
+        if (currentMode == 3) {
+          // 3 allapot korbe: KI(0) -> BE(1) -> Termosztatot koveti(-1) -> KI...
+          if (ev == BTN_UP) v = (v == 0) ? 1 : (v == 1 ? -1 : 0);
+          else v = (v == 0) ? -1 : (v == -1 ? 1 : 0);
+        } else {
+          // mode4: nincs termosztát, csak KI/BE
+          v = ch.val[menuLogicIdx] ? 0 : 1;
+        }
+        markDirty();
+      }
       else if (ev == BTN_SELECT || ev == BTN_BACK) {
+        markDirty();
         menuScreen = MENU_RELAY_LOGIC_LIST;
-        menuCursor = (currentMode == 4) ? menuLogicIdx : (menuLogicIdx == 0 ? 0 : 1);
+        menuCursor = ((currentMode == 4) ? menuLogicIdx : (menuLogicIdx == 0 ? 0 : 1)) + 1;
       }
       break;
     }
+
+    case MENU_WIFI_SCANNING:
+      // Ez a képernyő átmeneti - a tényleges keresést a loop() indítja
+      // (wifiMenuScanRequested), gombesemény itt nem releváns.
+      break;
+
+    case MENU_WIFI_SCAN_LIST: {
+      int count = wifiMenuScanCount + 1; // + "Vissza"
+      if (wifiMenuScanCount == 0) count = 2; // "Nincs talalhato..." sor + "Vissza"
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 4; }
+      else if (ev == BTN_SELECT) {
+        if (wifiMenuScanCount == 0 || menuCursor == wifiMenuScanCount) {
+          menuScreen = MENU_SETTINGS_SUB; menuCursor = 4;
+        } else {
+          wifiMenuSelectedSsid = wifiMenuScanSsids[menuCursor];
+          wifiPwLen = 0; wifiPwCursor = 0; wifiPwCharIdx = 1; // 1 = szóköz (0='<' torles)
+          wifiPwBuf[0] = '\0';
+          menuScreen = MENU_WIFI_PASSWORD_EDIT;
+          idleNeedsFullClear = true;
+        }
+      }
+      break;
+    }
+
+    case MENU_WIFI_PASSWORD_EDIT: {
+      if (ev == BTN_UP) wifiPwCharIdx = (wifiPwCharIdx + 1) % WIFI_CHARSET_LEN;
+      else if (ev == BTN_DOWN) wifiPwCharIdx = (wifiPwCharIdx - 1 + WIFI_CHARSET_LEN) % WIFI_CHARSET_LEN;
+      else if (ev == BTN_SELECT) {
+        char c = WIFI_CHARSET[wifiPwCharIdx];
+        if (c == '<') {
+          // TORLES: az utolsó beírt karakter törlése (ha van)
+          if (wifiPwLen > 0) {
+            wifiPwLen--;
+            wifiPwCursor = wifiPwLen;
+            wifiPwBuf[wifiPwLen] = '\0';
+          }
+        } else if (wifiPwLen < WIFI_PW_MAX_LEN) {
+          // Valódi karakter beírása a végéhez
+          wifiPwBuf[wifiPwLen] = c;
+          wifiPwLen++;
+          wifiPwCursor = wifiPwLen;
+          wifiPwBuf[wifiPwLen] = '\0';
+        }
+      }
+      else if (ev == BTN_LONG_SELECT) {
+        // HOSSZÚ, mindkét-gombos nyomás: jelszó véglegesítése, csatlakozás
+        // indítása (üres jelszóval = mégse, vissza a hálózat-listára)
+        if (wifiPwLen == 0) {
+          menuScreen = MENU_WIFI_SCAN_LIST; menuCursor = 0;
+        } else {
+          wifiSsid = wifiMenuSelectedSsid;
+          wifiPassword = String(wifiPwBuf);
+          markDirty();
+          wifiConnectRequested = true;
+          menuScreen = MENU_WIFI_CONNECTING;
+          idleNeedsFullClear = true;
+        }
+      }
+      break;
+    }
+
+    case MENU_WIFI_CONNECTING:
+      // Bármelyik gomb (rövid nyomás is) vissza a Beallitasok menübe -
+      // a kapcsolat állapota a háttérben tovább él, csak a menüből lépünk ki.
+      if (ev == BTN_UP || ev == BTN_DOWN || ev == BTN_SELECT || ev == BTN_BACK || ev == BTN_LONG_UP) {
+        menuScreen = MENU_SETTINGS_SUB; menuCursor = 4;
+        idleNeedsFullClear = true;
+      }
+      break;
 
     default: break;
   }

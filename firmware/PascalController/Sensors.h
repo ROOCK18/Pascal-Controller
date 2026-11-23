@@ -18,7 +18,7 @@ float readNTCTemperature(int ntcPin) {
   float voltage = adcValue * VCC / ADC_MAX;
   float rNTC = (voltage * R_FIXED) / (VCC - voltage);
   float steinhart = log(rNTC / NTC_R0) / NTC_BETA + 1.0 / NTC_T0;
-  return (1.0 / steinhart) - 263.15;
+  return (1.0 / steinhart) - 273.15; // NINCS kompenzáció itt - lásd loop() (NTC1/NTC2 külön kompenzálva)
 }
 
 // ============================================================
