@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.Ctrl">
+    <VerticalStackLayout Spacing="20" Padding="20">
+
+        <!-- VENTILÁTOR 1 -->
+        <Border BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" Padding="15" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label Grid.Column="0" HeightRequest="25" Text="Ventilátor 1" FontSize="{StaticResource MediumFontSize}" FontAttributes="Bold" />
+                    <Label x:Name="Fan1ValueLabel" HorizontalOptions="Center" HeightRequest="22" Margin="80,0,0,0" Text="0%" FontSize="{StaticResource SmallFontSize}" />
+                    <Border x:Name="Fan1PowerBorder"                        Grid.Column="2"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan1PowerSwitch"/>
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan1PowerLabel" Text="OFF" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Border x:Name="Fan1AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 6" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Start">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFan1AutoToggle"/>
+                    </Border.GestureRecognizers>
+                    <Label x:Name="Fan1AutoLabel" Text="Automata" FontSize="11" TextColor="{StaticResource White}" HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Label Text="0" Grid.Column="0" VerticalOptions="Center" />
+                    <Slider x:Name="Fan1Slider" 
+                            ThumbColor="{StaticResource White}"
+                            MinimumTrackColor="{StaticResource PrimaryRed}"
+                            MaximumTrackColor="{StaticResource LightGray}" 
+                            Grid.Column="1" 
+                            Minimum="0" 
+                            Maximum="100" 
+                            ValueChanged="OnFan1ValueChanged" 
+                            DragCompleted="OnFanSliderDragCompleted"/>
+                    <Label Text="100" Grid.Column="2" VerticalOptions="Center" />
+                </Grid>
+                
+                <!-- PWM gombok -->
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label x:Name="Fan1PWMTitle" Grid.Row="0" Text="PWM Frekvencia" FontSize="{StaticResource SmallFontSize}" />
+                    <Border x:Name="Fan1PWM30Border"
+                        Grid.Row="1"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,25,0,0"
+                        HorizontalOptions="Start"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+                        
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan1PWM30"/>
+                        </Border.GestureRecognizers>
+                        
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan1PWM30Label" Text="30Hz" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                    <Border x:Name="Fan1PWM20kBorder"
+                        Grid.Row="1"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,25,0,0"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+                        
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan1PWM20k"/>
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan1PWM20kLabel" Text="20kHz" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                    <Border x:Name="Fan1PWMEBorder"
+                        Grid.Row="1"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,25,0,0"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan1PWME"/>
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan1PWMELabel" Text="Egyedi" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- VENTILÁTOR 2 -->
+        <Border BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" Padding="15" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="5">
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label Grid.Column="0" HeightRequest="25" Text="Ventilátor 2" FontSize="{StaticResource MediumFontSize}" FontAttributes="Bold" />
+                    <Label x:Name="Fan2ValueLabel" HorizontalOptions="Center" HeightRequest="22" Margin="80,0,0,0" Text="0%" FontSize="{StaticResource SmallFontSize}" />
+                    <Border x:Name="Fan2PowerBorder"
+                        Grid.Column="2"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan2PowerSwitch" />
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <Label x:Name="Fan2PowerLabel"
+                               Text="OFF"
+                               FontSize="{StaticResource SmallFontSize}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Border x:Name="Fan2AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 6" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Start">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFan2AutoToggle"/>
+                    </Border.GestureRecognizers>
+                    <Label x:Name="Fan2AutoLabel" Text="Automata" FontSize="11" TextColor="{StaticResource White}" HorizontalOptions="Center" VerticalOptions="Center"/>
+                </Border>
+
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Label Text="0" Grid.Column="0" VerticalOptions="Center" />
+                    <Slider x:Name="Fan2Slider" 
+                            ThumbColor="{StaticResource White}"
+                            MinimumTrackColor="{StaticResource PrimaryRed}"
+                            MaximumTrackColor="{StaticResource LightGray}" 
+                            Grid.Column="1" 
+                            Minimum="0" 
+                            Maximum="100" 
+                            ValueChanged="OnFan2ValueChanged" 
+                            DragCompleted="OnFanSliderDragCompleted"/>
+                    <Label Text="100" Grid.Column="2" VerticalOptions="Center" />
+                </Grid>
+
+                <!-- PWM gombok -->
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label x:Name="Fan2PWMTitle" Grid.Row="0" Text="PWM Frekvencia" FontSize="{StaticResource SmallFontSize}" />
+                    <Border x:Name="Fan2PWM30Border"
+                        Grid.Row="1"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,25,0,0"
+                        HorizontalOptions="Start"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan2PWM30"/>
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan2PWM30Label" Text="30Hz" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                    <Border x:Name="Fan2PWM20kBorder"
+                        Grid.Row="1"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,25,0,0"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan2PWM20k"/>
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan2PWM20kLabel" Text="20kHz" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                    <Border x:Name="Fan2PWMEBorder"
+                        Grid.Row="1"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,25,0,0"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="Fan2PWME"/>
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <!-- Felirat -->
+                            <Label x:Name="Fan2PWMELabel" Text="Egyedi" FontSize="{StaticResource SmallFontSize}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- RELÉK SOR -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+
+            <!-- RELÉ 1 -->
+            <Border Grid.Column="0"
+                BackgroundColor="{StaticResource DarkGray}"
+                Stroke="{StaticResource LightGray}"
+                StrokeThickness="1"
+                Padding="12"
+                StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Relé 1"
+                       FontSize="{StaticResource MediumFontSize}"
+                       FontAttributes="Bold" />
+
+                    <Border x:Name="Relay1AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 6" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Center">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay1AutoToggle"/>
+                        </Border.GestureRecognizers>
+                        <Label x:Name="Relay1AutoLabel" Text="Automata" FontSize="11" TextColor="{StaticResource White}" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+
+                    <Border x:Name="Relay1ToggleBorder"
+                        Grid.Column="2"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay1ToggleTapped" />
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <Label x:Name="Relay1Label"
+                               Text="OFF"
+                               FontSize="{StaticResource SmallFontSize}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- RELÉ 2 -->
+            <Border Grid.Column="1"
+                BackgroundColor="{StaticResource DarkGray}"
+                Stroke="{StaticResource LightGray}"
+                StrokeThickness="1"
+                Padding="12"
+                StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Relé 2"
+                       FontSize="{StaticResource MediumFontSize}"
+                       FontAttributes="Bold" />
+
+                    <Border x:Name="Relay2AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 6" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Center">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay2AutoToggle"/>
+                        </Border.GestureRecognizers>
+                        <Label x:Name="Relay2AutoLabel" Text="Automata" FontSize="11" TextColor="{StaticResource White}" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+
+                    <Border x:Name="Relay2ToggleBorder"
+                        Grid.Column="2"
+                        WidthRequest="80"
+                        HeightRequest="35"
+                        BackgroundColor="{StaticResource LightGray}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Padding="4">
+                        <!-- Lekerekítés RoundRectangle-lel -->
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="40,0,0,40" />
+                        </Border.StrokeShape>
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRelay2ToggleTapped" />
+                        </Border.GestureRecognizers>
+
+                        <Grid>
+                            <Label x:Name="Relay2Label"
+                               Text="OFF"
+                               FontSize="{StaticResource SmallFontSize}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               TextColor="{StaticResource White}" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+        <Grid>
+            <Border>
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
+                <!-- IDŐZÍTÉSES GOMB -->
+                <Button Text="Időzítés és Termosztát"
+                    x:Name="TimingButton"
+                    Clicked="OnTimingClicked"
+                    BackgroundColor="{StaticResource PrimaryRed}"
+                    TextColor="{StaticResource White}"
+                    CornerRadius="12"
+                    FontSize="18"
+                    Padding="14"
+                    Margin="0,0,0,0" />
+            </Border>
+        </Grid>
+
+    </VerticalStackLayout>
+</ContentView>

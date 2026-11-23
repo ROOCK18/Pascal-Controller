@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.Settings"
+             BackgroundColor="{StaticResource GraphiteGray}">
+
+    <Grid RowDefinitions="Auto, *, Auto" Padding="20">
+
+        <VerticalStackLayout Grid.Row="0" Padding="30,20,30,10" Spacing="5">
+            <Label Text="Bluetooth" 
+                   FontSize="32" 
+                   FontAttributes="Bold" 
+                   TextColor="White" />
+        </VerticalStackLayout>
+
+        <Frame x:Name="ConnectedDevicePanel"
+               BackgroundColor="#2C2C2C"
+               CornerRadius="10"
+               Padding="15"
+               Grid.Row="0"
+               Margin="0,60,0,15">
+            <HorizontalStackLayout VerticalOptions="Center" Spacing="10">
+                <Label x:Name="LblConnectedDevice"
+                       TextColor="White"
+                       FontAttributes="Bold"
+                       FontSize="16"
+                       VerticalOptions="Center" />
+                <Button x:Name="BtnDisconnect"
+                        Text="X"
+                        IsVisible="False"
+                        Clicked="OnDisconnectClicked"
+                        BackgroundColor="{StaticResource PrimaryRed}"
+                        TextColor="White"
+                        CornerRadius="10"
+                        HeightRequest="40" />
+            </HorizontalStackLayout>
+        </Frame>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="20">
+
+                <Frame x:Name="ModeSelectionPanel"
+                       BackgroundColor="#2C2C2C"
+                       CornerRadius="10"
+                       Padding="15"
+                       IsVisible="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Üzemmód beállítása" 
+                               TextColor="White" 
+                               FontAttributes="Bold" 
+                               FontSize="16" />
+
+                        <Picker x:Name="ModePicker" 
+                                Title="Válassz üzemmódot" 
+                                TextColor="White"
+                                TitleColor="Gray">
+                            <Picker.Items>
+                                <x:String>2 hőmérő</x:String>
+                                <x:String>1 hőmérő</x:String>
+                                <x:String>Páratartalom mérő</x:String>
+                                <x:String>1 kapcsoló 1 hőmérő</x:String>
+                                <x:String>2 kapcsoló</x:String>
+                                <x:String>Kiegészítő modul (hamarosan)</x:String>
+                            </Picker.Items>
+                        </Picker>
+
+                        <Button Text="MÓD ALKALMAZÁSA"
+                                Clicked="OnSetModeClicked"
+                                BackgroundColor="{StaticResource PrimaryRed}"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                CornerRadius="10"
+                                HeightRequest="45" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame x:Name="FirmwareUpdatePanel"
+                       BackgroundColor="#2C2C2C"
+                       CornerRadius="10"
+                       Padding="15"
+                       IsVisible="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Firmware Kezelés" 
+                               TextColor="White" 
+                               FontAttributes="Bold" 
+                               FontSize="16" />
+
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Jelenlegi verzió:" TextColor="Gray" />
+                            <Label x:Name="LblFirmwareVersion" Text="Lekérdezés..." TextColor="White" />
+                        </HorizontalStackLayout>
+
+                        <Button Text="FIRMWARE FRISSÍTÉS (.bin)"
+                                Clicked="OnUpdateFirmwareClicked"
+                                BackgroundColor="#444444"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                CornerRadius="10"
+                                HeightRequest="45" />
+
+                        <VerticalStackLayout x:Name="UpdateProgressLayout" IsVisible="False" Spacing="5">
+                            <ProgressBar x:Name="UpdateProgressBar" ProgressColor="{StaticResource PrimaryRed}" HeightRequest="10" />
+                            <Label x:Name="LblUpdateStatus" Text="0%" TextColor="Gray" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Button x:Name="BtnSearch"
+                        Text="ESZKÖZÖK KERESÉSE"
+                        Clicked="OnBTSearchClicked"
+                        BackgroundColor="{StaticResource PrimaryRed}"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        HeightRequest="55"
+                        CornerRadius="10" />
+
+                <ActivityIndicator x:Name="ScanIndicator"
+                                   IsRunning="False"
+                                   Color="{StaticResource PrimaryRed}"
+                                   HorizontalOptions="Center" />
+
+                <CollectionView x:Name="DevicesListView"
+                                SelectionMode="Single"
+                                SelectionChanged="OnDeviceSelected">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="0,5">
+                                <Border StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="#333333"
+                                        StrokeThickness="0"
+                                        Padding="15">
+                                    <HorizontalStackLayout Spacing="15">
+                                        <Ellipse Fill="{StaticResource PrimaryRed}"
+                                                 WidthRequest="40"
+                                                 HeightRequest="40" />
+
+                                        <VerticalStackLayout VerticalOptions="Center">
+                                            <Label Text="{Binding Name}"
+                                                   TextColor="White"
+                                                   FontAttributes="Bold"
+                                                   FontSize="16" />
+                                            <Label Text="{Binding Id}"
+                                                   TextColor="Gray"
+                                                   FontSize="12" />
+                                        </VerticalStackLayout>
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

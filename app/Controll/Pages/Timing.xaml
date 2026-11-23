@@ -1,0 +1,679 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.Timing"
+             BackgroundColor="{StaticResource GraphiteGray}">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="16">
+
+            <Button Text="← Vissza a vezérléshez"
+                    BackgroundColor="{StaticResource PrimaryRed}"
+                    TextColor="White"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    Clicked="OnBackToControlClicked" />
+
+            <!-- ══════════════ VENTILÁTOR 1 ══════════════ -->
+            <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Ventilátor 1" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Border x:Name="Fan1TimerTab" Grid.Column="0"
+                                BackgroundColor="{StaticResource PrimaryRed}"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnFan1TimerTabTapped"/>
+                            </Border.GestureRecognizers>
+                            <Label Text="⏱ Időzítő" TextColor="White" FontAttributes="Bold"
+                                   HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                        <Border x:Name="Fan1ThermoTab" Grid.Column="1"
+                                BackgroundColor="#444444"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnFan1ThermoTabTapped"/>
+                            </Border.GestureRecognizers>
+                            <Label x:Name="Fan1ThermoTabLabel" Text="🌡 Termosztát" TextColor="White" FontAttributes="Bold"
+                                   HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- Fan1 Időzítő panel -->
+                    <VerticalStackLayout x:Name="Fan1TimerPanel" Spacing="8">
+                        <Label Text="Napok" TextColor="Gray" FontSize="12"/>
+                        <HorizontalStackLayout Spacing="4" x:Name="Fan1DaysRow">
+                            <Border x:Name="Fan1DayH"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="H"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="0"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan1DayK"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="K"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="1"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan1DaySz" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="2"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan1DayCs" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="CS" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="3"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan1DayP"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="P"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="4"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan1DaySzo" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="5"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan1DayV"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="V"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan1DayTapped" CommandParameter="6"/></Border.GestureRecognizers></Border>
+                        </HorizontalStackLayout>
+
+                        <Label Text="Időzítő slotok (max 5)" TextColor="Gray" FontSize="12"/>
+                        <VerticalStackLayout x:Name="Fan1SlotsContainer" Spacing="6"/>
+
+                        <Button Text="+ Slot hozzáadása"
+                                x:Name="Fan1AddSlotBtn"
+                                Clicked="OnFan1AddSlot"
+                                BackgroundColor="#444444" TextColor="White"
+                                CornerRadius="8" HeightRequest="38"/>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE"
+                                    Clicked="OnFan1TimerSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan1TimerDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Fan1TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
+                    <!-- Fan1 Termosztát panel -->
+                    <VerticalStackLayout x:Name="Fan1ThermoPanel" Spacing="10" IsVisible="False">
+                        <Grid x:Name="Fan1ControlSourceRow" ColumnDefinitions="Auto,*" ColumnSpacing="8" IsVisible="False">
+                            <Label Grid.Column="0" Text="Vezérlés forrása:" TextColor="Gray" FontSize="12" VerticalOptions="Center"/>
+                            <Picker Grid.Column="1" x:Name="Fan1ControlSource" BackgroundColor="#3A3A3A" TextColor="White"
+                                    SelectedIndexChanged="OnFan1ControlSourceChanged">
+                                <Picker.Items>
+                                    <x:String>Hőmérséklet (görbe)</x:String>
+                                    <x:String>Kapcsoló (K1)</x:String>
+                                    <x:String>Kapcsoló + hőmérséklet</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Grid>
+                        <VerticalStackLayout x:Name="Fan1ThermoNormal" Spacing="10">
+                        <GraphicsView x:Name="Fan1CurveGraph" HeightRequest="150"/>
+                        <Label FontSize="10" HorizontalOptions="Center">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="■ " TextColor="#e74c3c"/><Span Text="Fordulatszám (%)   " TextColor="Gray"/>
+                                    <Span Text="■ " TextColor="#e67e22"/><Span Text="PWM frekvencia (Hz)" TextColor="Gray"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Label Grid.Column="0" Text="Pontok száma:" TextColor="Gray" FontSize="12" VerticalOptions="Center"/>
+                            <Picker Grid.Column="1" x:Name="Fan1PointCount" BackgroundColor="#3A3A3A" TextColor="White"
+                                    SelectedIndexChanged="OnFan1PointCountChanged">
+                                <Picker.Items>
+                                    <x:String>1</x:String><x:String>2</x:String><x:String>3</x:String>
+                                    <x:String>4</x:String><x:String>5</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                            <Label Grid.Row="0" Grid.Column="0" Text="°C" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+                            <Label Grid.Row="0" Grid.Column="1" Text="%" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+                            <Label Grid.Row="0" Grid.Column="2" Text="Hz" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+                            <Entry Grid.Row="1" Grid.Column="0" x:Name="Fan1P1T"    Text="10"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="1" Grid.Column="1" x:Name="Fan1P1Pct"  Text="0"   Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="1" Grid.Column="2" x:Name="Fan1P1Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="2" Grid.Column="0" x:Name="Fan1P2T"    Text="20"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="2" Grid.Column="1" x:Name="Fan1P2Pct"  Text="25"  Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="2" Grid.Column="2" x:Name="Fan1P2Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="3" Grid.Column="0" x:Name="Fan1P3T"    Text="30"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="3" Grid.Column="1" x:Name="Fan1P3Pct"  Text="50"  Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="3" Grid.Column="2" x:Name="Fan1P3Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="4" Grid.Column="0" x:Name="Fan1P4T"    Text="40"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="4" Grid.Column="1" x:Name="Fan1P4Pct"  Text="75"  Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="4" Grid.Column="2" x:Name="Fan1P4Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="5" Grid.Column="0" x:Name="Fan1P5T"    Text="50"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="5" Grid.Column="1" x:Name="Fan1P5Pct"  Text="100" Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                            <Entry Grid.Row="5" Grid.Column="2" x:Name="Fan1P5Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan1ThermoChanged"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Érzékelő" TextColor="Gray" FontSize="11"/>
+                                <Picker x:Name="Fan1ThermoSensor"
+                                        BackgroundColor="#3A3A3A" TextColor="White"
+                                        SelectedIndexChanged="OnFan1ThermoChanged">
+                                    <Picker.Items><x:String>NTC1 (T1)</x:String><x:String>NTC2 (T2)</x:String></Picker.Items>
+                                </Picker>
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 8" Padding="12">
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Aktuális → számított" TextColor="Gray" FontSize="10"/>
+                                    <Label x:Name="Fan1ThermoPreview" Text="-- °C  →  -- %"
+                                           TextColor="{StaticResource PrimaryRed}" FontSize="13" FontAttributes="Bold"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE"
+                                    Clicked="OnFan1ThermoSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan1ThermoDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Fan1ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <!-- Fan1 Kapcsoló-logika (csak "2 kapcsoló" módban látszik) -->
+                        <VerticalStackLayout x:Name="Fan1LogicSection" Spacing="10" IsVisible="False">
+                            <Label x:Name="Fan1LogicIntro" Text="Add meg K1/K2 minden állapot-kombinációjához a ventilátor fordulatszámát (%)" TextColor="Gray" FontSize="11"/>
+                            <VerticalStackLayout x:Name="Fan1LogicThresholdSection" Spacing="4" IsVisible="False">
+                                <Label Text="Hőmérséklet küszöb (°C) - ez választja el az 'Alacsony'/'Magas' esetet" TextColor="Gray" FontSize="11"/>
+                                <Entry x:Name="Fan1LogicThreshold" Text="30" Keyboard="Numeric"
+                                       BackgroundColor="#3A3A3A" TextColor="White"
+                                       HorizontalTextAlignment="Center" HeightRequest="40"/>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                                <Label Grid.Row="0" Grid.Column="0" x:Name="Fan1LogicRow1" Text="K1: Nyitott · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
+                                    <Picker x:Name="Fan1LogicOOMode" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" SelectedIndexChanged="OnFan1LogicOOModeChanged">
+                                        <Picker.Items>
+                                            <x:String>Görbe szerint</x:String>
+                                            <x:String>Kikapcsolva</x:String>
+                                            <x:String>Bekapcsolva</x:String>
+                                            <x:String>Egyéni %</x:String>
+                                        </Picker.Items>
+                                    </Picker>
+                                    <Entry x:Name="Fan1LogicOO" Text="50" Placeholder="%" Keyboard="Numeric" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" IsVisible="False"/>
+                                </VerticalStackLayout>
+                                <Label Grid.Row="1" Grid.Column="0" x:Name="Fan1LogicRow2" Text="K1: Nyitott · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Entry Grid.Row="1" Grid.Column="1" x:Name="Fan1LogicOC" Text="50" Placeholder="%" Keyboard="Numeric" WidthRequest="70" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center"/>
+                                <Label Grid.Row="2" Grid.Column="0" x:Name="Fan1LogicRow3" Text="K1: Zárt · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="4">
+                                    <Picker x:Name="Fan1LogicCOMode" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" SelectedIndexChanged="OnFan1LogicCOModeChanged">
+                                        <Picker.Items>
+                                            <x:String>Görbe szerint</x:String>
+                                            <x:String>Kikapcsolva</x:String>
+                                            <x:String>Bekapcsolva</x:String>
+                                            <x:String>Egyéni %</x:String>
+                                        </Picker.Items>
+                                    </Picker>
+                                    <Entry x:Name="Fan1LogicCO" Text="50" Placeholder="%" Keyboard="Numeric" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" IsVisible="False"/>
+                                </VerticalStackLayout>
+                                <Label Grid.Row="3" Grid.Column="0" x:Name="Fan1LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Entry Grid.Row="3" Grid.Column="1" x:Name="Fan1LogicCC" Text="100" Placeholder="%" Keyboard="Numeric" WidthRequest="70" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnFan1LogicSave"
+                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                                <Button Grid.Column="1" Text="Törlés" Clicked="OnFan1LogicDelete"
+                                        BackgroundColor="#444444" TextColor="White"
+                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            </Grid>
+                            <Label x:Name="Fan1LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══════════════ VENTILÁTOR 2 ══════════════ -->
+            <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Ventilátor 2" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Border x:Name="Fan2TimerTab" Grid.Column="0"
+                                BackgroundColor="{StaticResource PrimaryRed}"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2TimerTabTapped"/></Border.GestureRecognizers>
+                            <Label Text="⏱ Időzítő" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                        <Border x:Name="Fan2ThermoTab" Grid.Column="1"
+                                BackgroundColor="#444444"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2ThermoTabTapped"/></Border.GestureRecognizers>
+                            <Label x:Name="Fan2ThermoTabLabel" Text="🌡 Termosztát" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Fan2TimerPanel" Spacing="8">
+                        <Label Text="Napok" TextColor="Gray" FontSize="12"/>
+                        <HorizontalStackLayout Spacing="4">
+                            <Border x:Name="Fan2DayH"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="H"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="0"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan2DayK"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="K"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="1"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan2DaySz" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="2"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan2DayCs" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="CS" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="3"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan2DayP"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="P"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="4"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan2DaySzo" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="5"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Fan2DayV"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="V"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnFan2DayTapped" CommandParameter="6"/></Border.GestureRecognizers></Border>
+                        </HorizontalStackLayout>
+                        <Label Text="Időzítő slotok (max 5)" TextColor="Gray" FontSize="12"/>
+                        <VerticalStackLayout x:Name="Fan2SlotsContainer" Spacing="6"/>
+                        <Button Text="+ Slot hozzáadása" x:Name="Fan2AddSlotBtn" Clicked="OnFan2AddSlot"
+                                BackgroundColor="#444444" TextColor="White" CornerRadius="8" HeightRequest="38"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE" Clicked="OnFan2TimerSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan2TimerDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Fan2TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout x:Name="Fan2ThermoPanel" Spacing="10" IsVisible="False">
+                        <Grid x:Name="Fan2ControlSourceRow" ColumnDefinitions="Auto,*" ColumnSpacing="8" IsVisible="False">
+                            <Label Grid.Column="0" Text="Vezérlés forrása:" TextColor="Gray" FontSize="12" VerticalOptions="Center"/>
+                            <Picker Grid.Column="1" x:Name="Fan2ControlSource" BackgroundColor="#3A3A3A" TextColor="White"
+                                    SelectedIndexChanged="OnFan2ControlSourceChanged">
+                                <Picker.Items>
+                                    <x:String>Hőmérséklet (görbe)</x:String>
+                                    <x:String>Kapcsoló (K1)</x:String>
+                                    <x:String>Kapcsoló + hőmérséklet</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Grid>
+                        <VerticalStackLayout x:Name="Fan2ThermoNormal" Spacing="10">
+                        <GraphicsView x:Name="Fan2CurveGraph" HeightRequest="150"/>
+                        <Label FontSize="10" HorizontalOptions="Center">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="■ " TextColor="#e74c3c"/><Span Text="Fordulatszám (%)   " TextColor="Gray"/>
+                                    <Span Text="■ " TextColor="#e67e22"/><Span Text="PWM frekvencia (Hz)" TextColor="Gray"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Label Grid.Column="0" Text="Pontok száma:" TextColor="Gray" FontSize="12" VerticalOptions="Center"/>
+                            <Picker Grid.Column="1" x:Name="Fan2PointCount" BackgroundColor="#3A3A3A" TextColor="White"
+                                    SelectedIndexChanged="OnFan2PointCountChanged">
+                                <Picker.Items>
+                                    <x:String>1</x:String><x:String>2</x:String><x:String>3</x:String>
+                                    <x:String>4</x:String><x:String>5</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="6">
+                            <Label Grid.Row="0" Grid.Column="0" Text="°C" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+                            <Label Grid.Row="0" Grid.Column="1" Text="%" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+                            <Label Grid.Row="0" Grid.Column="2" Text="Hz" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+                            <Entry Grid.Row="1" Grid.Column="0" x:Name="Fan2P1T"    Text="10"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="1" Grid.Column="1" x:Name="Fan2P1Pct"  Text="0"   Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="1" Grid.Column="2" x:Name="Fan2P1Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="2" Grid.Column="0" x:Name="Fan2P2T"    Text="20"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="2" Grid.Column="1" x:Name="Fan2P2Pct"  Text="25"  Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="2" Grid.Column="2" x:Name="Fan2P2Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="3" Grid.Column="0" x:Name="Fan2P3T"    Text="30"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="3" Grid.Column="1" x:Name="Fan2P3Pct"  Text="50"  Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="3" Grid.Column="2" x:Name="Fan2P3Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="4" Grid.Column="0" x:Name="Fan2P4T"    Text="40"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="4" Grid.Column="1" x:Name="Fan2P4Pct"  Text="75"  Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="4" Grid.Column="2" x:Name="Fan2P4Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="5" Grid.Column="0" x:Name="Fan2P5T"    Text="50"  Placeholder="°C" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="5" Grid.Column="1" x:Name="Fan2P5Pct"  Text="100" Placeholder="%"  Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                            <Entry Grid.Row="5" Grid.Column="2" x:Name="Fan2P5Freq" Text="30"  Placeholder="Hz" Keyboard="Numeric" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" HeightRequest="40" TextChanged="OnFan2ThermoChanged"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Érzékelő" TextColor="Gray" FontSize="11"/>
+                                <Picker x:Name="Fan2ThermoSensor" BackgroundColor="#3A3A3A" TextColor="White"
+                                        SelectedIndexChanged="OnFan2ThermoChanged">
+                                    <Picker.Items><x:String>NTC1 (T1)</x:String><x:String>NTC2 (T2)</x:String></Picker.Items>
+                                </Picker>
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 8" Padding="12">
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label Text="Aktuális → számított" TextColor="Gray" FontSize="10"/>
+                                    <Label x:Name="Fan2ThermoPreview" Text="-- °C  →  -- %"
+                                           TextColor="{StaticResource PrimaryRed}" FontSize="13" FontAttributes="Bold"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE" Clicked="OnFan2ThermoSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnFan2ThermoDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Fan2ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <!-- Fan2 Kapcsoló-logika (csak "2 kapcsoló" módban látszik) -->
+                        <VerticalStackLayout x:Name="Fan2LogicSection" Spacing="10" IsVisible="False">
+                            <Label x:Name="Fan2LogicIntro" Text="Add meg K1/K2 minden állapot-kombinációjához a ventilátor fordulatszámát (%)" TextColor="Gray" FontSize="11"/>
+                            <VerticalStackLayout x:Name="Fan2LogicThresholdSection" Spacing="4" IsVisible="False">
+                                <Label Text="Hőmérséklet küszöb (°C) - ez választja el az 'Alacsony'/'Magas' esetet" TextColor="Gray" FontSize="11"/>
+                                <Entry x:Name="Fan2LogicThreshold" Text="30" Keyboard="Numeric"
+                                       BackgroundColor="#3A3A3A" TextColor="White"
+                                       HorizontalTextAlignment="Center" HeightRequest="40"/>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                                <Label Grid.Row="0" Grid.Column="0" x:Name="Fan2LogicRow1" Text="K1: Nyitott · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
+                                    <Picker x:Name="Fan2LogicOOMode" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" SelectedIndexChanged="OnFan2LogicOOModeChanged">
+                                        <Picker.Items>
+                                            <x:String>Görbe szerint</x:String>
+                                            <x:String>Kikapcsolva</x:String>
+                                            <x:String>Bekapcsolva</x:String>
+                                            <x:String>Egyéni %</x:String>
+                                        </Picker.Items>
+                                    </Picker>
+                                    <Entry x:Name="Fan2LogicOO" Text="50" Placeholder="%" Keyboard="Numeric" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" IsVisible="False"/>
+                                </VerticalStackLayout>
+                                <Label Grid.Row="1" Grid.Column="0" x:Name="Fan2LogicRow2" Text="K1: Nyitott · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Entry Grid.Row="1" Grid.Column="1" x:Name="Fan2LogicOC" Text="50" Placeholder="%" Keyboard="Numeric" WidthRequest="70" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center"/>
+                                <Label Grid.Row="2" Grid.Column="0" x:Name="Fan2LogicRow3" Text="K1: Zárt · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="4">
+                                    <Picker x:Name="Fan2LogicCOMode" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" SelectedIndexChanged="OnFan2LogicCOModeChanged">
+                                        <Picker.Items>
+                                            <x:String>Görbe szerint</x:String>
+                                            <x:String>Kikapcsolva</x:String>
+                                            <x:String>Bekapcsolva</x:String>
+                                            <x:String>Egyéni %</x:String>
+                                        </Picker.Items>
+                                    </Picker>
+                                    <Entry x:Name="Fan2LogicCO" Text="50" Placeholder="%" Keyboard="Numeric" WidthRequest="150" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center" IsVisible="False"/>
+                                </VerticalStackLayout>
+                                <Label Grid.Row="3" Grid.Column="0" x:Name="Fan2LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Entry Grid.Row="3" Grid.Column="1" x:Name="Fan2LogicCC" Text="100" Placeholder="%" Keyboard="Numeric" WidthRequest="70" BackgroundColor="#3A3A3A" TextColor="White" HorizontalTextAlignment="Center"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnFan2LogicSave"
+                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                                <Button Grid.Column="1" Text="Törlés" Clicked="OnFan2LogicDelete"
+                                        BackgroundColor="#444444" TextColor="White"
+                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            </Grid>
+                            <Label x:Name="Fan2LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══════════════ RELÉ 1 ══════════════ -->
+            <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Relé 1" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Border x:Name="Relay1TimerTab" Grid.Column="0"
+                                BackgroundColor="{StaticResource PrimaryRed}"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1TimerTabTapped"/></Border.GestureRecognizers>
+                            <Label Text="⏱ Időzítő" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                        <Border x:Name="Relay1ThermoTab" Grid.Column="1"
+                                BackgroundColor="#444444"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1ThermoTabTapped"/></Border.GestureRecognizers>
+                            <Label x:Name="Relay1ThermoTabLabel" Text="🌡 Termosztát" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Relay1TimerPanel" Spacing="8">
+                        <Label Text="Napok" TextColor="Gray" FontSize="12"/>
+                        <HorizontalStackLayout Spacing="4">
+                            <Border x:Name="Relay1DayH"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="H"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="0"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay1DayK"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="K"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="1"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay1DaySz" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="2"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay1DayCs" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="CS" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="3"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay1DayP"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="P"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="4"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay1DaySzo" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="5"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay1DayV"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="V"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay1DayTapped" CommandParameter="6"/></Border.GestureRecognizers></Border>
+                        </HorizontalStackLayout>
+                        <Label Text="Időzítő slotok — be/ki esemény (max 5)" TextColor="Gray" FontSize="12"/>
+                        <VerticalStackLayout x:Name="Relay1SlotsContainer" Spacing="6"/>
+                        <Button Text="+ Slot hozzáadása" x:Name="Relay1AddSlotBtn" Clicked="OnRelay1AddSlot"
+                                BackgroundColor="#444444" TextColor="White" CornerRadius="8" HeightRequest="38"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE" Clicked="OnRelay1TimerSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay1TimerDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Relay1TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout x:Name="Relay1ThermoPanel" Spacing="10" IsVisible="False">
+                        <Grid x:Name="Relay1ControlSourceRow" ColumnDefinitions="Auto,*" ColumnSpacing="8" IsVisible="False">
+                            <Label Grid.Column="0" Text="Vezérlés forrása:" TextColor="Gray" FontSize="12" VerticalOptions="Center"/>
+                            <Picker Grid.Column="1" x:Name="Relay1ControlSource" BackgroundColor="#3A3A3A" TextColor="White"
+                                    SelectedIndexChanged="OnRelay1ControlSourceChanged">
+                                <Picker.Items>
+                                    <x:String>Hőmérséklet</x:String>
+                                    <x:String>Kapcsoló (K1)</x:String>
+                                    <x:String>Kapcsoló + hőmérséklet</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Grid>
+                        <VerticalStackLayout x:Name="Relay1ThermoNormal" Spacing="10">
+                        <Border BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 8" Padding="12">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="Hiszterézis — relé nem csapkod a küszöb körül" TextColor="Gray" FontSize="11"/>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label x:Name="Relay1OnLabel" Text="Bekapcsol (°C)" TextColor="Gray" FontSize="11"/>
+                                        <Entry x:Name="Relay1TOn" Text="30" Keyboard="Numeric"
+                                               BackgroundColor="#3A3A3A" TextColor="White"
+                                               HorizontalTextAlignment="Center" HeightRequest="44"
+                                               TextChanged="OnRelay1ThermoChanged"/>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label x:Name="Relay1OffLabel" Text="Kikapcsol (°C)" TextColor="Gray" FontSize="11"/>
+                                        <Entry x:Name="Relay1TOff" Text="25" Keyboard="Numeric"
+                                               BackgroundColor="#3A3A3A" TextColor="White"
+                                               HorizontalTextAlignment="Center" HeightRequest="44"
+                                               TextChanged="OnRelay1ThermoChanged"/>
+                                    </VerticalStackLayout>
+                                </Grid>
+                                <GraphicsView x:Name="Relay1ThermoGraph" HeightRequest="90"/>
+                            </VerticalStackLayout>
+                        </Border>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Érzékelő" TextColor="Gray" FontSize="11"/>
+                                <Picker x:Name="Relay1ThermoSensor" SelectedIndexChanged="OnRelay1ThermoChanged" BackgroundColor="#3A3A3A" TextColor="White">
+                                    <Picker.Items><x:String>NTC1 (T1)</x:String><x:String>NTC2 (T2)</x:String></Picker.Items>
+                                </Picker>
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 8" Padding="12">
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label x:Name="Relay1CurrentLabel" Text="Aktuális hőmérséklet" TextColor="Gray" FontSize="10"/>
+                                    <Label x:Name="Relay1CurrentTemp" Text="-- °C"
+                                           TextColor="{StaticResource PrimaryRed}" FontSize="18" FontAttributes="Bold"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE" Clicked="OnRelay1ThermoSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay1ThermoDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Relay1ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <!-- Relay1 Kapcsoló-logika (csak "2 kapcsoló" módban látszik) -->
+                        <VerticalStackLayout x:Name="Relay1LogicSection" Spacing="10" IsVisible="False">
+                            <Label x:Name="Relay1LogicIntro" Text="Add meg K1/K2 minden állapot-kombinációjához, hogy a relé húzzon-e" TextColor="Gray" FontSize="11"/>
+                            <VerticalStackLayout x:Name="Relay1LogicThresholdSection" Spacing="4" IsVisible="False">
+                                <Label Text="Hőmérséklet küszöb (°C) - ez választja el az 'Alacsony'/'Magas' esetet" TextColor="Gray" FontSize="11"/>
+                                <Entry x:Name="Relay1LogicThreshold" Text="30" Keyboard="Numeric"
+                                       BackgroundColor="#3A3A3A" TextColor="White"
+                                       HorizontalTextAlignment="Center" HeightRequest="40"/>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                                <Label Grid.Row="0" Grid.Column="0" x:Name="Relay1LogicRow1" Text="K1: Nyitott · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="0" Grid.Column="1" x:Name="Relay1LogicOO"/>
+                                <Label Grid.Row="1" Grid.Column="0" x:Name="Relay1LogicRow2" Text="K1: Nyitott · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="1" Grid.Column="1" x:Name="Relay1LogicOC"/>
+                                <Label Grid.Row="2" Grid.Column="0" x:Name="Relay1LogicRow3" Text="K1: Zárt · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="2" Grid.Column="1" x:Name="Relay1LogicCO"/>
+                                <Label Grid.Row="3" Grid.Column="0" x:Name="Relay1LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="3" Grid.Column="1" x:Name="Relay1LogicCC"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnRelay1LogicSave"
+                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                                <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay1LogicDelete"
+                                        BackgroundColor="#444444" TextColor="White"
+                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            </Grid>
+                            <Label x:Name="Relay1LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ══════════════ RELÉ 2 ══════════════ -->
+            <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Relé 2" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Border x:Name="Relay2TimerTab" Grid.Column="0"
+                                BackgroundColor="{StaticResource PrimaryRed}"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2TimerTabTapped"/></Border.GestureRecognizers>
+                            <Label Text="⏱ Időzítő" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                        <Border x:Name="Relay2ThermoTab" Grid.Column="1"
+                                BackgroundColor="#444444"
+                                StrokeShape="RoundRectangle 8" Padding="0">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2ThermoTabTapped"/></Border.GestureRecognizers>
+                            <Label x:Name="Relay2ThermoTabLabel" Text="🌡 Termosztát" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" Padding="0,10"/>
+                        </Border>
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="Relay2TimerPanel" Spacing="8">
+                        <Label Text="Napok" TextColor="Gray" FontSize="12"/>
+                        <HorizontalStackLayout Spacing="4">
+                            <Border x:Name="Relay2DayH"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="H"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="0"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay2DayK"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="K"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="1"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay2DaySz" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="2"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay2DayCs" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="CS" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="3"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay2DayP"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="P"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="4"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay2DaySzo" BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="SZ" TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="5"/></Border.GestureRecognizers></Border>
+                            <Border x:Name="Relay2DayV"  BackgroundColor="#444" StrokeShape="RoundRectangle 6" Padding="10,6"><Label Text="V"  TextColor="White" FontSize="13"/><Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRelay2DayTapped" CommandParameter="6"/></Border.GestureRecognizers></Border>
+                        </HorizontalStackLayout>
+                        <Label Text="Időzítő slotok — be/ki esemény (max 5)" TextColor="Gray" FontSize="12"/>
+                        <VerticalStackLayout x:Name="Relay2SlotsContainer" Spacing="6"/>
+                        <Button Text="+ Slot hozzáadása" x:Name="Relay2AddSlotBtn" Clicked="OnRelay2AddSlot"
+                                BackgroundColor="#444444" TextColor="White" CornerRadius="8" HeightRequest="38"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="MENTÉS AZ ESP-BE" Clicked="OnRelay2TimerSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay2TimerDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Relay2TimerStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout x:Name="Relay2ThermoPanel" Spacing="10" IsVisible="False">
+                        <Grid x:Name="Relay2ControlSourceRow" ColumnDefinitions="Auto,*" ColumnSpacing="8" IsVisible="False">
+                            <Label Grid.Column="0" Text="Vezérlés forrása:" TextColor="Gray" FontSize="12" VerticalOptions="Center"/>
+                            <Picker Grid.Column="1" x:Name="Relay2ControlSource" BackgroundColor="#3A3A3A" TextColor="White"
+                                    SelectedIndexChanged="OnRelay2ControlSourceChanged">
+                                <Picker.Items>
+                                    <x:String>Hőmérséklet</x:String>
+                                    <x:String>Kapcsoló (K1)</x:String>
+                                    <x:String>Kapcsoló + hőmérséklet</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Grid>
+                        <VerticalStackLayout x:Name="Relay2ThermoNormal" Spacing="10">
+                        <Border BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 8" Padding="12">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="Hiszterézis — relé nem csapkod a küszöb körül" TextColor="Gray" FontSize="11"/>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label x:Name="Relay2OnLabel" Text="Bekapcsol (°C)" TextColor="Gray" FontSize="11"/>
+                                        <Entry x:Name="Relay2TOn" Text="30" Keyboard="Numeric"
+                                               BackgroundColor="#3A3A3A" TextColor="White"
+                                               HorizontalTextAlignment="Center" HeightRequest="44"
+                                               TextChanged="OnRelay2ThermoChanged"/>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label x:Name="Relay2OffLabel" Text="Kikapcsol (°C)" TextColor="Gray" FontSize="11"/>
+                                        <Entry x:Name="Relay2TOff" Text="25" Keyboard="Numeric"
+                                               BackgroundColor="#3A3A3A" TextColor="White"
+                                               HorizontalTextAlignment="Center" HeightRequest="44"
+                                               TextChanged="OnRelay2ThermoChanged"/>
+                                    </VerticalStackLayout>
+                                </Grid>
+                                <GraphicsView x:Name="Relay2ThermoGraph" HeightRequest="90"/>
+                            </VerticalStackLayout>
+                        </Border>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Érzékelő" TextColor="Gray" FontSize="11"/>
+                                <Picker x:Name="Relay2ThermoSensor" SelectedIndexChanged="OnRelay2ThermoChanged" BackgroundColor="#3A3A3A" TextColor="White">
+                                    <Picker.Items><x:String>NTC1 (T1)</x:String><x:String>NTC2 (T2)</x:String></Picker.Items>
+                                </Picker>
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" BackgroundColor="#1A1A1A" StrokeShape="RoundRectangle 8" Padding="12">
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label x:Name="Relay2CurrentLabel" Text="Aktuális hőmérséklet" TextColor="Gray" FontSize="10"/>
+                                    <Label x:Name="Relay2CurrentTemp" Text="-- °C"
+                                           TextColor="{StaticResource PrimaryRed}" FontSize="18" FontAttributes="Bold"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="TERMOSZTÁT MENTÉSE AZ ESP-BE" Clicked="OnRelay2ThermoSave"
+                                    BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                    FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                            <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay2ThermoDelete"
+                                    BackgroundColor="#444444" TextColor="White"
+                                    CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                        </Grid>
+                        <Label x:Name="Relay2ThermoStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+
+                        <!-- Relay2 Kapcsoló-logika (csak "2 kapcsoló" módban látszik) -->
+                        <VerticalStackLayout x:Name="Relay2LogicSection" Spacing="10" IsVisible="False">
+                            <Label x:Name="Relay2LogicIntro" Text="Add meg K1/K2 minden állapot-kombinációjához, hogy a relé húzzon-e" TextColor="Gray" FontSize="11"/>
+                            <VerticalStackLayout x:Name="Relay2LogicThresholdSection" Spacing="4" IsVisible="False">
+                                <Label Text="Hőmérséklet küszöb (°C) - ez választja el az 'Alacsony'/'Magas' esetet" TextColor="Gray" FontSize="11"/>
+                                <Entry x:Name="Relay2LogicThreshold" Text="30" Keyboard="Numeric"
+                                       BackgroundColor="#3A3A3A" TextColor="White"
+                                       HorizontalTextAlignment="Center" HeightRequest="40"/>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+                                <Label Grid.Row="0" Grid.Column="0" x:Name="Relay2LogicRow1" Text="K1: Nyitott · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="0" Grid.Column="1" x:Name="Relay2LogicOO"/>
+                                <Label Grid.Row="1" Grid.Column="0" x:Name="Relay2LogicRow2" Text="K1: Nyitott · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="1" Grid.Column="1" x:Name="Relay2LogicOC"/>
+                                <Label Grid.Row="2" Grid.Column="0" x:Name="Relay2LogicRow3" Text="K1: Zárt · K2: Nyitott" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="2" Grid.Column="1" x:Name="Relay2LogicCO"/>
+                                <Label Grid.Row="3" Grid.Column="0" x:Name="Relay2LogicRow4" Text="K1: Zárt · K2: Zárt" TextColor="White" FontSize="13" VerticalOptions="Center"/>
+                                <Switch Grid.Row="3" Grid.Column="1" x:Name="Relay2LogicCC"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Button Grid.Column="0" Text="LOGIKA MENTÉSE AZ ESP-BE" Clicked="OnRelay2LogicSave"
+                                        BackgroundColor="{StaticResource PrimaryRed}" TextColor="White"
+                                        FontAttributes="Bold" CornerRadius="8" HeightRequest="42"/>
+                                <Button Grid.Column="1" Text="Törlés" Clicked="OnRelay2LogicDelete"
+                                        BackgroundColor="#444444" TextColor="White"
+                                        CornerRadius="8" HeightRequest="42" WidthRequest="80"/>
+                            </Grid>
+                            <Label x:Name="Relay2LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

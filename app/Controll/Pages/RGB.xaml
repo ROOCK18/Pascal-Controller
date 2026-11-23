@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.RGB">
+
+    <VerticalStackLayout Spacing="20" Padding="20">
+
+        <!-- Választott szín + egyedi ON/OFF buborék kapcsoló -->
+        <Border HeightRequest="80"
+                Stroke="Transparent"
+                BackgroundColor="Transparent">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  HorizontalOptions="Fill"
+                  VerticalOptions="Center">
+
+                <!-- Szín box bal oldalon, kis eltartással -->
+                <Border
+    Grid.Column="0"
+    Stroke="#000000"
+    StrokeThickness="1"
+    StrokeShape="RoundRectangle, 10"
+    WidthRequest="160"
+    HeightRequest="80"
+    HorizontalOptions="Start"
+    VerticalOptions="Center">
+
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnColorHexTapped" />
+                    </Border.GestureRecognizers>
+
+                    <Grid>
+                        <BoxView x:Name="ColorPreviewBox"
+                           WidthRequest="160"
+                           HeightRequest="80"/>
+
+                        <Label x:Name="HexLabel"
+                           Text="#FFFFFF" 
+                           TextColor="White"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           InputTransparent="True">
+                            <Label.Shadow>
+                                <Shadow Brush="Black" Offset="1,1" Radius="2" Opacity="0.8" />
+                            </Label.Shadow>
+                        </Label>
+                    </Grid>
+                </Border>
+
+                <!-- Középső oszlop csak kitölti a helyet -->
+                <Grid Grid.Column="1" />
+
+                <!-- Buborék kapcsoló jobb oldalon -->
+                <Border x:Name="ToggleBorder"
+                        Grid.Column="2"
+                        WidthRequest="80"
+                        HeightRequest="34"
+                        BackgroundColor="{StaticResource PrimaryRed}"
+                        Stroke="#000000"
+                        StrokeThickness="1"
+                        Margin="0,0,16,0"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Padding="4">
+                    <!-- Lekerekítés RoundRectangle-lel -->
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="40,0,0,40" />
+                    </Border.StrokeShape>
+
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnToggleTapped"/>
+                    </Border.GestureRecognizers>
+
+                    <Grid>
+                        <!-- Felirat -->
+                        <Label x:Name="ToggleLabel"
+                               Text="ON"
+                               FontSize="{StaticResource SmallFontSize}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               TextColor="{StaticResource White}" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Fényerő csúszka – 0 és 100 feliratokkal, app színekkel -->
+        <VerticalStackLayout Spacing="10">
+            <Label Text="Fényerő"
+                   FontSize="{StaticResource MediumFontSize}" />
+
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  HorizontalOptions="Fill"
+                  VerticalOptions="Center">
+                <!-- 0 felirat bal oldalon -->
+                <Label Text="0"
+                       Grid.Column="0"
+                       VerticalOptions="Center"
+                       Margin="0,0,8,0" />
+
+                <!-- Csúszka középen -->
+                <Slider x:Name="ValueSlider"
+                        Grid.Column="1"
+                        Minimum="0"
+                        Maximum="1"
+                        Value="1"
+                        MinimumTrackColor="{StaticResource PrimaryRed}"
+                        MaximumTrackColor="{StaticResource LightGray}"
+                        ThumbColor="{StaticResource PrimaryRed}"
+                        ValueChanged="OnValueChanged" />
+
+                <!-- 100 felirat jobb oldalon -->
+                <Label Text="100"
+                       Grid.Column="2"
+                       VerticalOptions="Center"
+                       Margin="8,0,0,0" />
+            </Grid>
+        </VerticalStackLayout>
+
+        <!-- HSV kör + pötty -->
+        <Grid HeightRequest="300"
+              WidthRequest="300"
+              HorizontalOptions="Center"
+              VerticalOptions="Center"
+              BackgroundColor="Transparent">
+
+            <GraphicsView x:Name="HsvWheelView"
+                          BackgroundColor="Transparent"
+                          HorizontalOptions="Fill"
+                          VerticalOptions="Fill" />
+
+            <!-- ujjat követő pötty (Frame ➜ Border) -->
+            <Border x:Name="SelectorDot"
+                    HeightRequest="18"
+                    WidthRequest="18"
+                    BackgroundColor="{StaticResource White}"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    TranslationX="0"
+                    TranslationY="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="9" />
+                </Border.StrokeShape>
+                <Border.Stroke>
+                    <SolidColorBrush Color="{StaticResource LightGray}" />
+                </Border.Stroke>
+            </Border>
+        </Grid>
+
+    </VerticalStackLayout>
+</ContentView>

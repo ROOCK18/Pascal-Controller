@@ -1,0 +1,43 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.NoteEditorPage"
+             Title="Szerkesztés"
+             BackgroundColor="#1A1A1A">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+            <Label Text="Bejegyzés adatai" TextColor="White" FontSize="20" FontAttributes="Bold" />
+
+            <Entry x:Name="TitleEntry" Placeholder="Cím" TextColor="White" PlaceholderColor="Gray" />
+
+            <Editor x:Name="DescriptionEditor" Placeholder="Leírás" TextColor="White" PlaceholderColor="Gray" 
+                    HeightRequest="200" AutoSize="TextChanges" />
+
+            <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                <VerticalStackLayout Grid.Column="0" Spacing="5">
+                    <Label Text="Kategória" TextColor="Gray" FontSize="12" Margin="5,0" />
+                    <Entry x:Name="CategoryEntry" Placeholder="Pl. Hiba, Munka..." TextColor="White" PlaceholderColor="Gray" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="5">
+                    <Label Text="Prioritás" TextColor="Gray" FontSize="12" Margin="5,0" />
+                    <Picker x:Name="PriorityPicker" TextColor="White">
+                        <Picker.Items>
+                            <x:String>Alacsony</x:String>
+                            <x:String>Közepes</x:String>
+                            <x:String>Magas</x:String>
+                        </Picker.Items>
+                    </Picker>
+                </VerticalStackLayout>
+            </Grid>
+
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Határidő" TextColor="Gray" FontSize="12" Margin="5,0" />
+                <DatePicker x:Name="DeadlinePicker" TextColor="White" />
+            </VerticalStackLayout>
+
+            <Button Text="Mentés" Clicked="OnSaveClicked" BackgroundColor="#FF4D4D" TextColor="White" 
+                    HeightRequest="50" CornerRadius="10" Margin="0,10" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

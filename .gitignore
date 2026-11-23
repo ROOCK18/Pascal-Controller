@@ -1,0 +1,35 @@
+# --- .NET / Visual Studio ---
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Android aláíró kulcsok – soha ne kerüljenek fel
+*.keystore
+*.jks
+*.pfx
+*.p12
+
+# --- Arduino build kimenet ---
+build/
+*.elf
+*.map
+
+# --- Hardver (Drive-on tárolva) ---
+*.SLDASM
+*.SLDPRT
+*.SLDDRW
+~$*
+*.step
+*.STL
+*.stl
+*.pdsprj
+*.pdsprj.*
+*.lgs
+*.gdoc
+
+# --- Egyéb ---
+*.zip
+Thumbs.db
+desktop.ini

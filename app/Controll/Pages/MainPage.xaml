@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.MainPage"
+             BackgroundColor="{StaticResource GraphiteGray}">
+
+    <Grid RowDefinitions="Auto, *, Auto"
+          HorizontalOptions="Fill"
+          VerticalOptions="Fill">
+
+        <!-- TOP RÉSZ - Csak beállítások gomb -->
+        <Grid Grid.Row="0" 
+              BackgroundColor="{StaticResource DarkGray}"
+              HeightRequest="40"
+              Padding="0">
+
+            <Ellipse x:Name="ConnectionIndicatorMain"
+                 WidthRequest="15"
+                 HeightRequest="15"
+                 Margin="10,0,0,0"
+                 Fill="Red"
+                 VerticalOptions="Center"
+                 HorizontalOptions="Start"/>
+
+
+            <Button Text="⚙️" 
+                    Clicked="OnSettingsClicked"
+                    HorizontalOptions="End"
+                    VerticalOptions="Center"
+                    BackgroundColor="Transparent"
+                    BorderWidth="0"
+                    FontSize="20"
+                    WidthRequest="60"
+                    HeightRequest="50" />
+        </Grid>
+
+        <!-- CONTENT RÉSZ - Itt jelenik meg a kiválasztott oldal -->
+        <ContentView x:Name="ContentArea"
+                     Grid.Row="1" 
+                     BackgroundColor="{StaticResource GraphiteGray}" />
+
+        <Border x:Name="NoConnectionOverlayMain"
+        Grid.Row="1"
+        BackgroundColor="#AA000000"
+        IsVisible="False"
+        ZIndex="10">
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
+                <Label Text="⚠️" FontSize="50" HorizontalOptions="Center"/>
+                <Label Text="Nincs csatlakoztatva eszköz!" TextColor="White" FontSize="18" HorizontalOptions="Center"/>
+                <Border BackgroundColor="{StaticResource PrimaryRed}" 
+                        StrokeShape="RoundRectangle 40,0,0,40"
+                        HeightRequest="40"
+                        WidthRequest="150">
+                    <Button Text="Csatlakozás"
+                            BackgroundColor="Transparent"
+                            TextColor="White"
+                            Clicked="OnConnectClicked"/>
+                </Border>
+                <!-- Körbenézek gomb -->
+                <Label Text="(Körbenézek)"
+                       TextColor="White"
+                       FontAttributes="Bold"
+                       FontSize="10"
+                       HorizontalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBrowseTapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
+            </VerticalStackLayout>
+        </Border>
+        
+        <!-- BOTTOM BAR - Custom tab bar -->
+        <Grid Grid.Row="2"
+              HeightRequest="60">
+            <Border x:Name="TapbarBorder"
+                    BackgroundColor="{StaticResource DarkGray}"
+                    StrokeShape="RoundRectangle 20,20,0,0">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource PrimaryRed}"
+                            Offset="0,0"
+                            Radius="20"
+                            Opacity="0.8" />
+                </Border.Shadow>
+
+                <!-- Tab gombok -->
+                <Grid ColumnDefinitions="*,*,*,*"
+                      Padding="20,5,20,5"
+                      BackgroundColor="Transparent">
+
+                    <!-- 1. Adatok tab -->
+                    <Grid Grid.Column="0"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <Path x:Name="DataTabIcon"
+                                  Data="M2,2 L2,18 L22,18 L22,2 Z M4,14 L4,16 L6,16 L6,14 Z M8,10 L8,16 L10,16 L10,10 Z M12,6 L12,16 L14,16 L14,6 Z M16,8 L16,16 L18,16 L18,8 Z"
+                                  Fill="{StaticResource TextColor}"
+                                  Aspect="Uniform"
+                                  WidthRequest="20"
+                                  HeightRequest="20"
+                                  HorizontalOptions="Center"/>
+                            <Label x:Name="DataTabLabel" 
+                                   Text="Adatok" 
+                                   FontSize="10"
+                                   HorizontalOptions="Center"
+                                   TextColor="{StaticResource TextColor}" />
+                        </VerticalStackLayout>
+                        <Button x:Name="DataTabButton"
+                                Clicked="OnDataTabClicked"
+                                BackgroundColor="Transparent"
+                                BorderWidth="0"
+                                Padding="0"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="Fill" />
+                    </Grid>
+                    
+                    <!-- 2. Vezérlés tab (slider ikon) -->
+                    <Grid Grid.Column="1"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <!-- 3 slider / fader -->
+                            <Path x:Name="ControlTabIcon"
+                                  Data="M6,4 L6,20 
+                                        M3,9 L9,9 
+                                        M12,4 L12,20 
+                                        M9,13 L15,13 
+                                        M18,4 L18,20 
+                                        M15,17 L21,17"
+                                  Stroke="{StaticResource TextColor}"
+                                  StrokeThickness="2"
+                                  Aspect="Uniform"
+                                  WidthRequest="20"
+                                  HeightRequest="20"
+                                  HorizontalOptions="Center" />
+                            <Label x:Name="ControlTabLabel" 
+                                   Text="Vezérlés" 
+                                   FontSize="10"
+                                   HorizontalOptions="Center"
+                                   TextColor="{StaticResource TextColor}" />
+                        </VerticalStackLayout>
+                        <Button x:Name="ControlTabButton"
+                                Clicked="OnControlTabClicked"
+                                BackgroundColor="Transparent"
+                                BorderWidth="0"
+                                Padding="0"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="Fill" />
+                    </Grid>
+
+                    <!-- 3. RGB tab (3 kör ikon) -->
+                    <Grid Grid.Column="2"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center">
+                                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                                                <!-- 3 egymásba érő kör (RGB) -->
+                                                <Path x:Name="RgbTabIcon"
+                                  Data="M8,8 A4,4 0 1 1 8.01,8 Z
+                                        M16,8 A4,4 0 1 1 16.01,8 Z
+                                        M12,14 A4,4 0 1 1 12.01,14 Z"
+                                  Fill="{StaticResource TextColor}"
+                                  Aspect="Uniform"
+                                  WidthRequest="20"
+                                  HeightRequest="20"
+                                  HorizontalOptions="Center" />
+                                                <Label x:Name="RgbTabLabel" 
+                                   Text="RGB" 
+                                   FontSize="10"
+                                   HorizontalOptions="Center"
+                                   TextColor="{StaticResource TextColor}" />
+                                            </VerticalStackLayout>
+                                            <Button x:Name="RgbTabButton"
+                                Clicked="OnRgbTabClicked"
+                                BackgroundColor="Transparent"
+                                BorderWidth="0"
+                                Padding="0"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="Fill" />
+                    </Grid>
+
+                    <!-- 4. Napló tab -->
+                    <Grid Grid.Column="3"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                            <Path x:Name="NoteTabIcon"
+                                  Data="M6,2 L18,2 L18,22 L6,22 Z M8,6 L16,6 L16,8 L8,8 Z M8,10 L16,10 L16,12 L8,12 Z M8,14 L16,14 L16,16 L8,16 Z M8,18 L13,18 L13,20 L8,20 Z"
+                                  Fill="{StaticResource TextColor}"
+                                  Aspect="Uniform"
+                                  WidthRequest="20"
+                                  HeightRequest="20"
+                                  HorizontalOptions="Center"/>
+                            <Label x:Name="NoteTabLabel" 
+                                   Text="Napló" 
+                                   FontSize="10"
+                                   HorizontalOptions="Center"
+                                   TextColor="{StaticResource TextColor}" />
+                        </VerticalStackLayout>
+                        <Button x:Name="NoteTabButton"
+                                Clicked="OnNoteTabClicked"
+                                BackgroundColor="Transparent"
+                                BorderWidth="0"
+                                Padding="0"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="Fill" />
+                    </Grid>
+
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

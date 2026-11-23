@@ -1,0 +1,59 @@
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.Note"
+             BackgroundColor="{StaticResource GraphiteGray}">
+
+    <Grid RowDefinitions="Auto, *, Auto" Padding="10">
+
+        <Label Grid.Row="0" Text="Napló bejegyzések"
+               FontSize="24" FontAttributes="Bold"
+               HorizontalOptions="Center" Margin="0,10"
+               TextColor="White" />
+
+        <CollectionView x:Name="LogCollectionView"
+                        SelectionMode="None"
+                        Margin="0,0,0,10">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="0" Margin="5"
+                            BackgroundColor="#2C2C2C"
+                            StrokeShape="RoundRectangle 10">
+
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRowTapped" CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+
+                        <Grid ColumnDefinitions="*, Auto" Padding="15">
+                            <VerticalStackLayout Grid.Column="0" Spacing="5" VerticalOptions="Center">
+                                <Label Text="{Binding ShortTitle}"
+                                       FontSize="18"
+                                       FontAttributes="Bold"
+                                       TextColor="White" />
+
+                                <Label Text="{Binding ShortDescription}"
+                                       FontSize="14"
+                                       TextColor="#BBBBBB" />
+
+                                <HorizontalStackLayout Spacing="10" Margin="0,5,0,0">
+                                    <Label Text="{Binding Category}" FontSize="11" TextColor="Orange" />
+                                    <Label Text="{Binding Priority}" FontSize="11" TextColor="LightBlue" />
+                                    <Label Text="{Binding Deadline}" FontSize="11" TextColor="Pink" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="1" Text="[X]" TextColor="Red" BackgroundColor="Transparent" FontSize="20" Clicked="OnDeleteRowClicked" CommandParameter="{Binding .}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="2" Text="+ Új bejegyzés"
+                Clicked="OnAddNewRowClicked"
+                BackgroundColor="#FF4D4D"
+                TextColor="White"
+                FontAttributes="Bold"
+                CornerRadius="10"
+                Margin="0,5"/>
+    </Grid>
+</ContentView>

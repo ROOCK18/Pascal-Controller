@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Színváltozók -->
+            <Color x:Key="GraphiteGray">#2C2C2E</Color>
+            <Color x:Key="DarkGray">#1C1C1E</Color>
+            <Color x:Key="LightGray">#3A3A3C</Color>
+            <Color x:Key="PrimaryRed">#FF453A</Color>
+            <Color x:Key="DarkRed">#D70015</Color>
+            <Color x:Key="White">#FFFFFF</Color>
+            <Color x:Key="TextColor">#FFFFFF</Color>
+
+            <!-- Betűméretek -->
+            <x:Double x:Key="SmallFontSize">14</x:Double>
+            <x:Double x:Key="MediumFontSize">16</x:Double>
+            <x:Double x:Key="LargeFontSize">20</x:Double>
+            <x:Double x:Key="TitleFontSize">24</x:Double>
+
+            <!-- Alap stílusok -->
+            <Style TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource TextColor}" />
+                <Setter Property="FontFamily" Value="OpenSansRegular" />
+            </Style>
+
+            <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
+                <Setter Property="Background" Value="{StaticResource GraphiteGray}" />
+            </Style>
+
+            <!-- Gomb stílusok -->
+            <Style TargetType="Button" x:Key="PrimaryButton">
+                <Setter Property="Background" Value="{StaticResource PrimaryRed}" />
+                <Setter Property="TextColor" Value="{StaticResource TextColor}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="14,10" />
+                <Setter Property="FontSize" Value="{StaticResource MediumFontSize}" />
+                <Setter Property="FontAttributes" Value="Bold" />
+            </Style>
+
+            <!-- ... többi stílus ... -->
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

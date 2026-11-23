@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Controll.Pages.Data"
+             BackgroundColor="{StaticResource GraphiteGray}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15" HorizontalOptions="FillAndExpand">
+
+            <Grid x:Name="SensorGrid" ColumnDefinitions="*, *" ColumnSpacing="15" HorizontalOptions="Center">
+
+                <Border x:Name="Sensor1Border" Grid.Column="0" 
+                        BackgroundColor="#2C2C2C" Stroke="#444444" StrokeThickness="1" 
+                        Padding="15" WidthRequest="165" HeightRequest="125" 
+                        StrokeShape="RoundRectangle 12" HorizontalOptions="Center">
+                    <VerticalStackLayout VerticalOptions="Center" Spacing="5">
+                        <Label x:Name="Sensor1Title" Text="Szenzor 1" HorizontalOptions="Center" FontSize="13" TextColor="Gray" FontAttributes="Bold"/>
+                        <Label x:Name="Sensor1Value" Text="-- °C" HorizontalOptions="Center" FontSize="26" FontAttributes="Bold" TextColor="#e67e22"/>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border x:Name="Sensor2Border" Grid.Column="1" 
+                        BackgroundColor="#2C2C2C" Stroke="#444444" StrokeThickness="1" 
+                        Padding="15" WidthRequest="165" HeightRequest="125" 
+                        StrokeShape="RoundRectangle 12" HorizontalOptions="Center">
+                    <VerticalStackLayout VerticalOptions="Center" Spacing="5">
+                        <Label x:Name="Sensor2Title" Text="Szenzor 2" HorizontalOptions="Center" FontSize="13" TextColor="Gray" FontAttributes="Bold"/>
+                        <Label x:Name="Sensor2Value" Text="-- °C" HorizontalOptions="Center" FontSize="26" FontAttributes="Bold" TextColor="#e67e22"/>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="15" HorizontalOptions="Center">
+                <Border x:Name="Fan1Border" Grid.Column="0" BackgroundColor="#2C2C2C" Padding="10" WidthRequest="165" HeightRequest="125" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                        <Label Text="Ventilátor 1" HorizontalOptions="Center" FontSize="13" TextColor="Gray" FontAttributes="Bold"/>
+                        <Label x:Name="Fan1ValueLabel" Text="0%" HorizontalOptions="Center" FontSize="26" FontAttributes="Bold" TextColor="#3498db"/>
+                        <Label x:Name="Fan1FreqLabel" Text="0 Hz" HorizontalOptions="Center" FontSize="11" TextColor="#95a5a6"/>
+                    </VerticalStackLayout>
+                </Border>
+                <Border x:Name="Fan2Border" Grid.Column="1" BackgroundColor="#2C2C2C" Padding="10" WidthRequest="165" HeightRequest="125" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                        <Label Text="Ventilátor 2" HorizontalOptions="Center" FontSize="13" TextColor="Gray" FontAttributes="Bold"/>
+                        <Label x:Name="Fan2ValueLabel" Text="0%" HorizontalOptions="Center" FontSize="26" FontAttributes="Bold" TextColor="#3498db"/>
+                        <Label x:Name="Fan2FreqLabel" Text="0 Hz" HorizontalOptions="Center" FontSize="11" TextColor="#95a5a6"/>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <Border BackgroundColor="#2C2C2C" Stroke="#444444" StrokeThickness="1" Padding="15" WidthRequest="345" HeightRequest="90" StrokeShape="RoundRectangle 12" HorizontalOptions="Center">
+                <Grid ColumnDefinitions="*, Auto, *">
+                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="RGB MÓD" FontSize="10" TextColor="Gray" HorizontalOptions="Center" FontAttributes="Bold"/>
+                        <Label x:Name="RgbModeLabel" Text="---" FontSize="15" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                    <Border x:Name="RgbBorder" Grid.Column="1" WidthRequest="45" HeightRequest="45" Stroke="White" StrokeThickness="1" StrokeShape="RoundRectangle 22.5" VerticalOptions="Center">
+                        <BoxView x:Name="RgbColorPreview" BackgroundColor="#FFFFFF"/>
+                    </Border>
+                    <VerticalStackLayout Grid.Column="2" VerticalOptions="Center">
+                        <Label Text="FÉNYERŐ" FontSize="10" TextColor="Gray" HorizontalOptions="Center" FontAttributes="Bold"/>
+                        <Label x:Name="RgbBrightnessLabel" Text="--%" FontSize="16" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <Grid x:Name="BottomRelayGrid" ColumnDefinitions="Auto, Auto" ColumnSpacing="20" HorizontalOptions="Center">
+                <Border x:Name="Relay1Border" Grid.Column="0" BackgroundColor="#2C2C2C" WidthRequest="100" HeightRequest="80" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout VerticalOptions="Center">
+                        <Label Text="RELÉ 1" HorizontalOptions="Center" FontSize="11" TextColor="Gray" FontAttributes="Bold"/>
+                        <Label x:Name="Relay1Label" Text="OFF" HorizontalOptions="Center" FontSize="16" FontAttributes="Bold" TextColor="DimGray"/>
+                    </VerticalStackLayout>
+                </Border>
+                <Border x:Name="Relay2Border" Grid.Column="1" BackgroundColor="#2C2C2C" WidthRequest="100" HeightRequest="80" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout VerticalOptions="Center">
+                        <Label Text="RELÉ 2" HorizontalOptions="Center" FontSize="11" TextColor="Gray" FontAttributes="Bold"/>
+                        <Label x:Name="Relay2Label" Text="OFF" HorizontalOptions="Center" FontSize="16" FontAttributes="Bold" TextColor="DimGray"/>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>
