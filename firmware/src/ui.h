@@ -434,10 +434,14 @@ void ui_wifi_scanning() {
 
 void ui_wifi_password(const String &ssid, const char *typed, const char *chip) {
   ui_lock();
+  // Hosszú jelszónál a VÉGE látszik (az éppen gépelt rész), nem az eleje.
+  String tail = String(typed);
+  const int maxChars = 15;
+  if ((int)tail.length() > maxChars) tail = "~" + tail.substring(tail.length() - maxChars);
   ui_menu_page(pagePw, "WIFI JELSZO");
   ui_set_text(mCount, "");
   ui_set_text(pwSsid, ssid.c_str());
-  ui_set_text(pwText, typed);
+  ui_set_text(pwText, tail.c_str());
   ui_set_text(pwChipTxt, chip);
   lv_obj_center(pwChipTxt);
   ui_unlock();
@@ -468,6 +472,14 @@ void ui_wifi_result(int state, const String &ip) {
   }
   lv_obj_align(connMsg, LV_ALIGN_TOP_MID, 0, 56);
   lv_obj_align(connSub, LV_ALIGN_TOP_MID, 0, 82);
+  ui_unlock();
+}
+
+// Azonnali kirajzolás: olyan helyeken kell, ahol a kód közvetlenül utána
+// blokkol/újraindul (pl. gyári visszaállítás), így a loop() nem jut ui_tick()-hez.
+void ui_refresh_now() {
+  ui_lock();
+  lv_refr_now(ui_disp);
   ui_unlock();
 }
 

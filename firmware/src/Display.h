@@ -19,6 +19,14 @@ const char* MODE_SHORT[] = { "2Ho", "1Ho", "Ho+Pa", "Ho+K1", "2K" };
 // Nap nevek (dayOfWeekIdx() sorrendjében: 0=Vasarnap...6=Szombat)
 const char* DOW_NAMES[] = { "Vas", "Het", "Ked", "Sze", "Csu", "Pen", "Szo" };
 
+// Változott-e a kijelzett érték? A NaN (pl. szakadt/hiányzó szenzor) is érvényes
+// állapot: NaN -> szám és szám -> NaN váltás is változásnak számít.
+static bool tempChanged(float cur, float last) {
+  if (isnan(cur) != isnan(last)) return true;
+  if (isnan(cur)) return false;
+  return fabs(cur - last) >= 0.1f;
+}
+
 // Hőmérséklet színe a palettából
 uint32_t tempToPal(float t) {
   if (isnan(t)) return PAL_TEXT;
@@ -287,20 +295,20 @@ void displayInfo() {
   // Középső kártya: mód-függő tartalom
   switch (currentMode) {
     case 0:
-      if (fabs(ntc1Temperature - lastT1) >= 0.1) { lastT1 = ntc1Temperature; tile_temp(0, "Homero 1", ntc1Temperature); }
-      if (fabs(ntc2Temperature - lastT2) >= 0.1) { lastT2 = ntc2Temperature; tile_temp(1, "Homero 2", ntc2Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homero 1", ntc1Temperature); }
+      if (tempChanged(ntc2Temperature, lastT2)) { lastT2 = ntc2Temperature; tile_temp(1, "Homero 2", ntc2Temperature); }
       break;
     case 1:
-      if (fabs(ntc1Temperature - lastT1) >= 0.1) { lastT1 = ntc1Temperature; tile_temp(0, "Homerseklet", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homerseklet", ntc1Temperature); }
       break;
     case 2: {
-      if (fabs(ntc1Temperature - lastT1) >= 0.1) { lastT1 = ntc1Temperature; tile_temp(0, "Homero", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homero", ntc1Temperature); }
       bool humChanged = (isnan(humidity) != isnan(lastHum)) || (!isnan(humidity) && fabs(humidity - lastHum) >= 0.5);
       if (humChanged) { lastHum = humidity; tile_hum(1, humidity); }
       break;
     }
     case 3: {
-      if (fabs(ntc1Temperature - lastT1) >= 0.1) { lastT1 = ntc1Temperature; tile_temp(0, "Homero", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homero", ntc1Temperature); }
       int sw = isSwitchClosed(NTC2_PIN) ? 1 : 0;
       if (sw != lastSw2) { lastSw2 = sw; tile_switch(1, "Kapcsolo", sw); }
       break;

@@ -151,6 +151,7 @@ void loadAllSettings() {
 // megadott alapértékeikkel jönnek létre újra (üres, "gyári" állapot).
 void factoryReset() {
   drawEditScreen("GYARI VISSZAALLITAS", "Torles...", "Ujrainditas kovetkezik");
+  ui_refresh_now(); // a delay()+restart miatt a loop() már nem rajzolna
   Preferences p;
   p.begin(PREFS_NAMESPACE, false);
   p.clear();
