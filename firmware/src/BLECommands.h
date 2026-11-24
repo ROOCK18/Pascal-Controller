@@ -390,6 +390,15 @@ void handleBleCommand(String receivedString) {
     else if (receivedString == "GET_ALERT") {
       handleGetAlert();
     }
+    else if (receivedString.startsWith("SET_PROX:")) {
+      handleSetProx(receivedString.substring(9));
+    }
+    else if (receivedString == "GET_PROX") {
+      handleGetProx();
+    }
+    else if (receivedString == "PROX_TRIGGER") {
+      proxTrigger();
+    }
     else if (receivedString.startsWith("PULSE:")) {
       // PULSE:<R1|R2>:<mp>  - a relé <mp> másodpercre bekapcsol (0 = a "Kapuzás" beállított ideje), majd kikapcsol
       String body = receivedString.substring(6);

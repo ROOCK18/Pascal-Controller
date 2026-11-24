@@ -511,6 +511,22 @@
                                     <Label Text="Impulzus ideje (mp) - 0: a relé Kapuzás beállított ideje" TextColor="#AEAEB2" FontSize="12" />
                                     <Entry x:Name="ProxPulseEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="0" />
                                 </VerticalStackLayout>
+                                <Label Text="Újraélesedés - mikor hajtsa végre újra a műveletet" TextColor="#AEAEB2" FontSize="12" />
+                                <Picker x:Name="ProxRearmPicker" Title="Válassz" SelectedIndexChanged="OnProxRearmChanged">
+                                    <Picker.Items>
+                                        <x:String>Teljes kapcsolatszakadás után</x:String>
+                                        <x:String>Ha X méteren kívül vagyok</x:String>
+                                        <x:String>X mp múlva, ha X méteren kívül vagyok</x:String>
+                                    </Picker.Items>
+                                </Picker>
+                                <VerticalStackLayout x:Name="ProxRearmMetersBox" Spacing="4">
+                                    <Label Text="X méter (a közeledési távolságnál nagyobb legyen)" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="ProxRearmMetersEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="15" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="ProxRearmSecBox" Spacing="4">
+                                    <Label Text="X másodperc" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="ProxRearmSecEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="30" />
+                                </VerticalStackLayout>
                                 <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                     <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked"/></Border.GestureRecognizers>
                                     <Label Text="KÖZELEDÉS BEÁLLÍTÁSOK MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />

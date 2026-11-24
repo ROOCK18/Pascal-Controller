@@ -20,6 +20,7 @@ public static class ProximityService
     private static readonly Dictionary<string, List<int>> _hist = new();   // utolsó RSSI-k (simításhoz)
     private static readonly Dictionary<string, bool> _armed = new();       // true: a következő közeledésnél végrehajthat
     private static readonly Dictionary<string, DateTime> _lastSeen = new();
+    private static readonly Dictionary<string, DateTime> _outsideSince = new();   // mióta van folyamatosan a "kívül" távolságon
 
     public static bool AnyEnabled => BluetoothManager.GetSavedDevices().Any(d => d.ProxEnabled);
 
@@ -124,14 +125,12 @@ public static class ProximityService
         {
             if (!seen.TryGetValue(cfg.Id, out _) || !rssi.TryGetValue(cfg.Id, out var list) || list.Count == 0)
             {
-                // Nem látszik: ha már legalább fél perce nem, a következő közeledés végrehajthat
-                if ((now - _lastSeen.GetValueOrDefault(cfg.Id, DateTime.MinValue)).TotalSeconds > 30) _armed[cfg.Id] = true;
+                UpdateArming(cfg, null, now);   // nem látszik
                 continue;
             }
             double dist = SmoothedMeters(cfg.Id, (int)Math.Round(list.Average()));
+            UpdateArming(cfg, dist, now);
             _lastSeen[cfg.Id] = now;
-            if (!_armed.ContainsKey(cfg.Id)) _armed[cfg.Id] = dist > cfg.ProxMeters * 1.5;   // az első látásnál: ha már közel van, nem "érkezett"
-            else if (dist > cfg.ProxMeters * 1.5) _armed[cfg.Id] = true;
             if (dist <= cfg.ProxMeters && dist < bestDist) { best = cfg; bestDist = dist; }
         }
 
@@ -150,15 +149,41 @@ public static class ProximityService
         if (!await dev.UpdateRssiAsync()) return;
 
         double dist = SmoothedMeters(id, dev.Rssi);
-        _lastSeen[id] = DateTime.UtcNow;
-        if (dist > cfg.ProxMeters * 1.5) _armed[id] = true;
-        else if (dist <= cfg.ProxMeters) await RunActionIfArmedAsync(cfg);
+        var now = DateTime.UtcNow;
+        UpdateArming(cfg, dist, now);
+        _lastSeen[id] = now;
+        if (dist <= cfg.ProxMeters) await RunActionIfArmedAsync(cfg);
+    }
+
+    // Az újraélesedés szabálya (SavedDevice.ProxRearmMode). dist == null: az eszköz most nem látszik.
+    private static void UpdateArming(SavedDevice cfg, double? dist, DateTime now)
+    {
+        string id = cfg.Id;
+        double unseenFor = dist == null ? (now - _lastSeen.GetValueOrDefault(id, DateTime.MinValue)).TotalSeconds : 0;
+        switch (cfg.ProxRearmMode)
+        {
+            case 0:   // teljes kapcsolatszakadás: az eszköz legalább 15 mp-ig egyáltalán nem látszik
+                if (dist == null && unseenFor >= 15) _armed[id] = true;
+                break;
+            case 1:   // ha a megadott méteren kívül van (mérhetően, vagy 15 mp-ig nem látszik)
+                if (dist != null ? dist > cfg.ProxRearmMeters : unseenFor >= 15) _armed[id] = true;
+                break;
+            default:  // a megadott méteren kívül van legalább ProxRearmSec másodpercig (nem látszó eszköz is "kívül")
+                if (dist == null || dist > cfg.ProxRearmMeters)
+                {
+                    if (!_outsideSince.TryGetValue(id, out var since)) _outsideSince[id] = since = now;
+                    if ((now - since).TotalSeconds >= cfg.ProxRearmSec) _armed[id] = true;
+                }
+                else _outsideSince.Remove(id);
+                break;
+        }
     }
 
     private static async Task RunActionIfArmedAsync(SavedDevice cfg)
     {
-        if (!IsArmed(cfg.Id) || cfg.ProxAction == "none") return;
+        if (!IsArmed(cfg.Id)) return;
         _armed[cfg.Id] = false;   // egy közeledés = egy végrehajtás
+        _outsideSince.Remove(cfg.Id);
         string? cmd = cfg.ProxAction switch
         {
             "r1pulse" => $"PULSE:R1:{cfg.ProxPulseSec}",
@@ -171,8 +196,12 @@ public static class ProximityService
             "rgboff" => "RGB_0",
             _ => null
         };
-        if (cmd == null) return;
-        await BluetoothManager.WriteAsync(cmd);
+        if (cmd != null)
+        {
+            await BluetoothManager.WriteAsync(cmd);
+            await Task.Delay(150);
+        }
+        await BluetoothManager.WriteAsync("PROX_TRIGGER");   // az eszköz a Vezérlés oldalon beállított közeledés-automatikákat is végrehajtja (ha az automatika be van kapcsolva)
         NotificationService.Show("Közeledés érzékelve",
             $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)}: {ActionLabel(cfg.ProxAction)} végrehajtva.", 3000);
     }

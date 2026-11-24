@@ -124,6 +124,14 @@ struct AlertCfg {
 };
 AlertCfg alertCfg;
 
+// Közeledés-automatika egy csatornára (0=F1, 1=F2, 2=R1, 3=R2, 4=RGB): lásd Prox.h
+struct ProxCh {
+  bool enabled = false;
+  uint8_t value = 100;     // ventilátor: fordulatszám % ; relé/RGB: nem használt
+  uint16_t durSec = 60;    // időtartam (mp); 0 = ventilátor/RGB: marad, relé: a Kapuzás ideje
+};
+ProxCh proxCh[5];
+
 // ============================================================
 // KAPCSOLÓ(+HŐMÉRSÉKLET)-LOGIKA (mode=3 vagy mode=4), CSATORNÁNKÉNT
 // axis2Mode: 0 = a 2. tengely K2 kapcsoló (mode 4, "2 kapcsoló")

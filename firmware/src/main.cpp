@@ -52,6 +52,7 @@
 #include "Timers.h"
 #include "Storage.h"
 #include "Alerts.h"
+#include "Prox.h"
 #include "Buttons.h"
 #include "Menu.h"
 #include "Display.h"
@@ -116,6 +117,7 @@ void setup() {
 void loop() {
   processBleCommands(); // a BLE parancsok ITT, a fő szálon futnak (a callback csak sorba állítja őket)
   applyRelayPulses();   // relé-impulzus (PULSE) lejáratának figyelése - OTA alatt is, hogy a relé ne ragadjon be
+  applyProxOverrides(); // közeledés-automatika lejárata / felülírása
 
   if (otaInProgress) {
     // OTA alatt kizárólag a queue ürítésére koncentrálunk - semmi mást
@@ -237,6 +239,7 @@ void loop() {
     applySwitchLogic();
     applyTimers();
     applyRelayPulses();   // az automatika után: az aktív impulzus felülírja
+    applyProxOverrides(); // ... és az aktív közeledés-művelet is
   }
   checkAlerts();          // riasztások (szenzorhiba / hőmérséklet-határ) -> értesítés az appnak
 

@@ -3,7 +3,7 @@
 // ============================================================
 #pragma once
 
-#define FW_VERSION "5.2.0"
+#define FW_VERSION "5.3.0"
 
 // --- Régi RGB565 színkonstansok (ValueRow.valColor); az ui.h a palettára képezi le ---
 #define UI_BLACK   0x0000
