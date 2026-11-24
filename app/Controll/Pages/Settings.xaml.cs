@@ -1352,9 +1352,7 @@ public partial class Settings : ContentPage
     private void UpdateLocalUI(bool connected, string name)
     {
         ConnectedDevicePanel.IsVisible = true;
-        // A rendszer Bluetooth-állapota (ahogy az Android az appnak jelzi) - hibakereséshez
-        string bt = Plugin.BLE.CrossBluetoothLE.Current.State.ToString();
-        LblConnectedDevice.Text = connected ? $"Csatlakozva: {name}\nRendszer Bluetooth: {bt}" : $"Nincs csatlakozva\nRendszer Bluetooth: {bt}";
+        LblConnectedDevice.Text = connected ? $"Csatlakozva: {name}" : "Nincs csatlakozva";
         BtnDisconnect.IsVisible = connected;
         ModeSelectionPanel.IsVisible = connected;
         WifiPanel.IsVisible = connected;

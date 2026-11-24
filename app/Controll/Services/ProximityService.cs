@@ -207,16 +207,10 @@ public static class ProximityService
             }
             finally { BluetoothManager.OnDataReceived -= OnReply; }
 
-            string name = ChannelName(ch);
-            fired.Add(applied switch
-            {
-                null => $"{name}: az eszköz nem válaszolt (régi firmware? töltsd fel az 5.3.1-et)",
-                0 => $"{name}: az eszköz nem hajtotta végre (a csatorna közeledése nincs elmentve az eszközön, vagy nincs Automata állapotban)",
-                _ => $"{name}: végrehajtva"
-            });
+            if (applied is > 0) fired.Add(ChannelName(ch));   // csak a ténylegesen végrehajtott csatornákról értesít
         }
         if (fired.Count > 0)
             NotificationService.Show("Közeledés érzékelve",
-                $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)} - {string.Join("; ", fired)}", 3000);
+                $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)}: {string.Join(", ", fired)}", 3000);
     }
 }
