@@ -8,4 +8,18 @@ public partial class App : Application
 
         MainPage = new AppShell();
     }
+
+    // Induláskor és az előtérbe kerüléskor megpróbál újra csatlakozni a legutóbbi eszközhöz.
+    protected override void OnStart()
+    {
+        base.OnStart();
+        BluetoothManager.Initialize(Plugin.BLE.CrossBluetoothLE.Current.Adapter);
+        BluetoothManager.StartAutoReconnect(allowPicker: true);
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        BluetoothManager.StartAutoReconnect();
+    }
 }

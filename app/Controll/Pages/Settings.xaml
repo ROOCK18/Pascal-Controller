@@ -17,6 +17,9 @@
                     Stroke="{StaticResource LightGray}"
                     StrokeShape="RoundRectangle 12"
                     Padding="15">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnConnectedPanelTapped" />
+                </Border.GestureRecognizers>
                 <Grid ColumnDefinitions="*,Auto">
                     <Label Grid.Column="0"
                            x:Name="LblConnectedDevice"
@@ -414,19 +417,25 @@
                                         Stroke="{StaticResource LightGray}"
                                         StrokeThickness="1"
                                         Padding="15"
-                                        Margin="0,4">
+                                        Margin="0,4"
+                                        Loaded="OnDeviceRowLoaded">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnDeviceRowTapped" />
                                     </Border.GestureRecognizers>
-                                    <HorizontalStackLayout Spacing="15">
-                                        <Border BackgroundColor="{StaticResource PrimaryRed}"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                                        <Border Grid.Column="0" BackgroundColor="{StaticResource PrimaryRed}"
                                                 StrokeShape="RoundRectangle 20,0,0,20"
                                                 WidthRequest="40" HeightRequest="40" Padding="0" />
-                                        <VerticalStackLayout VerticalOptions="Center">
-                                            <Label Text="{Binding Name}" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
-                                            <Label Text="{Binding Id}" TextColor="#AEAEB2" FontSize="12" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Title}" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
+                                            <Label Text="{Binding Subtitle}" TextColor="#AEAEB2" FontSize="12" />
                                         </VerticalStackLayout>
-                                    </HorizontalStackLayout>
+                                        <Label Grid.Column="2" Text="✎" TextColor="{StaticResource White}" FontSize="22" VerticalOptions="Center" Padding="10">
+                                            <Label.GestureRecognizers>
+                                                <TapGestureRecognizer Tapped="OnDeviceEditTapped" />
+                                            </Label.GestureRecognizers>
+                                        </Label>
+                                    </Grid>
                                 </Border>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>

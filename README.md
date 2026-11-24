@@ -40,6 +40,13 @@ A szövegek ékezet nélküliek (az LVGL beépített betűi csak ASCII-t tartalm
 
 ## Alkalmazás
 
+## Csatlakozás (app)
+
+- Az app megjegyzi a csatlakoztatott eszközt (BLE azonosító alapján), és szétkapcsolódás után, illetve indításkor magától újracsatlakozik, amint az eszköz hatótávban van.
+- **Több mentett eszköznél nincs néma csatlakozás**: indításkor az app a hatótávban látható mentett eszközök közül megkérdezi, melyikre csatlakozzon.
+- Az eszközök hely-nevet kapnak (pl. „Terrárium”): a listában a ✎ gombbal vagy hosszú nyomással (Android), csatlakozva pedig a panelre koppintva szerkeszthető; ugyanitt „Elfelejtés”.
+- A kézi „Lecsatlakozás” kikapcsolja az automatikus csatlakozást, amíg újra kézzel nem csatlakozol.
+
 - .NET 10 MAUI (Android, iOS, MacCatalyst, Windows célplatformok), Plugin.BLE
 - Funkciók: vezérlés, adatok, RGB, automatikák (termosztát, logika, kapuzás, időzítők),
   WiFi-beállítás, séma-mentés `.pcscheme` fájlba, firmware-frissítés GitHub release-ből vagy helyi `.bin`-ből

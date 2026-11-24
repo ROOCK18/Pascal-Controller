@@ -16,7 +16,8 @@ public partial class Settings : ContentPage
 {
     private IBluetoothLE _ble;
     private IAdapter _adapter;
-    private ObservableCollection<IDevice> _deviceList = new();
+    private ObservableCollection<DeviceRow> _deviceList = new();
+    private readonly List<IDevice> _scanned = new();
 
     private bool _isUpdating = false;
     private int _otaMtu = 20;
@@ -36,6 +37,7 @@ public partial class Settings : ContentPage
         _adapter = CrossBluetoothLE.Current.Adapter;
         DevicesListView.ItemsSource = _deviceList;
         InitSensPickers();
+        RefreshDeviceList();
         BluetoothManager.Initialize(_adapter);
         LoadConnectedDevice();
     }
@@ -52,6 +54,13 @@ public partial class Settings : ContentPage
             {
                 UpdateLocalUI(false, "Kapcsolat megszakadt");
                 BluetoothManager.OnDataReceived -= OnSettingsDataReceived;
+                if (BluetoothManager.IsReconnecting)
+                    LblConnectedDevice.Text = $"Újracsatlakozás: {BluetoothManager.GetSavedDeviceName()}...";
+            }
+            else if (BluetoothManager.LastConnectWasAuto)
+            {
+                // Az app magától újracsatlakozott (az eszköz újra hatótávban van): frissítjük az oldalt.
+                _ = RefreshAfterAutoConnectAsync();
             }
         });
     }
@@ -59,9 +68,9 @@ public partial class Settings : ContentPage
     private void Adapter_DeviceDiscovered(object sender,
         Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
     {
-        if (!_deviceList.Any(d => d.Id == e.Device.Id) &&
+        if (!_scanned.Any(d => d.Id == e.Device.Id) &&
             !string.IsNullOrEmpty(e.Device.Name))
-            MainThread.BeginInvokeOnMainThread(() => _deviceList.Add(e.Device));
+            MainThread.BeginInvokeOnMainThread(() => { _scanned.Add(e.Device); RefreshDeviceList(); });
     }
 
     private async void OnBTSearchClicked(object sender, EventArgs e)
@@ -71,8 +80,8 @@ public partial class Settings : ContentPage
         if (!_ble.IsOn) { await DisplayAlert("BT", "Kapcsold be a Bluetooth-t!", "OK"); return; }
         try
         {
-            _deviceList.Clear();
-            _selectedDeviceRow = null;
+            _scanned.Clear();
+            RefreshDeviceList();
             ScanIndicator.IsRunning = true;
             BtnSearch.IsEnabled = false;
             _adapter.DeviceDiscovered += Adapter_DeviceDiscovered;
@@ -90,9 +99,76 @@ public partial class Settings : ContentPage
 
     private Border _selectedDeviceRow;
 
+    // A lista: az összes mentett eszköz (hely-névvel) + a most látott, még nem mentettek.
+    private void RefreshDeviceList()
+    {
+        var saved = BluetoothManager.GetSavedDevices();
+        var rows = new List<DeviceRow>();
+        foreach (var sd in saved)
+            rows.Add(new DeviceRow { Id = sd.Id, Name = sd.Name, Location = sd.Location, Device = _scanned.FirstOrDefault(d => d.Id.ToString() == sd.Id) });
+        foreach (var d in _scanned)
+            if (!saved.Any(sd => sd.Id == d.Id.ToString()))
+                rows.Add(new DeviceRow { Id = d.Id.ToString(), Name = d.Name, Device = d });
+        _deviceList.Clear();
+        foreach (var r in rows) _deviceList.Add(r);
+        _selectedDeviceRow = null;
+    }
+
+    // Hosszú nyomás (Android) a soron -> hely szerkesztése. Más platformon a ✎ gomb szolgál erre.
+    private void OnDeviceRowLoaded(object sender, EventArgs e)
+    {
+#if ANDROID
+        if (sender is Border b && b.StyleId != "lc" && b.Handler?.PlatformView is Android.Views.View v)
+        {
+            b.StyleId = "lc";
+            v.LongClickable = true;
+            v.LongClick += (s2, a2) =>
+            {
+                if (b.BindingContext is DeviceRow r)
+                    MainThread.BeginInvokeOnMainThread(async () => await EditDeviceAsync(r));
+            };
+        }
+#endif
+    }
+
+    private async void OnDeviceEditTapped(object sender, TappedEventArgs e)
+    {
+        if ((sender as BindableObject)?.BindingContext is DeviceRow row) await EditDeviceAsync(row);
+    }
+
+    // A csatlakoztatott eszköz panelére koppintva szintén szerkeszthető a hely.
+    private async void OnConnectedPanelTapped(object sender, TappedEventArgs e)
+    {
+        var id = BluetoothManager.GetSavedDeviceId();
+        if (id == null || !BluetoothManager.IsConnected) return;
+        var sd = BluetoothManager.FindSaved(id);
+        await EditDeviceAsync(new DeviceRow { Id = id, Name = sd?.Name ?? "", Location = sd?.Location ?? "" });
+    }
+
+    private async Task EditDeviceAsync(DeviceRow row)
+    {
+        string act = await DisplayActionSheet(row.Title, "Mégse", "Elfelejtés", "Hely szerkesztése");
+        if (act == "Hely szerkesztése")
+        {
+            string loc = await DisplayPromptAsync("Hely", "Hol van ez az eszköz? (pl. Terrárium, Nappali)",
+                "Mentés", "Mégse", "Hely neve", 40, null, row.Location ?? "");
+            if (loc == null) return;
+            BluetoothManager.SetLocation(row.Id, row.Name, loc.Trim());
+        }
+        else if (act == "Elfelejtés")
+        {
+            bool isCurrent = BluetoothManager.IsConnected && BluetoothManager.GetSavedDeviceId() == row.Id;
+            if (isCurrent) { await BluetoothManager.DisconnectDeviceAsync(); UpdateLocalUI(false, "Lecsatlakoztatva"); }
+            BluetoothManager.ForgetSaved(row.Id);
+        }
+        else return;
+        RefreshDeviceList();
+        LoadConnectedDevice();
+    }
+
     private async void OnDeviceRowTapped(object sender, TappedEventArgs e)
     {
-        if (sender is not Border border || border.BindingContext is not IDevice device) return;
+        if (sender is not Border border || border.BindingContext is not DeviceRow row) return;
 
         // Azonnali, félreérthetetlen vizuális visszajelzés: a megérintett
         // sor kiemelt (piros) színt kap, hogy egyértelmű legyen, MELYIK
@@ -109,7 +185,15 @@ public partial class Settings : ContentPage
         try
         {
             ScanIndicator.IsRunning = true;
-            await _adapter.ConnectToDeviceAsync(device);
+            IDevice device = row.Device;
+            if (device != null)
+                await _adapter.ConnectToDeviceAsync(device);
+            else
+            {
+                // mentett, de most nem látott eszköz: ismert azonosítóval próbálunk csatlakozni
+                using var kc = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                device = await _adapter.ConnectToKnownDeviceAsync(Guid.Parse(row.Id), new ConnectParameters(false, true), kc.Token);
+            }
             BluetoothManager.ConnectedDevice = device;
             BluetoothManager.SaveConnectedDevice(device);
 
@@ -138,7 +222,7 @@ public partial class Settings : ContentPage
 
             BluetoothManager.OnDataReceived -= OnSettingsDataReceived;
             BluetoothManager.OnDataReceived += OnSettingsDataReceived;
-            UpdateLocalUI(true, device.Name);
+            UpdateLocalUI(true, BluetoothManager.DisplayNameFor(device.Id.ToString(), device.Name));
             RefreshSchemePicker();
             BluetoothManager.NotifyConnectionSuccess();
             await SyncTimeAsync();
@@ -630,7 +714,7 @@ public partial class Settings : ContentPage
 
         await BluetoothManager.WriteAsync("FACTORY_RESET");
         await DisplayAlert("Gyári visszaállítás", "Az eszköz törli a beállításokat és újraindul.\nCsatlakoztasd újra pár másodperc múlva.", "OK");
-        await BluetoothManager.DisconnectDeviceAsync();
+        await BluetoothManager.DisconnectDeviceAsync(forget: false); // újraindul -> magától újracsatlakozik
         UpdateLocalUI(false, "Kapcsolat megszakadt");
     }
 
@@ -976,7 +1060,7 @@ public partial class Settings : ContentPage
 
             await Task.Delay(4000);
             if (BluetoothManager.IsConnected)
-                await BluetoothManager.DisconnectDeviceAsync();
+                await BluetoothManager.DisconnectDeviceAsync(forget: false); // az eszköz újraindult -> magától újracsatlakozik
 
             await DisplayAlert("Siker", "Firmware sikeresen frissítve!\nAz eszköz újraindult.", "OK");
         }
@@ -1034,6 +1118,34 @@ public partial class Settings : ContentPage
         bool c = BluetoothManager.IsConnected;
         string n = BluetoothManager.GetSavedDeviceName() ?? "Nincs eszköz";
         UpdateLocalUI(c, n);
+        if (!c && BluetoothManager.IsReconnecting && !string.IsNullOrEmpty(BluetoothManager.GetSavedDeviceName()))
+            LblConnectedDevice.Text = $"Újracsatlakozás: {n}...";
+    }
+
+    private async Task RefreshAfterAutoConnectAsync()
+    {
+        try
+        {
+            BluetoothManager.OnDataReceived -= OnSettingsDataReceived;
+            BluetoothManager.OnDataReceived += OnSettingsDataReceived;
+            UpdateLocalUI(true, BluetoothManager.GetSavedDeviceName() ?? "");
+            RefreshSchemePicker();
+            await Task.Delay(400);
+            await BluetoothManager.WriteAsync("GET_STATE");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_COMP");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:1");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:2");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_DISPLAY");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_DATEPOS");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_WIFI_STATUS");
+        }
+        catch (Exception ex) { Debug.WriteLine($"Frissítés újracsatlakozás után: {ex.Message}"); }
     }
 
     private void UpdateLocalUI(bool connected, string name)
