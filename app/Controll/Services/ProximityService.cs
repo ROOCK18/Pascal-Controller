@@ -83,7 +83,7 @@ public static class ProximityService
                     if (BluetoothManager.ConnectedDevice?.Id.ToString() == cfg.Id) await PollConnectedAsync(cfg);
                 }
                 else if (BluetoothManager.AutoConnectAllowed) await ScanAndConnectAsync(cfg);
-                await Task.Delay(BluetoothManager.IsConnected ? 4000 : 6000, ct);
+                await Task.Delay(BluetoothManager.IsConnected ? 2000 : 6000, ct);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex) { Debug.WriteLine($"Közeledés: {ex.Message}"); try { await Task.Delay(8000, ct); } catch { break; } }
@@ -192,12 +192,31 @@ public static class ProximityService
             if (dist > c.Meters || !IsArmed(cfg.Id, ch)) continue;
             _armed[Key(cfg.Id, ch)] = false;   // egy közeledés = egy végrehajtás
             _outsideSince.Remove(Key(cfg.Id, ch));
-            await BluetoothManager.WriteAsync($"PROX_TRIGGER:{ch}");
-            await Task.Delay(150);
-            fired.Add(ChannelName(ch));
+            // Az eszköz "PROX_OK:<n>" válaszából látszik, hogy ténylegesen végrehajtott-e valamit (n = végrehajtott csatornák)
+            var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnReply(string line)
+            {
+                if (line.StartsWith("PROX_OK:") && int.TryParse(line.Substring(8).Trim(), out int n)) tcs.TrySetResult(n);
+            }
+            BluetoothManager.OnDataReceived += OnReply;
+            int? applied = null;
+            try
+            {
+                await BluetoothManager.WriteAsync($"PROX_TRIGGER:{ch}");
+                if (await Task.WhenAny(tcs.Task, Task.Delay(3000)) == tcs.Task) applied = tcs.Task.Result;
+            }
+            finally { BluetoothManager.OnDataReceived -= OnReply; }
+
+            string name = ChannelName(ch);
+            fired.Add(applied switch
+            {
+                null => $"{name}: az eszköz nem válaszolt (régi firmware? töltsd fel az 5.3.1-et)",
+                0 => $"{name}: az eszköz nem hajtotta végre (a csatorna közeledése nincs elmentve az eszközön, vagy nincs Automata állapotban)",
+                _ => $"{name}: végrehajtva"
+            });
         }
         if (fired.Count > 0)
             NotificationService.Show("Közeledés érzékelve",
-                $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)}: {string.Join(", ", fired)} elindítva (csak Automata állapotban hajtódik végre).", 3000);
+                $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)} - {string.Join("; ", fired)}", 3000);
     }
 }

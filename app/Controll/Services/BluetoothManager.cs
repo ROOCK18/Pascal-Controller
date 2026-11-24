@@ -182,7 +182,9 @@ public static class BluetoothManager
         get
         {
             var dev = ConnectedDevice;
-            return dev != null && _adapter?.ConnectedDevices.Any(d => d.Id == dev.Id) == true;
+            // Kikapcsolt Bluetooth mellett nincs kapcsolat (az Android listája ilyenkor elavult maradhat)
+            return dev != null && Plugin.BLE.CrossBluetoothLE.Current.IsOn
+                && _adapter?.ConnectedDevices.Any(d => d.Id == dev.Id) == true;
         }
     }
 
@@ -192,6 +194,11 @@ public static class BluetoothManager
         _adapter = adapter;
         adapter.DeviceDisconnected   += (s, e) => CheckAndNotify(e.Device);
         adapter.DeviceConnectionLost += (s, e) => CheckAndNotify(e.Device);
+        // A telefon Bluetooth-ának kikapcsolásakor a kapcsolat megszakad (ne maradjon "csatlakozva" állapot)
+        Plugin.BLE.CrossBluetoothLE.Current.StateChanged += (s, e) =>
+        {
+            if (e.NewState != BluetoothState.On && ConnectedDevice != null) HandleDisconnect();
+        };
     }
 
     private static void CheckAndNotify(IDevice device)
