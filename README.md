@@ -70,3 +70,17 @@ A Google Home, Alexa és Apple Home a Home Assistanton keresztül éri el ezeket
 - Egy csatornára érkező kézi parancs (Home Assistant / Google Home) a csatornát **kézi módba** kapcsolja, különben a termosztát azonnal visszaírná. Az „automata” kapcsolóval állítható vissza.
 - Témák: `pascal/<id>/…` (az `id` az eszköz MAC-címének utolsó 3 bájtjából jön, így több eszköz nem ütközik).
 - A jelszó titkosítatlanul tárolódik az eszköz flash-ében, és a kapcsolat sima MQTT (TLS nélkül) – csak megbízható helyi hálózaton használd. A jelszó BLE-n sosem megy vissza az appnak.
+
+## Hardver-megjegyzések (T-Display, lábkiosztás)
+
+| Funkció | GPIO | Csatlakozó láb |
+|---|---|---|
+| NTC1 / NTC2 (analóg) | 37 / 38 (csak bemenet) | 15 / 16 |
+| Relé 1 / Relé 2 | 33 / 32 | 19 / 18 |
+| Ventilátor 1/2 engedélyező | 27 / 26 | 22 / 21 |
+| RGB engedélyező | 25 | 20 |
+| **DH_ON** (DHT11 3,3 V-os táp) | **22** | **4** |
+
+- **DH_ON**: csak „Páratartalom” módban (2. mód) van bekapcsolva (Q14 → Q15 MOSFET), más módban kikapcsolva, hogy ne zavarja az NTC2 mérést. Bekapcsolás után a DHT11 ~1,5 mp felfutási időt kap.
+- **A GPIO34–39 csak bemenet** (kimenetként nem működik). A DHT11 adatvonalát a firmware az `NTC2_PIN`-en (GPIO38) várja (`DHT_DATA_PIN`), de a DHT11 indításához a vonalat le kell húzni – ezt bemeneti láb nem tudja. Ha a páratartalom-mérés nem működik, kösd az adatvonalat egy kimenetként is használható lábra (pl. GPIO21, a csatlakozó 3-as lába), és írd át a `Config.h`-ban a `DHT_DATA_PIN`-t.
+- Relé-kattanás ellen: ~10 kΩ lehúzó ellenállás a relé-meghajtók bemenetére (GPIO32/33), lásd HIBAK.md.

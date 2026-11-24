@@ -67,6 +67,16 @@ const int BTN_LEFT  = 0;
 
 const int BTN_RIGHT = 35;
 
+// DH_ON: a páratartalom-mérő (DHT11) közvetlen 3,3 V-os tápkapcsolása (Q14 -> Q15 MOSFET a NYÁK-on).
+// Csak "Páratartalom" módban (2. mód) van bekapcsolva: az NTC-s 1,2 kΩ-os felhúzón át a DHT11
+// kevés áramot kapna. A csatlakozó 4-es lába = GPIO22 (kimenetként is használható; a GPIO34-39 csak bemenet!).
+const int DH_ON_PIN = 22;
+
+// A DHT11 adatvonala. FIGYELEM: az NTC2_PIN (GPIO38) csak BEMENET, a DHT11 indításához viszont a vonalat
+// 18 ms-ra le kell húzni (kimenet kell). Ha a páratartalom-mérés nem működik, kösd az adatvonalat egy
+// kimenetként is használható lábra (pl. GPIO21 = a csatlakozó 3-as lába), és írd át ezt a sort.
+const int DHT_DATA_PIN = NTC2_PIN;
+
 const int FAN1_ON = 27;
 
 const int FAN2_ON = 26;

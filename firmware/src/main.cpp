@@ -72,6 +72,7 @@ void setup() {
   digitalWrite(FAN1_ON, LOW);    pinMode(FAN1_ON, OUTPUT);
   digitalWrite(FAN2_ON, LOW);    pinMode(FAN2_ON, OUTPUT);
   digitalWrite(RGB_ON, LOW);     pinMode(RGB_ON, OUTPUT);
+  digitalWrite(DH_ON_PIN, LOW);  pinMode(DH_ON_PIN, OUTPUT); // DHT11 táp: alapból KI (a kapu 1 MΩ-mal lehúzva)
 
   Serial.begin(115200);
   randomSeed(analogRead(0));
@@ -188,6 +189,15 @@ void loop() {
   if (now - lastSensorRead >= 500) {
     lastSensorRead = now;
 
+    // DHT11 közvetlen 3,3 V-os tápja (DH_ON): csak páratartalom módban kapcsol be. Más módban
+    // KI kell legyen, különben a kapcsolt 3,3 V az NTC2 bemenetet (felhúzó csomópontot) hamisítaná.
+    static int dhLastMode = -1;
+    static unsigned long dhOnSince = 0;
+    bool dhWant = (currentMode == 2);
+    digitalWrite(DH_ON_PIN, dhWant ? HIGH : LOW);
+    if (dhWant && dhLastMode != 2) dhOnSince = now;   // bekapcsolás időpontja (a DHT11-nek ~1,5 mp felfutás kell)
+    dhLastMode = currentMode;
+
     // Mód-függő szenzorolvasás: az NTC1/NTC2 lábak jelentése módonként más
     // (analóg hőmérő / digitális kapcsoló / DHT11) - csak azt olvassuk ki,
     // ami az aktuális módban ténylegesen NTC-ként van bekötve.
@@ -201,10 +211,10 @@ void loop() {
         break;
       case 2: { // páratartalom - DHT11 az NTC2_PIN lábon (min. 1mp a mérések közt)
         static unsigned long lastDhtRead = 0, lastDhtOk = 0;
-        if (now - lastDhtRead >= 1000) {
+        if (now - dhOnSince >= 1500 && now - lastDhtRead >= 1000) {
           lastDhtRead = now;
           float dhtT, dhtH;
-          if (readDHT11(NTC2_PIN, dhtT, dhtH)) {
+          if (readDHT11(DHT_DATA_PIN, dhtT, dhtH)) {
             ntc1Temperature = dhtT; // a DHT11-hez nincs kompenzáció (nem NTC)
             humidity = dhtH;
             lastDhtOk = now;
