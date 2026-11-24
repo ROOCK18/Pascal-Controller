@@ -81,3 +81,4 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - Számítási logika Python-tükörrel ellenőrizve: PT1000 (Callendar–Van Dusen, -50…250 °C, 2,2 kΩ felhúzó) hiba < 1e-9 °C, NTC β-modell, időzítő-napmaszk (4000 nap, 0 eltérés).
 - Megjegyzés: szenzorhibánál (NaN) a termosztátrelé KI-re áll; a ventilátorgörbe ilyenkor a görbe utolsó (legnagyobb) pontját használja – szándékosan biztonságos oldal.
 - Hardveren nem próbáltam (BLE+PIN, OTA, MQTT, DHT11, PT1000, új kijelző-kinézet, propeller-sebesség).
+- **N7** (súlyos, javítva): a Beállítások menü 9 elemű, de a `drawMenuList()` csak 8 soros tömböt használt, ezért a lista alsó elemeinél (BLE védelem, Factory reset, Vissza) tömbön kívüli olvasás → az eszköz újraindult. Most 12 soros a tömb, és a szám le van korlátozva.

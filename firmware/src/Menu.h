@@ -44,8 +44,10 @@ void drawValueList(const String &title, ValueRow rows[], int count, int cursor) 
 }
 
 void drawMenuList(const String &title, const char* items[], int count, int cursor) {
-  ValueRow rows[8];
-  for (int i = 0; i < count && i < 8; i++) { rows[i].label = items[i]; rows[i].value = ""; rows[i].valColor = UI_WHITE; }
+  const int MAXR = 12;   // a leghosszabb sima lista (Beállítások) 9 elemű - ne legyen túlindexelés
+  ValueRow rows[MAXR];
+  if (count > MAXR) count = MAXR;
+  for (int i = 0; i < count; i++) { rows[i].label = items[i]; rows[i].value = ""; rows[i].valColor = UI_WHITE; }
   drawValueList(title, rows, count, cursor);
 }
 
