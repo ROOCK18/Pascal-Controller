@@ -55,8 +55,63 @@ static void alertSend(int i) {
   notifyLine("ALERT:" + String(i + 1) + ":" + String(alertState[i]) + ":" + (isnan(v) ? String("nan") : String(v, 1)));
 }
 
+// ------------------------------------------------------------
+// Csatornánkénti figyelmeztetések (Vezérlés -> Automatikák): ventilátor 1-2, relé 1-2.
+// A csatorna szenzora a termosztátjáé (1. / 2. hőmérő). Állapot: 0 = rendben, 1 = szenzorhiba, 2 = túl alacsony,
+// 3 = túl magas hőmérséklet. Üzenet: "CALERT:<F1|F2|R1|R2>:<állapot>:<hőmérséklet °C>"
+// ------------------------------------------------------------
+#define CH_ALERT_N 4
+static const char *CH_ALERT_NAMES[CH_ALERT_N] = { "F1", "F2", "R1", "R2" };
+static uint8_t chState[CH_ALERT_N]   = { AL_OK, AL_OK, AL_OK, AL_OK };
+static uint8_t chPending[CH_ALERT_N] = { AL_OK, AL_OK, AL_OK, AL_OK };
+static unsigned long chPendingSince[CH_ALERT_N] = { 0, 0, 0, 0 };
+
+static int chSensorIdx(int ch) {
+  uint8_t s = (ch == 0) ? thermF1.sensor : (ch == 1) ? thermF2.sensor : (ch == 2) ? thermR1.sensor : thermR2.sensor;
+  return (s == 2) ? 1 : 0;   // a páratartalom (3) hőmérséklete az 1. szenzorról jön
+}
+
+static uint8_t chClassify(int ch, uint8_t cur) {
+  const ChAlert &a = chAlert[ch];
+  int s = chSensorIdx(ch);
+  if ((alertSensorMask() & (1 << s)) == 0) return AL_OK;   // ebben az üzemmódban nincs ilyen hőmérő
+  float t = alertValue(s);
+  if (isnan(t)) return a.faultOn ? AL_FAULT : AL_OK;
+  if (a.lowOn) {
+    float limit = a.low + (cur == AL_LOW ? ALERT_HYST : 0.0f);
+    if (t < limit) return AL_LOW;
+  }
+  if (a.highOn) {
+    float limit = a.high - (cur == AL_HIGH ? ALERT_HYST : 0.0f);
+    if (t > limit) return AL_HIGH;
+  }
+  return AL_OK;
+}
+
+static void chAlertSend(int ch) {
+  float v = alertValue(chSensorIdx(ch));
+  notifyLine("CALERT:" + String(CH_ALERT_NAMES[ch]) + ":" + String(chState[ch]) + ":" + (isnan(v) ? String("nan") : String(v, 1)));
+}
+
+static void checkChAlerts(unsigned long now) {
+  for (int ch = 0; ch < CH_ALERT_N; ch++) {
+    uint8_t want = AL_OK;
+    if (chAlert[ch].enabled) want = chClassify(ch, chState[ch]);
+    if (want == chState[ch]) { chPending[ch] = want; continue; }
+    if (want != chPending[ch]) { chPending[ch] = want; chPendingSince[ch] = now; continue; }
+    if (now - chPendingSince[ch] >= ALERT_DEBOUNCE_MS) {
+      chState[ch] = want;
+      chAlertSend(ch);
+    }
+  }
+}
+
 // Van-e most aktív riasztás (a kijelzőn jelzésre)
-bool alertActive() { return alertState[0] != AL_OK || alertState[1] != AL_OK; }
+bool alertActive() {
+  if (alertState[0] != AL_OK || alertState[1] != AL_OK) return true;
+  for (int ch = 0; ch < CH_ALERT_N; ch++) if (chState[ch] != AL_OK) return true;
+  return false;
+}
 
 // Másodpercenként egyszer hívandó
 void checkAlerts() {
@@ -78,6 +133,7 @@ void checkAlerts() {
       alertSend(i);
     }
   }
+  checkChAlerts(now);
 }
 
 // Parancs: SET_ALERT:<bekapcsolva 0/1>:<alsó határ be 0/1>:<alsó °C>:<felső határ be 0/1>:<felső °C>:<szenzorhiba 0/1>
@@ -109,4 +165,40 @@ void handleGetAlert() {
              String(alertCfg.faultOn ? 1 : 0));
   for (int i = 0; i < 2; i++)
     if (alertState[i] != AL_OK) alertSend(i);
+}
+
+// Parancs: SET_CALERT:<F1|F2|R1|R2>:<be>:<szenzorhiba>:<alsó be>:<alsó °C>:<felső be>:<felső °C>
+void handleSetChAlert(const String &body) {
+  String tok[7]; int n = 0, start = 0;
+  while (n < 7) {
+    int c = body.indexOf(':', start);
+    if (c < 0) { tok[n++] = body.substring(start); break; }
+    tok[n++] = body.substring(start, c);
+    start = c + 1;
+  }
+  if (n < 7) return;
+  int ch = -1;
+  for (int i = 0; i < CH_ALERT_N; i++) if (tok[0] == CH_ALERT_NAMES[i]) ch = i;
+  if (ch < 0) return;
+  ChAlert &a = chAlert[ch];
+  a.enabled = tok[1].toInt() != 0;
+  a.faultOn = tok[2].toInt() != 0;
+  a.lowOn = tok[3].toInt() != 0;
+  a.low = constrain(tok[4].toFloat(), -50.0f, 150.0f);
+  a.highOn = tok[5].toInt() != 0;
+  a.high = constrain(tok[6].toFloat(), -50.0f, 150.0f);
+  chState[ch] = AL_OK; chPending[ch] = AL_OK;   // új beállítás: újraértékelés
+  markDirty();
+  notifyLine("CALERT_OK");
+}
+
+// GET_CALERT: minden csatorna beállítása + az épp aktív figyelmeztetések
+void handleGetChAlert() {
+  for (int ch = 0; ch < CH_ALERT_N; ch++) {
+    const ChAlert &a = chAlert[ch];
+    notifyLine("LOAD_CALERT:" + String(CH_ALERT_NAMES[ch]) + ":" + String(a.enabled ? 1 : 0) + ":" + String(a.faultOn ? 1 : 0) + ":" +
+               String(a.lowOn ? 1 : 0) + ":" + String(a.low, 1) + ":" + String(a.highOn ? 1 : 0) + ":" + String(a.high, 1));
+  }
+  for (int ch = 0; ch < CH_ALERT_N; ch++)
+    if (chState[ch] != AL_OK) chAlertSend(ch);
 }

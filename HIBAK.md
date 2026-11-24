@@ -88,3 +88,9 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - A háttérfigyelés Android előtér-szolgáltatás: az appot telefon-újraindítás után egyszer meg kell nyitni.
 - A riasztás-értesítés csak kapcsolódott (hatótávon belüli) telefonra érkezik; távoli értesítéshez MQTT/Home Assistant kell (a riasztás MQTT-s bejelentése még nincs megvalósítva).
 - Hardveren / telefonon nem próbáltam: közeledés-csatlakozás, relé-impulzus, ALERT értesítés, előtér-szolgáltatás.
+
+## 5.4.0 – csatornánkénti figyelmeztetések: ismert korlátok
+- A csatorna-figyelmeztetés ugyanúgy csak kapcsolódott (hatótávon belüli) telefonra érkezik, mint az 5.2.0 riasztás; MQTT-s bejelentése nincs.
+- A csatorna szenzora a termosztátjáé; páratartalom-forrásnál az 1. hőmérő hőmérséklete számít. Az RGB-nek nincs figyelmeztetése (nincs szenzora).
+- A Közeledés a háttér-kapcsolat jelzését az Android nem engedi teljesen elrejteni: minimális fontosságú, néma értesítés marad az értesítési panel alján.
+- Hardveren / telefonon nem próbáltam: CALERT értesítés, közeledés legördülő elrendezés.

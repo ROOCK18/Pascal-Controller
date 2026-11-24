@@ -76,6 +76,7 @@ void saveAllSettings() {
   prefs.putBytes("rHoldR2", &relayTimerR2, sizeof(relayTimerR2));
   prefs.putBytes("alertCfg", &alertCfg, sizeof(alertCfg));
   prefs.putBytes("proxCh", proxCh, sizeof(proxCh));
+  prefs.putBytes("chAlert", chAlert, sizeof(chAlert));
 
   prefs.end();
 }
@@ -164,6 +165,7 @@ void loadAllSettings() {
   loadStructIfMatching("rHoldR2", relayTimerR2);
   loadStructIfMatching("alertCfg", alertCfg);
   loadStructIfMatching("proxCh", proxCh);
+  loadStructIfMatching("chAlert", chAlert);
 
   prefs.end();
 }

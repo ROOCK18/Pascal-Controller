@@ -90,7 +90,12 @@ public partial class Timing : ContentView
     {
         ProxF1View.Reload(); ProxF2View.Reload(); ProxR1View.Reload(); ProxR2View.Reload();
         await Task.Delay(800);
-        if (BluetoothManager.IsConnected) await BluetoothManager.WriteAsync("GET_PROX");
+        if (BluetoothManager.IsConnected)
+        {
+            await BluetoothManager.WriteAsync("GET_PROX");
+            await Task.Delay(300);
+            await BluetoothManager.WriteAsync("GET_CALERT");   // csatornánkénti figyelmeztetések
+        }
     }
 
     // ══════════════ VISSZA GOMB ══════════════

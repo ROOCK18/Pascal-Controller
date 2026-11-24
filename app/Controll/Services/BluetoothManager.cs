@@ -327,6 +327,8 @@ public static class BluetoothManager
             await WriteAsync("GET_STATE");
             await Task.Delay(150);
             await WriteAsync("GET_ALERT");   // az aktív riasztások újraküldése (AlertService)
+            await Task.Delay(150);
+            await WriteAsync("GET_CALERT");  // a csatornánkénti figyelmeztetések aktív állapota
             return true;
         }
         catch (Exception ex)

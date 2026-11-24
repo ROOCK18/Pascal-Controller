@@ -1530,7 +1530,7 @@ public partial class Settings : ContentPage
     {
         if (string.IsNullOrWhiteSpace(data)) return;
         var d = data.Trim();
-        if ((d.StartsWith("STATE:") || d.StartsWith("LOAD_")) && !d.StartsWith("LOAD_MQTT:") && !d.StartsWith("LOAD_ALERT:"))
+        if ((d.StartsWith("STATE:") || d.StartsWith("LOAD_")) && !d.StartsWith("LOAD_MQTT:") && !d.StartsWith("LOAD_ALERT:") && !d.StartsWith("LOAD_CALERT:"))
             _capturedSchemeLines?.Add(d);
     }
 

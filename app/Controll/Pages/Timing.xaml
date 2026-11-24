@@ -226,6 +226,7 @@
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                     <pages:ProxChannelView x:Name="ProxF1View" ChannelKey="F1" Kind="Fan" />
+                    <pages:AlertChannelView x:Name="AlertF1View" ChannelKey="F1" />
                 </VerticalStackLayout>
                     </VerticalStackLayout>
             </Border>
@@ -430,6 +431,7 @@
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                     <pages:ProxChannelView x:Name="ProxF2View" ChannelKey="F2" Kind="Fan" />
+                    <pages:AlertChannelView x:Name="AlertF2View" ChannelKey="F2" />
                 </VerticalStackLayout>
                     </VerticalStackLayout>
             </Border>
@@ -623,6 +625,7 @@
                     </VerticalStackLayout>
 
                     <pages:ProxChannelView x:Name="ProxR1View" ChannelKey="R1" Kind="Relay" />
+                    <pages:AlertChannelView x:Name="AlertR1View" ChannelKey="R1" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
@@ -816,6 +819,7 @@
                     </VerticalStackLayout>
 
                     <pages:ProxChannelView x:Name="ProxR2View" ChannelKey="R2" Kind="Relay" />
+                    <pages:AlertChannelView x:Name="AlertR2View" ChannelKey="R2" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>

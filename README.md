@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.3.1** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.4.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,7 +18,7 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.3.1)
+## Firmware (v5.4.0)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
@@ -79,6 +79,8 @@ indításakor egyszer meg kell nyitni). A távolság a BLE jelerősségből (RSS
   Automata/Kézi módja. Ventilátor: az időtartam végén visszaáll az előző értékre; relé: az időtartam alatt az automatika nem írja felül, utána átveszi;
   RGB: az időtartam után az ellenkezőjére áll (0 mp: marad). Reléknél a 0 mp a relé "Kapuzás" beállított ideje.
 - A távolságot és az újraélesedést az app tárolja (az app méri), a "mit/meddig" és a bekapcsolás az eszközön is tárolódik (`SET_PROX`, `PROX_TRIGGER:<csatorna>`). Firmware 5.3.1 szükséges.
+
+**Figyelmeztetések csatornánként (v5.4.0):** Vezérlés → Automatikák beállítása → a Ventilátor 1-2 és Relé 1-2 kártyák alján, a Közeledés alatt egy "Figyelmeztetés" legördülő (bekapcsolóval): *szenzorhiba*, *túl alacsony hőmérséklet* (alsó határ), *túl magas hőmérséklet* (felső határ). A csatorna szenzora a termosztátjáé (1. vagy 2. hőmérő). Az eszköz `CALERT:<csatorna>:<állapot>:<érték>` sort küld (`SET_CALERT` / `GET_CALERT`), az app ebből a csatorna nevével ír értesítést. Az RGB-nek nincs szenzora, ott nincs figyelmeztetés. A Beállítások → Értesítések panel (a két hőmérőre közös riasztás) változatlan.
 
 **Értesítések / riasztások** (Beállítások → Értesítések, az eszközön tárolt határokkal): szenzorhiba (szakadt szál,
 rövidzár, értelmezhetetlen érték), túl alacsony és túl magas hőmérséklet. Az eszköz `ALERT:<szenzor>:<állapot>:<érték>`

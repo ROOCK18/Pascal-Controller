@@ -124,6 +124,17 @@ struct AlertCfg {
 };
 AlertCfg alertCfg;
 
+// Csatornánkénti figyelmeztetés (0=F1, 1=F2, 2=R1, 3=R2): lásd Alerts.h. A csatorna szenzora a termosztátjáé.
+struct ChAlert {
+  bool enabled = false;   // a csatorna figyelmeztetései be vannak kapcsolva
+  bool faultOn = true;    // szenzorhiba
+  bool lowOn = false;     // túl alacsony hőmérséklet
+  bool highOn = false;    // túl magas hőmérséklet
+  float low = 5.0f;
+  float high = 35.0f;
+};
+ChAlert chAlert[4];
+
 // Közeledés-automatika egy csatornára (0=F1, 1=F2, 2=R1, 3=R2, 4=RGB): lásd Prox.h
 struct ProxCh {
   bool enabled = false;

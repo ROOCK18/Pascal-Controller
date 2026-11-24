@@ -390,6 +390,12 @@ void handleBleCommand(String receivedString) {
     else if (receivedString == "GET_ALERT") {
       handleGetAlert();
     }
+    else if (receivedString.startsWith("SET_CALERT:")) {
+      handleSetChAlert(receivedString.substring(11));
+    }
+    else if (receivedString == "GET_CALERT") {
+      handleGetChAlert();
+    }
     else if (receivedString.startsWith("SET_PROX:")) {
       handleSetProx(receivedString.substring(9));
     }
