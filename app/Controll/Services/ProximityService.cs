@@ -29,6 +29,27 @@ public static class ProximityService
     private static readonly Dictionary<string, DateTime> _lastSeen = new();   // eszközönként: mikor látszott utoljára
     private static readonly Dictionary<string, DateTime> _outsideSince = new(); // "eszköz/csatorna": mióta van folyamatosan a "kívül" távolságon
 
+    // ── Élő állapot a beállító oldalnak (hibakereséshez: mit lát az app) ──
+    private static int? _lastRssi;
+    private static double? _lastDist;
+    private static DateTime _lastTick = DateTime.MinValue;
+    private static string _note = "A figyelés még nem mért semmit.";
+
+    public static string Describe(string ch)
+    {
+        bool running = _task is { IsCompleted: false };
+        var sb = new System.Text.StringBuilder();
+        sb.Append("Figyelés: ").Append(running ? "fut" : "NEM fut (nincs bekapcsolt közeledés mentett eszköznél)");
+        sb.Append("\nKapcsolat: ").Append(BluetoothManager.IsConnected ? "csatlakozva" : "nincs");
+        if (_lastRssi != null && _lastDist != null)
+            sb.Append($"\nUtolsó mérés: {_lastRssi} dBm ≈ {_lastDist:0.0} m ({(int)(DateTime.UtcNow - _lastTick).TotalSeconds} mp-e)");
+        else sb.Append("\nUtolsó mérés: még nincs");
+        string? id = BluetoothManager.LastUsedId;
+        sb.Append("\nÉles (végrehajt a következő közeledésnél): ").Append(id != null && IsArmed(id, ch) ? "igen" : "nem");
+        sb.Append("\n").Append(_note);
+        return sb.ToString();
+    }
+
     // A bekapcsolt csatornák egy eszköznél
     private static List<(string key, ProxChannelCfg cfg)> EnabledChannels(SavedDevice d)
         => d.ProxChannels.Where(kv => kv.Value.Enabled && Channels.Contains(kv.Key)).Select(kv => (kv.Key, kv.Value)).ToList();
@@ -75,15 +96,17 @@ public static class ProximityService
                 // Több mentett eszköz esetén mindig az UTOLJÁRA használt eszközt figyeli
                 string? last = BluetoothManager.LastUsedId;
                 var cfg = BluetoothManager.GetSavedDevices().FirstOrDefault(d => d.Id == last && Wanted(d));
-                if (cfg == null) { await Task.Delay(10000, ct); continue; }
+                if (cfg == null) { _note = "Nincs az utoljára használt eszköznél bekapcsolt közeledés."; await Task.Delay(10000, ct); continue; }
 
-                if (!await BleReadyAsync()) { await Task.Delay(15000, ct); continue; }
+                if (!await BleReadyAsync()) { _note = "Bluetooth kikapcsolva vagy nincs engedély."; await Task.Delay(15000, ct); continue; }
                 if (BluetoothManager.IsConnected)
                 {
                     if (BluetoothManager.ConnectedDevice?.Id.ToString() == cfg.Id) await PollConnectedAsync(cfg);
+                    else _note = "Másik eszközhöz van csatlakozva, nem az utoljára használthoz.";
                 }
                 else if (BluetoothManager.AutoConnectAllowed) await ScanAndConnectAsync(cfg);
-                await Task.Delay(BluetoothManager.IsConnected ? 4000 : 6000, ct);
+                else _note = "Kézi lecsatlakozás után az automatikus csatlakozás szünetel (csatlakozz kézzel újra).";
+                await Task.Delay(BluetoothManager.IsConnected ? 2000 : 6000, ct);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex) { Debug.WriteLine($"Közeledés: {ex.Message}"); try { await Task.Delay(8000, ct); } catch { break; } }
@@ -102,7 +125,9 @@ public static class ProximityService
         if (!_hist.TryGetValue(id, out var h)) _hist[id] = h = new List<int>();
         h.Add(rssi);
         while (h.Count > 3) h.RemoveAt(0);
-        return EstimateMeters(h.Average());
+        double m = EstimateMeters(h.Average());
+        _lastRssi = rssi; _lastDist = m; _lastTick = DateTime.UtcNow;
+        return m;
     }
 
     private static async Task ScanAndConnectAsync(SavedDevice cfg)
@@ -129,6 +154,7 @@ public static class ProximityService
         if (dev == null || list.Count == 0)
         {
             UpdateAllArming(cfg, null, now);   // nem látszik
+            _note = "Keresés: az eszköz most nem látszik.";
             return;
         }
 
@@ -142,7 +168,9 @@ public static class ProximityService
     private static async Task PollConnectedAsync(SavedDevice cfg)
     {
         var dev = BluetoothManager.ConnectedDevice;
-        if (dev == null || !await dev.UpdateRssiAsync()) return;
+        if (dev == null) return;
+        if (!await dev.UpdateRssiAsync()) { _note = "A jelerősség lekérése nem sikerült (a kapcsolat romlik?)."; return; }
+        _note = "Kapcsolat él, mérés folyamatban.";
 
         double dist = SmoothedMeters(cfg.Id, dev.Rssi);
         var now = DateTime.UtcNow;
@@ -193,6 +221,7 @@ public static class ProximityService
             _armed[Key(cfg.Id, ch)] = false;   // egy közeledés = egy végrehajtás
             _outsideSince.Remove(Key(cfg.Id, ch));
             await BluetoothManager.WriteAsync($"PROX_TRIGGER:{ch}");
+            _note = $"{ChannelName(ch)}: PROX_TRIGGER elküldve ({DateTime.Now:HH:mm:ss}, {dist:0.0} m).";
             await Task.Delay(150);
             fired.Add(ChannelName(ch));
         }
