@@ -69,10 +69,25 @@ void startWifiConnect() {
 // kísérletet is indít (a tényleges WiFi.begin() a loop()-ban indul,
 // lásd wifiConnectRequested a PascalController.ino loop()-jában).
 void handleSetWifi(const String &body) {
-  int c = body.indexOf(':');
-  if (c < 0) return;
-  wifiSsid = body.substring(0, c);
-  wifiPassword = body.substring(c + 1);
+  // Formátum: <ssid>:<jelszó>. Az SSID/jelszó ':' és '\' karaktere "\:" ill. "\\" alakban jön
+  // (escape-elve), így ezek is megadhatók; escape nélküli (régi) formátum változatlanul működik.
+  String parts[2];
+  int idx = 0;
+  String cur;
+  for (size_t i = 0; i < body.length(); i++) {
+    char ch = body[i];
+    if (ch == '\\' && i + 1 < body.length() && (body[i + 1] == ':' || body[i + 1] == '\\')) {
+      cur += body[++i];
+    } else if (ch == ':' && idx == 0) {
+      parts[0] = cur; cur = ""; idx = 1;
+    } else {
+      cur += ch;
+    }
+  }
+  if (idx == 0) return;
+  parts[1] = cur;
+  wifiSsid = parts[0];
+  wifiPassword = parts[1];
   markDirty();
   notifyLine("WIFI_OK");
   wifiConnectRequested = true;

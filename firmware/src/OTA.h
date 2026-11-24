@@ -26,6 +26,11 @@ void otaFail(const String &reason) {
 }
 
 void processOtaQueue() {
+  if (otaProblem) {
+    uint8_t pr = otaProblem; otaProblem = 0;
+    otaFail(pr == 1 ? "Tul nagy csomag" : "Tulterheles (sor betelt)");
+    return;
+  }
   int processed = 0;
   while (processed < 8) {
     OtaPacket packet;

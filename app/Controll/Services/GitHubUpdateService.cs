@@ -46,7 +46,7 @@ public static class GitHubUpdateService
     public static async Task<List<FirmwareRelease>> GetAllReleasesAsync()
     {
         var result = new List<FirmwareRelease>();
-        string url = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases";
+        string url = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases?per_page=100";
 
         using var resp = await _http.GetAsync(url);
         resp.EnsureSuccessStatusCode();
@@ -123,14 +123,15 @@ public static class GitHubUpdateService
         return 0;
     }
 
+    // A tag bármilyen előtaggal/utótaggal jöhet ("v4.9.0", "PaC_FW_4.2.1", "fw-5.0.0-beta"):
+    // az első "x.y" vagy "x.y.z" számhármast keressük benne.
     private static int[] ParseVersion(string s)
     {
-        s = (s ?? "").Trim();
-        if (s.StartsWith("v", StringComparison.OrdinalIgnoreCase)) s = s.Substring(1);
-        var parts = s.Split('.');
         var result = new int[3];
+        var m = System.Text.RegularExpressions.Regex.Match(s ?? "", @"(\d+)\.(\d+)(?:\.(\d+))?");
+        if (!m.Success) return result;
         for (int i = 0; i < 3; i++)
-            result[i] = (i < parts.Length && int.TryParse(parts[i], out int v)) ? v : 0;
+            if (m.Groups[i + 1].Success && int.TryParse(m.Groups[i + 1].Value, out int v)) result[i] = v;
         return result;
     }
 }

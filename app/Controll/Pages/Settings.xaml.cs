@@ -741,7 +741,7 @@ public partial class Settings : ContentPage
         _wifiConnectTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
-            await BluetoothManager.WriteAsync($"SET_WIFI:{ssid}:{pass}");
+            await BluetoothManager.WriteAsync($"SET_WIFI:{EscapeWifiField(ssid)}:{EscapeWifiField(pass)}");
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             string result;
@@ -1277,6 +1277,11 @@ public partial class Settings : ContentPage
         await Task.Delay(120);
         await BluetoothManager.WriteAsync($"TIME:{n.Hour:D2}:{n.Minute:D2}:{n.Second:D2}");
     }
+
+    // A firmware a ':'-ot választja el az SSID-t és a jelszót; a mezőkben lévő ':' és '\' karaktert
+    // escape-eljük ("\:" és "\\"), így kettőspontot tartalmazó SSID/jelszó is működik.
+    private static string EscapeWifiField(string v)
+        => (v ?? "").Replace("\\", "\\\\").Replace(":", "\\:");
 
     private async Task<PermissionStatus> CheckBTPerm()
     {

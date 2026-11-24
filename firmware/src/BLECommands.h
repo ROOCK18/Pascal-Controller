@@ -118,33 +118,27 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
   }
 };
 
-class MyCallbacks : public NimBLECharacteristicCallbacks {
-  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo& connInfo) override {
-    NimBLEAttValue rxValue = pCharacteristic->getValue();
-    const uint8_t* data = rxValue.data();
-    size_t len = rxValue.size();
-    if (len == 0) return;
+// ============================================================
+// BLE PARANCS-SOR: a callback berakja, a loop() dolgozza fel
+// ============================================================
+#define BLE_CMD_QUEUE_SIZE 24
+static String *bleCmdQueue[BLE_CMD_QUEUE_SIZE];
+static volatile uint8_t bleCmdHead = 0, bleCmdTail = 0;
+static portMUX_TYPE bleCmdMux = portMUX_INITIALIZER_UNLOCKED;
 
-    // ---------------- OTA bináris adat: csak queue-ba másolás ----------------
-    // A tényleges flash írás a loop()-ban (processOtaQueue) történik, hogy a
-    // BLE stack callback taskja soha ne blokkolódjon flash művelet miatt.
-    if (otaInProgress) {
-      if (len > MAX_OTA_CHUNK) len = MAX_OTA_CHUNK; // védelem, elméletileg nem fordulhat elő
-      OtaPacket packet;
-      packet.len = len;
-      memcpy(packet.data, data, len);
-      portENTER_CRITICAL(&otaMux);
-      otaQueue.push(packet);
-      portEXIT_CRITICAL(&otaMux);
-      return;
-    }
+static bool bleCmdPush(const String &s) {
+  String *p = new String(s);  // a memóriafoglalás a kritikus szakaszon KÍVÜL történik
+  bool ok = false;
+  portENTER_CRITICAL(&bleCmdMux);
+  uint8_t next = (bleCmdHead + 1) % BLE_CMD_QUEUE_SIZE;
+  if (next != bleCmdTail) { bleCmdQueue[bleCmdHead] = p; bleCmdHead = next; ok = true; }
+  portEXIT_CRITICAL(&bleCmdMux);
+  if (!ok) delete p;
+  return ok;
+}
 
-    // ---------------- Szöveges parancsok ----------------
-    String receivedString;
-    receivedString.reserve(len + 1);
-    for (size_t i = 0; i < len; i++) receivedString += (char)data[i];
-    receivedString.trim();
-
+// Egyetlen BLE szöveges parancs végrehajtása (a fő szálon hívva).
+void handleBleCommand(String receivedString) {
     if (receivedString.startsWith("UPDATE:")) {
       // "UPDATE:<total>:<chunkSize>" - a toInt() a ':'-nál megall,
       // igy csak a total meretet olvassuk ki.
@@ -208,10 +202,13 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
     else if (receivedString == "R2_1")  { digitalWrite(RELAY2_PIN, HIGH); markDirty(); }
     else if (receivedString == "R2_0")  { digitalWrite(RELAY2_PIN, LOW); markDirty(); }
     else if (receivedString.startsWith("TIME:")) {
-      hr    = receivedString.substring(5, 7).toInt();
-      min_t = receivedString.substring(8, 10).toInt();
-      sec   = receivedString.substring(11, 13).toInt();
-      markDirty();
+      int th = receivedString.substring(5, 7).toInt();
+      int tm = receivedString.substring(8, 10).toInt();
+      int ts = receivedString.substring(11, 13).toInt();
+      if (th >= 0 && th <= 23 && tm >= 0 && tm <= 59 && ts >= 0 && ts <= 59) {
+        hr = th; min_t = tm; sec = ts;
+        markDirty();
+      }
     }
     else if (receivedString.startsWith("SET_MODE:")) {
       // Szenzor-elrendezés választó (Settings ModePicker) - ezen a hardveren
@@ -399,6 +396,56 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
         notifyLine("AUTO_OK:" + target + ":" + String(en ? 1 : 0));
       }
     }
+}
+
+void processBleCommands() {
+  for (;;) {
+    String *p = nullptr;
+    portENTER_CRITICAL(&bleCmdMux);
+    if (bleCmdTail != bleCmdHead) { p = bleCmdQueue[bleCmdTail]; bleCmdTail = (bleCmdTail + 1) % BLE_CMD_QUEUE_SIZE; }
+    portEXIT_CRITICAL(&bleCmdMux);
+    if (!p) break;
+    String cmd = *p;
+    delete p;
+    handleBleCommand(cmd);
+  }
+}
+
+class MyCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo& connInfo) override {
+    NimBLEAttValue rxValue = pCharacteristic->getValue();
+    const uint8_t* data = rxValue.data();
+    size_t len = rxValue.size();
+    if (len == 0) return;
+
+    // ---------------- OTA bináris adat: csak queue-ba másolás ----------------
+    // A tényleges flash írás a loop()-ban (processOtaQueue) történik, hogy a
+    // BLE stack callback taskja soha ne blokkolódjon flash művelet miatt.
+    if (otaInProgress) {
+      // Túl nagy csomagot NEM vágunk le (az sérült image-et adna), hanem hibával lezárjuk az OTA-t.
+      if (len > MAX_OTA_CHUNK) { otaProblem = 1; return; }
+      OtaPacket packet;
+      packet.len = len;
+      memcpy(packet.data, data, len);
+      bool full = false;
+      portENTER_CRITICAL(&otaMux);
+      if (otaQueue.size() >= 400) full = true; // legfeljebb ~55 KB várakozó adat
+      else otaQueue.push(packet);
+      portEXIT_CRITICAL(&otaMux);
+      if (full) otaProblem = 2;
+      return;
+    }
+
+    // ---------------- Szöveges parancsok ----------------
+    String receivedString;
+    receivedString.reserve(len + 1);
+    for (size_t i = 0; i < len; i++) receivedString += (char)data[i];
+    receivedString.trim();
+
+    // A feldolgozás NEM itt (a BLE host taskban) történik, hanem a loop()-ban - így nincs
+    // versenyhelyzet a fő szál adataival, és a hosszú műveletek (flash törlés, újraindítás)
+    // nem blokkolják a BLE stacket. Lásd handleBleCommand() / processBleCommands().
+    if (!bleCmdPush(receivedString)) Serial.println("BLE parancs-sor tele - parancs eldobva");
   }
 };
 

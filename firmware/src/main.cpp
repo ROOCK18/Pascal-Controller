@@ -63,6 +63,16 @@
 // SETUP / LOOP
 // ============================================================
 void setup() {
+  // ELSŐ lépés: a kimeneti lábak definiált (KI) szintre. Reset után a lábak lebegnek
+  // (bemenet, felhúzás nélkül); minél tovább tart, mire a firmware kimenetté teszi és
+  // alacsonyra húzza őket, annál nagyobb az esély, hogy a relé/MOSFET meghajtó
+  // "megérzi", és a relé kattan. Ezért ez megelőz minden mást (Serial, kijelző, LVGL).
+  digitalWrite(RELAY1_PIN, LOW); pinMode(RELAY1_PIN, OUTPUT);
+  digitalWrite(RELAY2_PIN, LOW); pinMode(RELAY2_PIN, OUTPUT);
+  digitalWrite(FAN1_ON, LOW);    pinMode(FAN1_ON, OUTPUT);
+  digitalWrite(FAN2_ON, LOW);    pinMode(FAN2_ON, OUTPUT);
+  digitalWrite(RGB_ON, LOW);     pinMode(RGB_ON, OUTPUT);
+
   Serial.begin(115200);
   randomSeed(analogRead(0));
 
@@ -112,6 +122,8 @@ void setup() {
 }
 
 void loop() {
+  processBleCommands(); // a BLE parancsok ITT, a fő szálon futnak (a callback csak sorba állítja őket)
+
   if (otaInProgress) {
     // OTA alatt kizárólag a queue ürítésére koncentrálunk - semmi mást
     // nem csinálunk (kijelző/szenzor/időzítő), hogy a flash írás
@@ -188,13 +200,19 @@ void loop() {
         ntc1Temperature = readNTCTemperature(NTC1_PIN) + tempCompNTC1;
         break;
       case 2: { // páratartalom - DHT11 az NTC2_PIN lábon (min. 1mp a mérések közt)
-        static unsigned long lastDhtRead = 0;
+        static unsigned long lastDhtRead = 0, lastDhtOk = 0;
         if (now - lastDhtRead >= 1000) {
           lastDhtRead = now;
           float dhtT, dhtH;
           if (readDHT11(NTC2_PIN, dhtT, dhtH)) {
             ntc1Temperature = dhtT; // a DHT11-hez nincs kompenzáció (nem NTC)
             humidity = dhtH;
+            lastDhtOk = now;
+          } else if (now - lastDhtOk > 15000) {
+            // 15 mp-e nincs érvényes mérés: ne maradjon régi érték, a termosztát ne
+            // elavult adat alapján dolgozzon (a szenzorhiba kezelése NaN-nal történik).
+            ntc1Temperature = NAN;
+            humidity = NAN;
           }
         }
         break;

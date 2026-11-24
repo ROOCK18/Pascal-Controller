@@ -122,7 +122,7 @@ bool wifiScanRequested = false;    // WIFI_SCAN után a loop() indítja a keres�
 
 // ── Kijelző-menüs WiFi beállítás állapota ──
 #define WIFI_MENU_MAX_NETWORKS 15
-#define WIFI_PW_MAX_LEN 32
+#define WIFI_PW_MAX_LEN 63   // a WPA2 jelszó legfeljebb 63 karakter
 String wifiMenuScanSsids[WIFI_MENU_MAX_NETWORKS];
 int wifiMenuScanCount = 0;
 bool wifiMenuScanRequested = false; // a menüből indított keresés jelzője (külön a BLE-s wifiScanRequested-től)
@@ -152,6 +152,7 @@ struct OtaPacket {
 };
 
 std::queue<OtaPacket> otaQueue;
+volatile uint8_t otaProblem = 0; // 1 = túl nagy csomag, 2 = a sor betelt (a loop() hibával lezárja az OTA-t)
 portMUX_TYPE otaMux = portMUX_INITIALIZER_UNLOCKED;
 
 // Előre deklarálás: az Arduino IDE a fájl elejére generál automatikus

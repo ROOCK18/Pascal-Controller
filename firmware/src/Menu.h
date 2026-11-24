@@ -233,7 +233,7 @@ void drawMenu() {
   // képernyőre váltottunk (más elrendezés) - ugyanannak a képernyőnek az
   // ismételt újrarajzolása NEM töröl mindent, ezért nem villódzik a kijelző.
   lastDrawnMenuScreen = menuScreen;
-  ValueRow rows[12];
+  ValueRow rows[17]; // a leghosszabb lista: 15 WiFi hálózat + Vissza
 
   switch (menuScreen) {
     case MENU_MAIN:
@@ -618,7 +618,7 @@ void drawMenu() {
         drawValueList("WIFI HÁLÓZATOK", rows, 2, menuCursor);
       } else {
         int n = 0;
-        for (int i = 0; i < wifiMenuScanCount && n < 11; i++) {
+        for (int i = 0; i < wifiMenuScanCount && n < 15; i++) {
           rows[n].label = wifiMenuScanSsids[i]; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
         }
         rows[n] = { "Vissza", "", UI_WHITE }; n++;
