@@ -501,7 +501,6 @@ public partial class Settings : ContentPage
         var sd = BluetoothManager.FindSaved(_proxIds[i]);
         if (sd == null) return;
         ProxEnabledSwitch.IsToggled = sd.ProxEnabled;
-        ProxMetersEntry.Text = sd.ProxMeters.ToString("0.#", CultureInfo.InvariantCulture);
     }
 
     private void OnProxDeviceChanged(object? s, EventArgs e)
@@ -514,12 +513,6 @@ public partial class Settings : ContentPage
     {
         int i = ProxDevicePicker.SelectedIndex;
         if (i < 0 || i >= _proxIds.Count) return;
-        if (!double.TryParse((ProxMetersEntry.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double meters)
-            || meters < 1 || meters > 100)
-        {
-            await DisplayAlertAsync("Hibás érték", "A távolság 1 és 100 méter közötti szám legyen.", "OK");
-            return;
-        }
         bool enabled = ProxEnabledSwitch.IsToggled;
         if (enabled)
         {
@@ -528,13 +521,13 @@ public partial class Settings : ContentPage
         }
         BluetoothManager.UpdateSaved(_proxIds[i], sd =>
         {
-            sd.ProxEnabled = enabled; sd.ProxMeters = meters;
+            sd.ProxEnabled = enabled;
         });
         ProximityService.Refresh();
         BackgroundHost.Update();
         BluetoothManager.StartAutoReconnect();
         await DisplayAlertAsync("Siker", enabled
-            ? $"Elmentve. Az app {meters:0.#} méteren belül magától csatlakozik."
+            ? "Elmentve. Az app azonnal csatlakozik, amint látja az eszközt."
             : "Elmentve. Az automatikus csatlakozás ennél az eszköznél ki van kapcsolva.", "OK");
     }
 

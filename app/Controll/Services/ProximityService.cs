@@ -37,7 +37,8 @@ public static class ProximityService
     // bekapcsolt csatornák legnagyobb távolsága - a csatorna-művelethez kapcsolat kell.
     public static double ConnectMeters(SavedDevice d)
     {
-        double m = d.ProxEnabled ? d.ProxMeters : 0;
+        if (d.ProxEnabled) return double.MaxValue;   // automatikus csatlakozás: azonnal, amint az eszköz látszik (nem távolságfüggő)
+        double m = 0;
         foreach (var (_, c) in EnabledChannels(d)) m = Math.Max(m, c.Meters);
         return m;
     }

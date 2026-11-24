@@ -481,7 +481,7 @@
                             <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnProxHeaderTapped"/></Grid.GestureRecognizers>
                         </Grid>
                         <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
-                            <Label Text="Ha az eszköz a megadott távolságon belülre kerül, az app magától csatlakozik hozzá (az utoljára használt eszközhöz). A közeledés-műveleteket (mikor, mit, meddig, újraélesedés) a Vezérlés → Automatikák és az RGB automatikák oldalon kell beállítani. A távolság a Bluetooth jelerősségből becsült érték, több méteres eltérés lehet. A háttérben futáshoz állandó értesítés látszik." TextColor="#AEAEB2" FontSize="12" />
+                            <Label Text="Amint az app észleli az eszközt (az utoljára használtat), azonnal csatlakozik hozzá, távolságtól függetlenül. A közeledés-műveleteket (távolság, mikor, mit, meddig, újraélesedés) a Vezérlés → Automatikák és az RGB automatikák oldalon kell beállítani. A háttérben futáshoz állandó értesítés látszik." TextColor="#AEAEB2" FontSize="12" />
                             <Label x:Name="LblProxEmpty" Text="Előbb csatlakozz egy eszközhöz, hogy mentett eszköz legyen." TextColor="#AEAEB2" FontSize="12" />
                             <VerticalStackLayout x:Name="ProxFields" Spacing="10">
                                 <Picker x:Name="ProxDevicePicker" IsVisible="False" Title="Válassz eszközt" SelectedIndexChanged="OnProxDeviceChanged" />
@@ -489,10 +489,6 @@
                                     <Label Grid.Column="0" Text="Automatikus csatlakozás ennél az eszköznél" TextColor="{StaticResource White}" VerticalOptions="Center" />
                                     <Switch Grid.Column="1" x:Name="ProxEnabledSwitch" />
                                 </Grid>
-                                <VerticalStackLayout Spacing="4">
-                                    <Label Text="Távolság (méter) - ezen belül csatlakozik" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="ProxMetersEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="10" />
-                                </VerticalStackLayout>
                                 <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                     <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked"/></Border.GestureRecognizers>
                                     <Label Text="KÖZELEDÉS BEÁLLÍTÁSOK MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
