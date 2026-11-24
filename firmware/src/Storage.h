@@ -28,6 +28,8 @@ void saveAllSettings() {
   prefs.putString("wifiPass", wifiPassword);
   prefs.putFloat("compNTC1", tempCompNTC1);
   prefs.putFloat("compNTC2", tempCompNTC2);
+  prefs.putBytes("sensCfg1", &sensCfg[0], sizeof(SensorCfg));
+  prefs.putBytes("sensCfg2", &sensCfg[1], sizeof(SensorCfg));
   prefs.putUChar("brightness", displayBrightness);
   prefs.putUChar("sleepIdx", sleepTimeoutIdx);
 
@@ -99,6 +101,9 @@ void loadAllSettings() {
   if (dateFormat > 4) dateFormat = 0;
   tempCompNTC1 = prefs.getFloat("compNTC1", 0.0);
   tempCompNTC2 = prefs.getFloat("compNTC2", 0.0);
+  loadStructIfMatching("sensCfg1", sensCfg[0]);
+  loadStructIfMatching("sensCfg2", sensCfg[1]);
+  if (currentMode > 4) currentMode = 0; // védelem sérült/hibás mentett érték ellen
   displayBrightness = prefs.getUChar("brightness", 100);
   sleepTimeoutIdx = prefs.getUChar("sleepIdx", 8);
   if (sleepTimeoutIdx >= SLEEP_OPTIONS_COUNT) sleepTimeoutIdx = 8;
@@ -150,7 +155,7 @@ void loadAllSettings() {
 // újraindítja az eszközt - a globális változók ekkor a forráskódban
 // megadott alapértékeikkel jönnek létre újra (üres, "gyári" állapot).
 void factoryReset() {
-  drawEditScreen("GYARI VISSZAALLITAS", "Torles...", "Ujrainditas kovetkezik");
+  drawEditScreen("GYÁRI VISSZAÁLLÍTÁS", "Törlés...", "Újraindítás következik");
   ui_refresh_now(); // a delay()+restart miatt a loop() már nem rajzolna
   Preferences p;
   p.begin(PREFS_NAMESPACE, false);

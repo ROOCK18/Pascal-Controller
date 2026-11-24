@@ -51,7 +51,7 @@ void processOtaQueue() {
     if (currentSize >= fullSize) {
       if (Update.end(true)) {
         notifyLine("OK_RESTART");
-        drawOtaStatus("OTA KESZ!", "Ujrainditas...");
+        drawOtaStatus("OTA KÉSZ!", "Újraindítás...");
         delay(1500);
         ESP.restart();
       } else {

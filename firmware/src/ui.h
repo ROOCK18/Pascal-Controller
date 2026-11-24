@@ -31,11 +31,50 @@
 #define PAL_YELLOW 0xFACC15
 #define PAL_BLUE   0x60A5FA
 
+// ---------------- Betűtípusok ----------------
+// HU_FONTS=1 esetén a saját, magyar ékezetes betűtípusok (src/fonts/lv_font_hu_*.c,
+// generálás: tools/gen_fonts.sh). Nélkülük az LVGL beépített, ASCII-s Montserrat betűi
+// futnak, és az ékezetes szövegeket a ui_fold() automatikusan ékezet nélkülire képezi le.
+#ifdef HU_FONTS
+LV_FONT_DECLARE(lv_font_hu_12);
+LV_FONT_DECLARE(lv_font_hu_14);
+LV_FONT_DECLARE(lv_font_hu_16);
+LV_FONT_DECLARE(lv_font_hu_20);
+LV_FONT_DECLARE(lv_font_hu_28);
+#define FONT_S  (&lv_font_hu_12)
+#define FONT_M  (&lv_font_hu_14)
+#define FONT_ML (&lv_font_hu_16)
+#define FONT_L  (&lv_font_hu_20)
+#define FONT_XL (&lv_font_hu_28)
+#else
 #define FONT_S  (&lv_font_montserrat_12)
 #define FONT_M  (&lv_font_montserrat_14)
 #define FONT_ML (&lv_font_montserrat_16)
 #define FONT_L  (&lv_font_montserrat_20)
 #define FONT_XL (&lv_font_montserrat_28)
+
+// Ékezetes UTF-8 karakterek -> ASCII (csak a beépített betűtípusokhoz kell).
+// Az LVGL szimbólumok (FontAwesome, 0xEF kezdőbájt) érintetlenül átmennek.
+static void ui_fold(const char *in, char *out, size_t cap) {
+  struct Map { uint8_t a, b; const char *r; };
+  static const Map map[] = {
+    {0xC3,0x81,"A"},{0xC3,0x89,"E"},{0xC3,0x8D,"I"},{0xC3,0x93,"O"},{0xC3,0x96,"O"},{0xC3,0x9A,"U"},{0xC3,0x9C,"U"},
+    {0xC3,0xA1,"a"},{0xC3,0xA9,"e"},{0xC3,0xAD,"i"},{0xC3,0xB3,"o"},{0xC3,0xB6,"o"},{0xC3,0xBA,"u"},{0xC3,0xBC,"u"},
+    {0xC5,0x90,"O"},{0xC5,0x91,"o"},{0xC5,0xB0,"U"},{0xC5,0xB1,"u"},
+    {0xCE,0xA9,"Ohm"},{0xCE,0xB2,"beta"}
+  };
+  size_t o = 0;
+  for (size_t i = 0; in[i] && o + 5 < cap; ) {
+    const char *rep = nullptr;
+    for (const Map &m : map) {
+      if ((uint8_t)in[i] == m.a && (uint8_t)in[i + 1] == m.b) { rep = m.r; break; }
+    }
+    if (rep) { while (*rep && o + 1 < cap) out[o++] = *rep++; i += 2; }
+    else out[o++] = in[i++];
+  }
+  out[o] = 0;
+}
+#endif
 
 // ---------------- Állapot ----------------
 LGFX lcd;
@@ -99,6 +138,11 @@ static lv_color_t ui_color565(uint16_t c) {
 }
 
 static void ui_set_text(lv_obj_t *o, const char *s) {
+#ifndef HU_FONTS
+  char buf[240];
+  ui_fold(s, buf, sizeof(buf));
+  s = buf;
+#endif
   if (strcmp(lv_label_get_text(o), s) != 0) lv_label_set_text(o, s);
 }
 
@@ -106,7 +150,7 @@ static lv_obj_t *ui_label(lv_obj_t *parent, const lv_font_t *f, uint32_t col, co
   lv_obj_t *l = lv_label_create(parent);
   lv_obj_set_style_text_font(l, f, 0);
   lv_obj_set_style_text_color(l, pal(col), 0);
-  lv_label_set_text(l, txt);
+  ui_set_text(l, txt);
   return l;
 }
 
@@ -218,7 +262,7 @@ static void ui_build_menu() {
   lv_label_set_long_mode(eSub, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_align(eSub, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(eSub, LV_ALIGN_TOP_MID, 0, 72);
-  eHint = ui_label(pageEdit, FONT_S, PAL_ACCENT, "Fel/Le: ertek     Dupla: OK");
+  eHint = ui_label(pageEdit, FONT_S, PAL_ACCENT, "Fel/Le: érték     Dupla: OK");
   lv_obj_align(eHint, LV_ALIGN_BOTTOM_MID, 0, -3);
 
   // ---- Frekvencia ----
@@ -231,7 +275,7 @@ static void ui_build_menu() {
     fDig[i] = ui_label(fBox[i], FONT_XL, PAL_TEXT, "0");
     lv_obj_center(fDig[i]);
   }
-  fHint = ui_label(pageFreq, FONT_S, PAL_ACCENT, "Fel/Le: ertek 0-9\nHosszu Fel: kovetkezo szamjegy");
+  fHint = ui_label(pageFreq, FONT_S, PAL_ACCENT, "Fel/Le: érték 0-9\nHosszú Fel: következő számjegy");
   lv_obj_set_style_text_align(fHint, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(fHint, LV_ALIGN_BOTTOM_MID, 0, -4);
 
@@ -245,7 +289,7 @@ static void ui_build_menu() {
   lv_obj_set_style_arc_color(scanSpin, pal(PAL_LINE), LV_PART_MAIN);
   lv_obj_set_style_arc_color(scanSpin, pal(PAL_ACCENT), LV_PART_INDICATOR);
   lv_obj_align(scanSpin, LV_ALIGN_TOP_MID, 0, 14);
-  scanLbl = ui_label(pageScan, FONT_ML, PAL_TEXT, "Halozatok keresese...");
+  scanLbl = ui_label(pageScan, FONT_ML, PAL_TEXT, "Hálózatok keresése...");
   lv_obj_align(scanLbl, LV_ALIGN_TOP_MID, 0, 72);
 
   // ---- WiFi: jelszó ----
@@ -266,7 +310,7 @@ static void ui_build_menu() {
   lv_obj_align(pwChip, LV_ALIGN_TOP_MID, 0, 52);
   pwChipTxt = ui_label(pwChip, FONT_L, PAL_BG, "a");
   lv_obj_center(pwChipTxt);
-  pwHint = ui_label(pagePw, FONT_S, PAL_ACCENT, "Fel/Le: karakter     Mindket gomb: beir\nHosszan mindket gomb: csatlakozas");
+  pwHint = ui_label(pagePw, FONT_S, PAL_ACCENT, "Fel/Le: karakter     Mindkét gomb: beír\nHosszan mindkét gomb: csatlakozás");
   lv_obj_set_style_text_align(pwHint, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(pwHint, LV_ALIGN_BOTTOM_MID, 0, -2);
 
@@ -286,7 +330,7 @@ static void ui_build_menu() {
   lv_obj_align(connMsg, LV_ALIGN_TOP_MID, 0, 56);
   connSub = ui_label(pageConn, FONT_M, PAL_MUTED, "");
   lv_obj_align(connSub, LV_ALIGN_TOP_MID, 0, 82);
-  connHint = ui_label(pageConn, FONT_S, PAL_ACCENT, "Barmelyik gomb: vissza");
+  connHint = ui_label(pageConn, FONT_S, PAL_ACCENT, "Bármelyik gomb: vissza");
   lv_obj_align(connHint, LV_ALIGN_BOTTOM_MID, 0, -2);
 
   ui_pages[0] = pageList; ui_pages[1] = pageEdit; ui_pages[2] = pageFreq;
@@ -438,7 +482,7 @@ void ui_wifi_password(const String &ssid, const char *typed, const char *chip) {
   String tail = String(typed);
   const int maxChars = 15;
   if ((int)tail.length() > maxChars) tail = "~" + tail.substring(tail.length() - maxChars);
-  ui_menu_page(pagePw, "WIFI JELSZO");
+  ui_menu_page(pagePw, "WIFI JELSZÓ");
   ui_set_text(mCount, "");
   ui_set_text(pwSsid, ssid.c_str());
   ui_set_text(pwText, tail.c_str());
@@ -456,7 +500,7 @@ void ui_wifi_result(int state, const String &ip) {
     lv_obj_remove_flag(connSpin, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(connIcon, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_text_color(connMsg, pal(PAL_TEXT), 0);
-    ui_set_text(connMsg, "Csatlakozas...");
+    ui_set_text(connMsg, "Csatlakozás...");
     ui_set_text(connSub, "");
     lv_obj_add_flag(connHint, LV_OBJ_FLAG_HIDDEN);
   } else {
@@ -468,7 +512,7 @@ void ui_wifi_result(int state, const String &ip) {
     lv_obj_set_style_text_color(connIcon, pal(ok ? PAL_OK : PAL_BAD), 0);
     lv_obj_set_style_text_color(connMsg, pal(ok ? PAL_OK : PAL_BAD), 0);
     ui_set_text(connMsg, ok ? "Sikeres!" : "Sikertelen");
-    ui_set_text(connSub, ok ? ip.c_str() : "Ellenorizd a jelszot");
+    ui_set_text(connSub, ok ? ip.c_str() : "Ellenőrizd a jelszót");
   }
   lv_obj_align(connMsg, LV_ALIGN_TOP_MID, 0, 56);
   lv_obj_align(connSub, LV_ALIGN_TOP_MID, 0, 82);
@@ -489,7 +533,7 @@ void ui_ota_status(const char *line1, const String &line2) {
   ui_lock();
   if (lv_screen_active() != scrOta) lv_screen_load(scrOta);
   bool err = strstr(line1, "HIBA") != nullptr;
-  bool done = strstr(line1, "KESZ") != nullptr;
+  bool done = strstr(line1, "KESZ") != nullptr || strstr(line1, "KÉSZ") != nullptr;
   lv_obj_set_style_text_color(otaTitle, pal(err ? PAL_BAD : (done ? PAL_OK : PAL_TEXT)), 0);
   ui_set_text(otaTitle, line1);
   ui_set_text(otaSub, line2.c_str());

@@ -15,9 +15,9 @@
 #pragma once
 
 // Rövid mód-kódok a jobb felső sarokba
-const char* MODE_SHORT[] = { "2Ho", "1Ho", "Ho+Pa", "Ho+K1", "2K" };
+const char* MODE_SHORT[] = { "2Hő", "1Hő", "Hő+Pá", "Hő+K1", "2K" };
 // Nap nevek (dayOfWeekIdx() sorrendjében: 0=Vasarnap...6=Szombat)
-const char* DOW_NAMES[] = { "Vas", "Het", "Ked", "Sze", "Csu", "Pen", "Szo" };
+const char* DOW_NAMES[] = { "Vas", "Hét", "Ked", "Sze", "Csü", "Pén", "Szo" };
 
 // Változott-e a kijelzett érték? A NaN (pl. szakadt/hiányzó szenzor) is érvényes
 // állapot: NaN -> szám és szám -> NaN váltás is változásnak számít.
@@ -203,11 +203,11 @@ static void tile_hum(int k, float h) {
   char b[16];
   if (isnan(h)) snprintf(b, sizeof(b), "--%%");
   else snprintf(b, sizeof(b), "%.0f%%", h);
-  tile_set(k, "Paratartalom", b, PAL_ACCENT, isnan(h) ? 0 : (int)constrain(h, 0.0f, 100.0f), PAL_ACCENT, true);
+  tile_set(k, "Páratartalom", b, PAL_ACCENT, isnan(h) ? 0 : (int)constrain(h, 0.0f, 100.0f), PAL_ACCENT, true);
 }
 
 static void tile_switch(int k, const char *name, bool closed) {
-  tile_set(k, name, closed ? "Zart" : "Nyit", closed ? PAL_OK : PAL_BAD, 0, PAL_OK, false);
+  tile_set(k, name, closed ? "Zárt" : "Nyit", closed ? PAL_OK : PAL_BAD, 0, PAL_OK, false);
 }
 
 // A csempék elrendezése módonként: 1 hőmérő módban egy széles csempe nagy
@@ -295,22 +295,22 @@ void displayInfo() {
   // Középső kártya: mód-függő tartalom
   switch (currentMode) {
     case 0:
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homero 1", ntc1Temperature); }
-      if (tempChanged(ntc2Temperature, lastT2)) { lastT2 = ntc2Temperature; tile_temp(1, "Homero 2", ntc2Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérő 1", ntc1Temperature); }
+      if (tempChanged(ntc2Temperature, lastT2)) { lastT2 = ntc2Temperature; tile_temp(1, "Hőmérő 2", ntc2Temperature); }
       break;
     case 1:
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homerseklet", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérséklet", ntc1Temperature); }
       break;
     case 2: {
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homero", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérő", ntc1Temperature); }
       bool humChanged = (isnan(humidity) != isnan(lastHum)) || (!isnan(humidity) && fabs(humidity - lastHum) >= 0.5);
       if (humChanged) { lastHum = humidity; tile_hum(1, humidity); }
       break;
     }
     case 3: {
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Homero", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérő", ntc1Temperature); }
       int sw = isSwitchClosed(NTC2_PIN) ? 1 : 0;
-      if (sw != lastSw2) { lastSw2 = sw; tile_switch(1, "Kapcsolo", sw); }
+      if (sw != lastSw2) { lastSw2 = sw; tile_switch(1, "Kapcsoló", sw); }
       break;
     }
     case 4: {

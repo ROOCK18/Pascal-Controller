@@ -202,7 +202,7 @@ void handleOtaUrl(const String &body) {
 
   wifiOtaInProgress = true;
 
-  drawOtaStatus("WIFI CSATLAKOZAS...", wifiSsid);
+  drawOtaStatus("WIFI CSATLAKOZÁS...", wifiSsid);
   notifyLine("WIFI_CONNECTING");
 
   if (!connectWifi()) {
@@ -211,7 +211,7 @@ void handleOtaUrl(const String &body) {
   }
 
   notifyLine("WIFI_CONNECTED:" + WiFi.localIP().toString());
-  drawOtaStatus("LETOLTES...", downloadLabel);
+  drawOtaStatus("LETÖLTÉS...", downloadLabel);
 
   // ── BLE STACK LEÁLLÍTÁSA a letöltés idejére ──
   // A BLE stack (kapcsolat + advertising + belső bufferek) jelentős RAM-ot
@@ -222,7 +222,7 @@ void handleOtaUrl(const String &body) {
   // visszaálljon, az ESP.restart() úgyis mindent tiszta állapotból indít.
   // A telefon a BLE-kapcsolat megszakadását fogja látni, de a folyamat
   // állapota a kijelzőn (progress bar) továbbra is valós időben követhető.
-  drawOtaStatus("MEMORIA FELSZAB.", "BLE leallitasa...");
+  drawOtaStatus("MEMÓRIA FELSZAB.", "BLE leállítása...");
   deviceConnected = false; // notifyLine() mostantól biztonságosan no-op lesz
   if (pServer != nullptr) {
     for (uint16_t h : pServer->getPeerDevices()) pServer->disconnect(h);
@@ -231,7 +231,7 @@ void handleOtaUrl(const String &body) {
   NimBLEDevice::deinit(true);
   delay(200);
   Serial.printf("BLE leallitva letoltes elott. Szabad memoria: %u byte\n", ESP.getFreeHeap());
-  drawOtaStatus("LETOLTES...", downloadLabel);
+  drawOtaStatus("LETÖLTÉS...", downloadLabel);
 
   // FONTOS: a GitHub release-letöltési URL-ek szinte mindig átirányítanak
   // (302) egy MÁSIK domain-re (objects.githubusercontent.com), ahol a
@@ -336,7 +336,7 @@ void handleOtaUrl(const String &body) {
 
   if (Update.end(true)) {
     notifyLine("OK_RESTART");
-    drawOtaStatus("OTA KESZ!", "Ujrainditas...");
+    drawOtaStatus("OTA KÉSZ!", "Újraindítás...");
     delay(1500);
     ESP.restart();
   } else {

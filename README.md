@@ -25,6 +25,12 @@ A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 - Partíciók (`partitions.csv`, 16 MB): két 6 MB-os OTA slot + ~3,9 MB SPIFFS.
 - BLE: NimBLE (a Bluedroid helyett, ~490 KB flash megtakarítás), UUID-k és protokoll változatlan.
 - Kijelző: LovyanGFX (ST7789 meghajtó) + LVGL 9.2, a menü logikája (`Menu.h`) változatlan, a megjelenítés az `ui.h`-ban és a `Display.h`-ban van.
+- Szenzorok: alapértelmezés **PT1000** (Callendar–Van Dusen), mellette NTC 10k, NTC 100k és Egyedi (β-modell).
+  Szenzoronként állítható: névleges ellenállás, alap hőfok (NTC), béta (NTC), soros (felhúzó) ellenállás, tápfeszültség és kompenzáció.
+  Az eszköz menüjében: *Beállítások → Szenzor beállítások*; az appban: *Hőmérő beállítások*; BLE: `SET_SENS` / `GET_SENS` / `GET_SENSRAW`.
+  A mérés kalibrált mV-olvasás 16-os átlagolással; szakadt/rövidzárt szenzornál az érték „--”, a relé-termosztát KI-re áll.
+  **PT1000-hez felhúzónak 1,0–1,2 kΩ ajánlott** (3,3 V-ra kötve): ~3,9 ADC-lépés/°C, a 10 kΩ-mal csak ~1,4.
+- Ékezetes betűk: `firmware/tools/gen_fonts.sh` + `-DHU_FONTS=1` (lásd HIBAK.md N7); addig ékezet nélkül jelennek meg.
 - Méret: firmware.bin ~1,74 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
   Az új partíciós tábla csak USB-s teljes flash-eléssel (`firmware.factory.bin`) kerül fel.
 

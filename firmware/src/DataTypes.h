@@ -34,6 +34,33 @@ struct ThermRelay {
   bool state = false;
 };
 
+// Szenzor-paraméterek (szenzoronként: NTC1 / NTC2 láb).
+//   type: 0 = PT1000 (Callendar-Van Dusen), 1 = NTC 10k, 2 = NTC 100k, 3 = Egyedi (NTC, beta-modell)
+// Mérés: a láb egy felhúzó (soros) ellenálláson át a vSupply feszültségre van kötve,
+// a szenzor a földre -> R_szenzor = rSeries * V / (vSupply - V).
+struct SensorCfg {
+  uint8_t type = 0;
+  float r0 = 1000.0f;       // névleges ellenállás a t0 hőfokon (Ohm)
+  float t0 = 0.0f;          // alap hőfok (C), ahol r0 érvényes (PT1000: 0 C)
+  float beta = 3977.0f;     // beta (csak NTC)
+  float rSeries = 1200.0f;  // felhúzó (soros) ellenállás (Ohm)
+  float vSupply = 3.3f;     // a felhúzó tápfeszültsége (V)
+};
+
+SensorCfg sensCfg[2];                       // [0] = NTC1 láb, [1] = NTC2 láb
+float sensLastMv[2] = { 0, 0 };             // utolsó mért feszültség (mV)
+float sensLastR[2] = { NAN, NAN };          // utolsó számolt ellenállás (Ohm)
+int menuSensTarget = 0;                     // melyik szenzort szerkesztjük a menüben (0/1)
+int menuSensField = 0;                      // a szerkesztett mező (SensField)
+
+// Előbeállítások (a "Típus" választáskor ezek töltődnek be; az Egyedi nem ír felül semmit)
+void applySensorPreset(SensorCfg &c, uint8_t type) {
+  c.type = type;
+  if (type == 0)      { c.r0 = 1000.0f;   c.t0 = 0.0f;  c.beta = 3977.0f; c.rSeries = 1200.0f;   c.vSupply = 3.3f; }
+  else if (type == 1) { c.r0 = 10000.0f;  c.t0 = 25.0f; c.beta = 3977.0f; c.rSeries = 10000.0f;  c.vSupply = 3.3f; }
+  else if (type == 2) { c.r0 = 100000.0f; c.t0 = 25.0f; c.beta = 3950.0f; c.rSeries = 100000.0f; c.vSupply = 3.3f; }
+}
+
 // Idő alapú relékapcsolás ("impulzus" logika): ha enabled, akkor amikor az
 // automatika (termosztát/logika) az AKTUÁLIS kimenettől ELTÉRŐ állapotot
 // kér (tehát ténylegesen VÁLTANI akarna), a relé a kért új állapotot
@@ -140,7 +167,8 @@ enum MenuScreen {
   MENU_RELAY_SUB, MENU_RELAY_SENSOR_SEL,
   MENU_RELAY_THERM_LIST, MENU_RELAY_THERM_EDIT, MENU_RELAY_LOGIC_LIST, MENU_RELAY_LOGIC_EDIT,
   MENU_RELAY_HOLD_LIST, MENU_RELAY_HOLD_EDIT, MENU_RELAY_LOCKMODE_SEL, MENU_RELAY_STATE_SEL,
-  MENU_WIFI_SCANNING, MENU_WIFI_SCAN_LIST, MENU_WIFI_PASSWORD_EDIT, MENU_WIFI_CONNECTING
+  MENU_WIFI_SCANNING, MENU_WIFI_SCAN_LIST, MENU_WIFI_PASSWORD_EDIT, MENU_WIFI_CONNECTING,
+  MENU_SENS_LIST, MENU_SENS_EDIT, MENU_SENS_TYPE_SEL
 };
 
 // ── Generikus "cimke: ertek" lista sor + rajzoló ──

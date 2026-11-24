@@ -10,15 +10,66 @@ float getSensorTemp(uint8_t sensor) {
 }
 
 // ============================================================
-// NTC
+// HŐMÉRŐ (PT1000 / NTC) - paraméterezhető, lásd SensorCfg
 // ============================================================
+// PT1000/PT100: Callendar-Van Dusen R(T) = R0 (1 + A T + B T^2 [+ C (T-100) T^3, T<0])
+static float ptTempFromR(float r, float r0) {
+  const float A = 3.9083e-3f, B = -5.775e-7f, C = -4.183e-12f;
+  float ratio = r / r0;
+  float disc = A * A - 4.0f * B * (1.0f - ratio);
+  if (disc < 0) return NAN;
+  float t = (-A + sqrtf(disc)) / (2.0f * B); // T >= 0 zárt alak
+  if (t < 0) {                               // T < 0: Newton-iteráció a C taggal
+    for (int i = 0; i < 6; i++) {
+      float f = 1.0f + A * t + B * t * t + C * (t - 100.0f) * t * t * t - ratio;
+      float df = A + 2.0f * B * t + C * (4.0f * t * t * t - 300.0f * t * t);
+      if (df == 0) break;
+      t -= f / df;
+    }
+  }
+  return t;
+}
+
+float sensorTempFromR(const SensorCfg &c, float r) {
+  if (!(r > 0) || isnan(r) || isinf(r)) return NAN;
+  float t;
+  if (c.type == 0) {
+    t = ptTempFromR(r, c.r0);
+  } else {
+    // NTC beta-modell: 1/T = ln(R/R0)/beta + 1/T0
+    float s = logf(r / c.r0) / c.beta + 1.0f / (c.t0 + 273.15f);
+    t = (s == 0) ? NAN : (1.0f / s - 273.15f);
+  }
+  if (isnan(t) || t < -100.0f || t > 400.0f) return NAN; // kívül esik a hihető tartományon
+  return t;
+}
+
+// A kiolvasott feszültség (mV): a kalibrált analogReadMilliVolts (eFuse Vref)
+// 16 mérés átlaga - ez zajtalanabb és pontosabb, mint a nyers ADC érték.
+static float sensReadMilliVolts(int pin) {
+  uint32_t acc = 0;
+  const int N = 16;
+  for (int i = 0; i < N; i++) acc += analogReadMilliVolts(pin);
+  return acc / (float)N;
+}
+
+// Visszaadja a hőmérsékletet (C), vagy NAN-t, ha a szenzor hibás (szakadt/rövidzárt/
+// kívül esik a tartományon). A kompenzációt (offset) a hívó adja hozzá.
+// A függvény neve a régi NTC-s kódból maradt (a hívók változatlanok).
 float readNTCTemperature(int ntcPin) {
-  int adcValue = analogRead(ntcPin);
-  if (adcValue <= 0) adcValue = 1;
-  float voltage = adcValue * VCC / ADC_MAX;
-  float rNTC = (voltage * R_FIXED) / (VCC - voltage);
-  float steinhart = log(rNTC / NTC_R0) / NTC_BETA + 1.0 / NTC_T0;
-  return (1.0 / steinhart) - 273.15; // NINCS kompenzáció itt - lásd loop() (NTC1/NTC2 külön kompenzálva)
+  int idx = (ntcPin == NTC2_PIN) ? 1 : 0;
+  const SensorCfg &c = sensCfg[idx];
+  float mv = sensReadMilliVolts(ntcPin);
+  sensLastMv[idx] = mv;
+  sensLastR[idx] = NAN;
+
+  const float adcTopMv = 3100.0f;                      // az ESP32 ADC (11 dB) felső széle
+  if (mv < 15.0f) return NAN;                          // rövidzár
+  if (mv > adcTopMv || mv >= c.vSupply * 1000.0f - 15.0f) return NAN; // szakadás / telítés
+  float v = mv / 1000.0f;
+  float r = c.rSeries * v / (c.vSupply - v);
+  sensLastR[idx] = r;
+  return sensorTempFromR(c, r);
 }
 
 // ============================================================

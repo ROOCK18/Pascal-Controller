@@ -33,9 +33,9 @@ unsigned long lastMenuActivity = 0;
 
 void menuTouch() { lastMenuActivity = millis(); }
 
-const char* MODE_NAMES[] = { "2 homero", "1 homero", "Paratartalom", "Kapcsolo+ho", "2 kapcsolo" };
+const char* MODE_NAMES[] = { "2 hőmérő", "1 hőmérő", "Páratartalom", "Kapcsoló+hő", "2 kapcsoló" };
 
-const char* MAIN_ITEMS[] = { "Beallitasok", "RGB szin", "Ventilator 1", "Ventilator 2", "Rele 1", "Rele 2" };
+const char* MAIN_ITEMS[] = { "Beállítások", "RGB szín", "Ventilátor 1", "Ventilátor 2", "Relé 1", "Relé 2" };
 
 // A tényleges rajzolás az ui.h-ban van (LVGL) - ezek a vékony átvezetők
 // őrzik meg a menü eredeti hívási felületét.
@@ -77,7 +77,7 @@ uint8_t nextSensorForMode(uint8_t cur) {
   return (cur == 1) ? 2 : 1;
 }
 
-String sensorLabel(uint8_t s) { return s == 3 ? "Paratartalom" : (s == 2 ? "NTC2" : "NTC1"); }
+String sensorLabel(uint8_t s) { return s == 3 ? "Páratartalom" : (s == 2 ? "NTC2" : "NTC1"); }
 
 // A digit-tömbből (5 jegy) összeállítja a tényleges Hz értéket
 uint16_t freqDigitsToValue() {
@@ -122,9 +122,79 @@ void exitFreqEdit() {
 }
 
 String logicValLabel(int v, bool isFan) {
-  if (isFan) return v < 0 ? "GORBE" : (String(v) + "%");
-  if (v < 0) return "TERMOSZTAT";
+  if (isFan) return v < 0 ? "GÖRBE" : (String(v) + "%");
+  if (v < 0) return "TERMOSZTÁT";
   return v != 0 ? "BE" : "KI";
+}
+
+// ============================================================
+// SZENZOR BEÁLLÍTÁSOK (menü)
+// ============================================================
+enum SensField : uint8_t { SF_TYPE, SF_R0, SF_T0, SF_BETA, SF_RS, SF_VS, SF_COMP, SF_LIVE, SF_BACK };
+const char* SENS_TYPE_NAMES[4] = { "PT1000", "NTC 10k", "NTC 100k", "Egyedi" };
+
+float &sensComp(int s) { return s == 0 ? tempCompNTC1 : tempCompNTC2; }
+
+// Az aktuális típushoz tartozó mezők sora (PT1000-nél nincs alap hőfok és béta).
+int sensBuildFields(int s, SensField out[]) {
+  int n = 0;
+  out[n++] = SF_TYPE; out[n++] = SF_R0;
+  if (sensCfg[s].type != 0) { out[n++] = SF_T0; out[n++] = SF_BETA; }
+  out[n++] = SF_RS; out[n++] = SF_VS; out[n++] = SF_COMP; out[n++] = SF_LIVE; out[n++] = SF_BACK;
+  return n;
+}
+
+const char* sensFieldLabel(SensField f) {
+  switch (f) {
+    case SF_TYPE: return "Típus";
+    case SF_R0:   return "Névleges ellenállás";
+    case SF_T0:   return "Alap hőfok";
+    case SF_BETA: return "Béta (β)";
+    case SF_RS:   return "Soros ellenállás";
+    case SF_VS:   return "Tápfeszültség";
+    case SF_COMP: return "Kompenzáció";
+    case SF_LIVE: return "Mért érték";
+    default:      return "Vissza";
+  }
+}
+
+String sensFieldValue(int s, SensField f) {
+  const SensorCfg &c = sensCfg[s];
+  switch (f) {
+    case SF_TYPE: return SENS_TYPE_NAMES[c.type < 4 ? c.type : 3];
+    case SF_R0:   return String(c.r0, 0) + " Ω";
+    case SF_T0:   return String(c.t0, 0) + " °C";
+    case SF_BETA: return String(c.beta, 0);
+    case SF_RS:   return String(c.rSeries, 0) + " Ω";
+    case SF_VS:   return String(c.vSupply, 1) + " V";
+    case SF_COMP: return String(sensComp(s), 1) + " °C";
+    case SF_LIVE: { float t = (s == 0) ? ntc1Temperature : ntc2Temperature; return isnan(t) ? String("HIBA") : (String(t, 1) + " °C"); }
+    default:      return "";
+  }
+}
+
+// Egy lépés fel/le. Hosszan nyomva (ismétlődő események) a lépés felgyorsul,
+// így a nagy értékek (pl. 10000 Ω) is gyorsan beállíthatók, a finomhangolás pedig pontos marad.
+void sensEditStep(int s, SensField f, int dir) {
+  static unsigned long lastT = 0;
+  static int lastDir = 0, rep = 0;
+  unsigned long now = millis();
+  if (dir == lastDir && now - lastT < 400) rep++; else rep = 0;
+  lastDir = dir; lastT = now;
+  float mul = rep > 25 ? 100.0f : (rep > 8 ? 10.0f : 1.0f);
+  SensorCfg &c = sensCfg[s];
+  switch (f) {
+    case SF_R0:   c.r0 = constrain(c.r0 + dir * mul, 1.0f, 1000000.0f); break;
+    case SF_T0:   c.t0 = constrain(c.t0 + dir * (mul > 10.0f ? 10.0f : mul), -50.0f, 150.0f); break;
+    case SF_BETA: c.beta = constrain(c.beta + dir * mul, 500.0f, 10000.0f); break;
+    case SF_RS:   c.rSeries = constrain(c.rSeries + dir * mul, 10.0f, 1000000.0f); break;
+    case SF_VS:   c.vSupply = constrain(roundf((c.vSupply + dir * (mul > 1.0f ? 0.5f : 0.1f)) * 10.0f) / 10.0f, 1.0f, 6.0f); break;
+    case SF_COMP: { float &v = sensComp(s); v = constrain(roundf((v + dir * (mul > 1.0f ? 0.5f : 0.1f)) * 10.0f) / 10.0f, -20.0f, 20.0f); break; }
+    default: break;
+  }
+  // A modell-paraméterek kézi módosítása után a típus "Egyedi" lesz
+  // (a PT1000 típus modellje fix, ott az R0/soros/táp módosítása nem változtat típust).
+  if ((f == SF_R0 || f == SF_T0 || f == SF_BETA) && (c.type == 1 || c.type == 2)) c.type = 3;
 }
 
 void enterMenu() {
@@ -147,7 +217,7 @@ void drawMenu() {
   // MENU_FREQ_DIGIT_EDIT szándékosan KIMARAD, mert ott a FEL gomb hosszú
   // nyomása a digit-pozíció váltására szolgál, azt nem szabad felülírni.
   menuAllowsHoldRepeat =
-    (menuScreen == MENU_COMP_EDIT) ||
+    (menuScreen == MENU_SENS_EDIT) ||
     (menuScreen == MENU_BRIGHTNESS_EDIT) ||
     (menuScreen == MENU_RGB_EDIT) ||
     (menuScreen == MENU_FAN_MANUAL_PCT) ||
@@ -167,91 +237,114 @@ void drawMenu() {
 
   switch (menuScreen) {
     case MENU_MAIN:
-      drawMenuList("FOMENU", MAIN_ITEMS, MAIN_COUNT, menuCursor);
+      drawMenuList("FŐMENÜ", MAIN_ITEMS, MAIN_COUNT, menuCursor);
       break;
 
     case MENU_SETTINGS_SUB: {
-      const char* items[7] = { "Mod", "Datum/Ido", "Kompenzacio", "Kijelzo", "WiFi", "Factory reset", "Vissza" };
-      drawMenuList("BEALLITASOK", items, 7, menuCursor);
+      const char* items[7] = { "Mód", "Dátum/Idő", "Szenzor beállítások", "Kijelző", "WiFi", "Factory reset", "Vissza" };
+      drawMenuList("BEÁLLÍTÁSOK", items, 7, menuCursor);
       break;
     }
 
     case MENU_DISPLAY_SUB: {
-      const char* items[3] = { "Fenyero", "Elalvasi ido", "Vissza" };
-      drawMenuList("KIJELZO", items, 3, menuCursor);
+      const char* items[3] = { "Fényerő", "Elalvási idő", "Vissza" };
+      drawMenuList("KIJELZŐ", items, 3, menuCursor);
       break;
     }
 
     case MENU_BRIGHTNESS_EDIT:
-      drawEditScreen("FENYERO", String(displayBrightness) + " %");
+      drawEditScreen("FÉNYERŐ", String(displayBrightness) + " %");
       break;
 
     case MENU_SLEEP_SEL: {
       int n = 0;
-      for (int i = 0; i < SLEEP_OPTIONS_COUNT; i++) { rows[n].label = SLEEP_NAMES[i]; rows[n].value = (i == sleepTimeoutIdx) ? "AKTIV" : ""; rows[n].valColor = UI_GREEN; n++; }
+      for (int i = 0; i < SLEEP_OPTIONS_COUNT; i++) { rows[n].label = SLEEP_NAMES[i]; rows[n].value = (i == sleepTimeoutIdx) ? "AKTÍV" : ""; rows[n].valColor = UI_GREEN; n++; }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
-      drawValueList("ELALVASI IDO", rows, n, menuCursor);
+      drawValueList("ELALVÁSI IDŐ", rows, n, menuCursor);
       break;
     }
 
     case MENU_MODE_LIST: {
       int n = 0;
-      for (int i = 0; i < 5; i++) { rows[n].label = MODE_NAMES[i]; rows[n].value = (i == currentMode) ? "AKTIV" : ""; rows[n].valColor = UI_GREEN; n++; }
+      for (int i = 0; i < 5; i++) { rows[n].label = MODE_NAMES[i]; rows[n].value = (i == currentMode) ? "AKTÍV" : ""; rows[n].valColor = UI_GREEN; n++; }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
-      drawValueList("MOD VALASZTAS", rows, n, menuCursor);
+      drawValueList("MÓD VÁLASZTÁS", rows, n, menuCursor);
       break;
     }
 
     case MENU_COMP_LIST: {
       // Csak azok a szenzorok jelennek meg, amik az AKTUÁLIS módban tényleg
-      // NTC-ként (hőmérőként) vannak bekötve - a DHT11-nek nincs kompenzációja.
+      // hőmérőként vannak bekötve - a DHT11-nek és a kapcsolóknak nincs szenzor-beállítása.
       int n = 0;
       if (currentMode == 0) {
-        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", UI_CYAN }; n++;
-        rows[n] = { "NTC2", String(tempCompNTC2, 1) + " C", UI_CYAN }; n++;
+        rows[n] = { "1. szenzor", SENS_TYPE_NAMES[sensCfg[0].type < 4 ? sensCfg[0].type : 3], UI_CYAN }; n++;
+        rows[n] = { "2. szenzor", SENS_TYPE_NAMES[sensCfg[1].type < 4 ? sensCfg[1].type : 3], UI_CYAN }; n++;
       } else if (currentMode == 1 || currentMode == 3) {
-        rows[n] = { "NTC1", String(tempCompNTC1, 1) + " C", UI_CYAN }; n++;
+        rows[n] = { "1. szenzor", SENS_TYPE_NAMES[sensCfg[0].type < 4 ? sensCfg[0].type : 3], UI_CYAN }; n++;
       }
-      // mode 2 (paratartalom, DHT11) es mode 4 (2 kapcsolo): nincs kompenzalhato NTC
-      if (n == 0) { rows[n] = { "Nincs NTC ebben a modban", "", UI_WHITE }; n++; }
+      if (n == 0) { rows[n] = { "Nincs hőmérő ebben a módban", "", UI_WHITE }; n++; }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
-      drawValueList("KOMPENZACIO", rows, n, menuCursor);
+      drawValueList("SZENZOR BEÁLLÍTÁSOK", rows, n, menuCursor);
       break;
     }
 
-    case MENU_COMP_EDIT: {
-      float val = (menuEditField == 0) ? tempCompNTC1 : tempCompNTC2;
-      String title = (menuEditField == 0) ? "NTC1 KOMPENZACIO" : "NTC2 KOMPENZACIO";
-      drawEditScreen(title, String(val, 1) + " C");
+    case MENU_SENS_LIST: {
+      SensField f[9];
+      int n = sensBuildFields(menuSensTarget, f);
+      for (int i = 0; i < n; i++) {
+        uint16_t col = UI_CYAN;
+        if (f[i] == SF_BACK) col = UI_WHITE;
+        if (f[i] == SF_LIVE) {
+          float t = (menuSensTarget == 0) ? ntc1Temperature : ntc2Temperature;
+          col = isnan(t) ? UI_RED : UI_GREEN;
+        }
+        rows[i] = { sensFieldLabel(f[i]), sensFieldValue(menuSensTarget, f[i]), col };
+      }
+      drawValueList(menuSensTarget == 0 ? "1. SZENZOR" : "2. SZENZOR", rows, n, menuCursor);
+      break;
+    }
+
+    case MENU_SENS_EDIT: {
+      String title = String(sensFieldLabel((SensField)menuSensField));
+      title.toUpperCase();
+      drawEditScreen(title, sensFieldValue(menuSensTarget, (SensField)menuSensField));
+      break;
+    }
+
+    case MENU_SENS_TYPE_SEL: {
+      int n = 0;
+      for (int i = 0; i < 4; i++) { rows[n].label = SENS_TYPE_NAMES[i]; rows[n].value = (i == sensCfg[menuSensTarget].type) ? "AKTÍV" : ""; rows[n].valColor = UI_GREEN; n++; }
+      rows[n] = { "Vissza", "", UI_WHITE }; n++;
+      drawValueList("SZENZOR TÍPUSA", rows, n, menuCursor);
       break;
     }
 
     case MENU_FACTORY_CONFIRM:
-      drawEditScreen("GYARI VISSZAALLITAS", "Biztos, hogy visszaallitja", "a gyari beallitasokat?");
+      drawEditScreen("GYÁRI VISSZAÁLLÍTÁS", "Biztos, hogy visszaállítja", "a gyári beállításokat?");
       break;
 
     case MENU_TIME_LIST: {
       const char* tfNames[3] = { "O:P:MP", "O:P", "AM/PM" };
-      const char* dfNames[5] = { "E/H/N", "N/H/E", "H/N/E", "H/N", "N/H" };
-      const char* posNames[3] = { "KI", "BALRA", "KOZEPEN" };
-      rows[0] = { "Ev", String(yr), UI_CYAN };
-      rows[1] = { "Honap", String(month), UI_CYAN };
+      const char* dfNames[5] = { "É/H/N", "N/H/É", "H/N/É", "H/N", "N/H" };
+      const char* posNames[3] = { "KI", "BALRA", "KÖZÉPEN" };
+      rows[0] = { "Év", String(yr), UI_CYAN };
+      rows[1] = { "Hónap", String(month), UI_CYAN };
       rows[2] = { "Nap", String(day), UI_CYAN };
-      rows[3] = { "Ora", String(hr), UI_CYAN };
+      rows[3] = { "Óra", String(hr), UI_CYAN };
       rows[4] = { "Perc", String(min_t), UI_CYAN };
-      rows[5] = { "Masodperc", String(sec), UI_CYAN };
-      rows[6] = { "Ido formatum", tfNames[timeFormat], UI_CYAN };
-      rows[7] = { "Datum formatum", dfNames[dateFormat], UI_CYAN };
-      rows[8] = { "Ora megjelenites", posNames[clockPos], (uint16_t)(clockPos ? UI_GREEN : UI_WHITE) };
-      rows[9] = { "Datum megjelenites", posNames[datePos], (uint16_t)(datePos ? UI_GREEN : UI_WHITE) };
-      rows[10] = { "Nap neve megjelenites", posNames[dayNamePos], (uint16_t)(dayNamePos ? UI_GREEN : UI_WHITE) };
+      rows[5] = { "Másodperc", String(sec), UI_CYAN };
+      rows[6] = { "Idő formátum", tfNames[timeFormat], UI_CYAN };
+      rows[7] = { "Dátum formátum", dfNames[dateFormat], UI_CYAN };
+      rows[8] = { "Óra megjelenítés", posNames[clockPos], (uint16_t)(clockPos ? UI_GREEN : UI_WHITE) };
+      rows[9] = { "Dátum megjelenítés", posNames[datePos], (uint16_t)(datePos ? UI_GREEN : UI_WHITE) };
+      rows[10] = { "Nap neve megjelenítés", posNames[dayNamePos], (uint16_t)(dayNamePos ? UI_GREEN : UI_WHITE) };
       rows[11] = { "Vissza", "", UI_WHITE };
-      drawValueList("DATUM/IDO", rows, 12, menuCursor);
+      drawValueList("DÁTUM/IDŐ", rows, 12, menuCursor);
       break;
     }
 
     case MENU_TIME_EDIT: {
-      const char* names[6] = { "EV", "HONAP", "NAP", "ORA", "PERC", "MASODPERC" };
+      const char* names[6] = { "ÉV", "HÓNAP", "NAP", "ÓRA", "PERC", "MÁSODPERC" };
       int vals[6] = { yr, month, day, hr, min_t, sec };
       drawEditScreen(names[menuEditField], String(vals[menuEditField]));
       break;
@@ -259,28 +352,28 @@ void drawMenu() {
 
     case MENU_TIMEFORMAT_SEL: {
       const char* items[4] = { "O:P:MP", "O:P", "AM/PM (angol)", "Vissza" };
-      drawMenuList("IDO FORMATUM", items, 4, menuCursor);
+      drawMenuList("IDŐ FORMÁTUM", items, 4, menuCursor);
       break;
     }
 
     case MENU_DATEFORMAT_SEL: {
-      const char* items[6] = { "Ev/Honap/Nap", "Nap/Honap/Ev", "Honap/Nap/Ev", "Honap/Nap", "Nap/Honap", "Vissza" };
-      drawMenuList("DATUM FORMATUM", items, 6, menuCursor);
+      const char* items[6] = { "Év/Hónap/Nap", "Nap/Hónap/Év", "Hónap/Nap/Év", "Hónap/Nap", "Nap/Hónap", "Vissza" };
+      drawMenuList("DÁTUM FORMÁTUM", items, 6, menuCursor);
       break;
     }
 
     case MENU_RGB_LIST: {
       bool on = digitalRead(RGB_ON);
-      rows[0] = { "Allapot", on ? "BE" : "KI", (uint16_t)(on ? UI_GREEN : UI_RED) };
+      rows[0] = { "Állapot", on ? "BE" : "KI", (uint16_t)(on ? UI_GREEN : UI_RED) };
       rows[1] = { "Piros", String(pwmR), UI_CYAN };
-      rows[2] = { "Zold", String(pwmG), UI_CYAN };
-      rows[3] = { "Kek", String(pwmB), UI_CYAN };
+      rows[2] = { "Zöld", String(pwmG), UI_CYAN };
+      rows[3] = { "Kék", String(pwmB), UI_CYAN };
       rows[4] = { "Vissza", "", UI_WHITE };
-      drawValueList("RGB SZIN", rows, 5, menuCursor);
+      drawValueList("RGB SZÍN", rows, 5, menuCursor);
       break;
     }
     case MENU_RGB_EDIT: {
-      const char* names[3] = {"PIROS", "ZOLD", "KEK"};
+      const char* names[3] = {"PIROS", "ZÖLD", "KÉK"};
       int val = menuEditField == 0 ? pwmR : (menuEditField == 1 ? pwmG : pwmB);
       drawEditScreen(names[menuEditField], String(val));
       break;
@@ -289,43 +382,43 @@ void drawMenu() {
     case MENU_FAN_SUB: {
       int curPwm = (menuFanTarget == 1) ? pwmFan : pwmFan2;
       int curFreq = (menuFanTarget == 1) ? FAN1_PWM_FREQ : FAN2_PWM_FREQ;
-      rows[0] = { "Auto/Kezi", curFanAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curFanAuto() ? UI_GREEN : UI_ORANGE) };
-      rows[1] = { "Allapot", curPwm > 0 ? "BE" : "KI", (uint16_t)(curPwm > 0 ? UI_GREEN : UI_RED) };
-      rows[2] = { "Kezi %", String((int)round(curPwm / 2.55)) + "%", UI_CYAN };
+      rows[0] = { "Auto/Kézi", curFanAuto() ? "AUTOMATA" : "KÉZI", (uint16_t)(curFanAuto() ? UI_GREEN : UI_ORANGE) };
+      rows[1] = { "Állapot", curPwm > 0 ? "BE" : "KI", (uint16_t)(curPwm > 0 ? UI_GREEN : UI_RED) };
+      rows[2] = { "Kézi %", String((int)round(curPwm / 2.55)) + "%", UI_CYAN };
       rows[3] = { "Frekvencia", String(curFreq) + " Hz", UI_CYAN };
       int n = 4;
-      // mode3 ("1 kapcsolo+1 homero"): VAN homero ES kapcsolo is, ezert
+      // mode3 ("1 kapcsoló + 1 hőmérő"): VAN homero ES kapcsolo is, ezert
       // mindket lehetoseg (Gorbe ES Logika) elerheto egyszerre.
       if (currentMode == 3 || !isSwitchMode()) {
-        rows[n] = { "Gorbe pontjai", curThermFan().enabled ? "BE" : "KI", (uint16_t)(curThermFan().enabled ? UI_GREEN : UI_RED) }; n++;
+        rows[n] = { "Görbe pontjai", curThermFan().enabled ? "BE" : "KI", (uint16_t)(curThermFan().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       if (currentMode == 3 || isSwitchMode()) {
         rows[n] = { "Logika", curLogicFan().enabled ? "BE" : "KI", (uint16_t)(curLogicFan().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
-      drawValueList(menuFanTarget == 1 ? "VENTILATOR 1" : "VENTILATOR 2", rows, n, menuCursor);
+      drawValueList(menuFanTarget == 1 ? "VENTILÁTOR 1" : "VENTILÁTOR 2", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_MANUAL_PCT:
-      drawEditScreen("KEZI FORDULATSZAM", String((int)round((menuFanTarget == 1 ? pwmFan : pwmFan2) / 2.55)) + " %");
+      drawEditScreen("KÉZI FORDULATSZÁM", String((int)round((menuFanTarget == 1 ? pwmFan : pwmFan2) / 2.55)) + " %");
       break;
     case MENU_FAN_SENSOR_SEL: {
       int n = 0;
-      if (currentMode == 2) { rows[n].label = "NTC1 (Ho)"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
-                               rows[n].label = "Paratartalom"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      if (currentMode == 2) { rows[n].label = "NTC1 (Hő)"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
+                               rows[n].label = "Páratartalom"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
       else if (currentMode == 1) { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
       else { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
              rows[n].label = "NTC2"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
       rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
-      drawValueList("ERZEKELO VALASZTAS", rows, n, menuCursor);
+      drawValueList("ÉRZÉKELŐ VÁLASZTÁS", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_CURVE_LIST: {
       ThermFan &tf = curThermFan();
       int n = 0;
-      rows[n].label = "Forras"; rows[n].value = sensorLabel(tf.sensor); rows[n].valColor = UI_CYAN; n++;
-      rows[n].label = "Allapot"; rows[n].value = tf.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(tf.enabled ? UI_GREEN : UI_RED); n++;
-      rows[n].label = "Pontok szama"; rows[n].value = String(tf.count); rows[n].valColor = UI_CYAN; n++;
+      rows[n].label = "Forrás"; rows[n].value = sensorLabel(tf.sensor); rows[n].valColor = UI_CYAN; n++;
+      rows[n].label = "Állapot"; rows[n].value = tf.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(tf.enabled ? UI_GREEN : UI_RED); n++;
+      rows[n].label = "Pontok száma"; rows[n].value = String(tf.count); rows[n].valColor = UI_CYAN; n++;
       for (int i = 0; i < tf.count && n < 11; i++) {
         rows[n].label = String(i + 1) + ".";
         rows[n].value = String(tf.temp[i], 0) + "C " + String(tf.pct[i]) + "% " + String(tf.freq[i]) + "Hz";
@@ -333,12 +426,12 @@ void drawMenu() {
         n++;
       }
       rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
-      drawValueList("GORBE PONTJAI", rows, n, menuCursor);
+      drawValueList("GÖRBE PONTJAI", rows, n, menuCursor);
       break;
     }
     case MENU_FAN_CURVE_POINT: {
       ThermFan &tf = curThermFan();
-      rows[0] = { "Homerseklet", String(tf.temp[menuEditPoint], 0) + " C", UI_CYAN };
+      rows[0] = { "Hőmérséklet", String(tf.temp[menuEditPoint], 0) + " C", UI_CYAN };
       rows[1] = { "PWM", String(tf.pct[menuEditPoint]) + " %", UI_CYAN };
       rows[2] = { "Frekvencia", String(tf.freq[menuEditPoint]) + " Hz", UI_CYAN };
       rows[3] = { "Vissza", "", UI_WHITE };
@@ -347,13 +440,13 @@ void drawMenu() {
     }
     case MENU_FAN_CURVE_FIELD_EDIT: {
       ThermFan &tf = curThermFan();
-      String title = menuEditField == 0 ? "HOMERSEKLET" : "PWM";
+      String title = menuEditField == 0 ? "HŐMÉRSÉKLET" : "PWM";
       String val = menuEditField == 0 ? (String(tf.temp[menuEditPoint], 0) + " C") : (String(tf.pct[menuEditPoint]) + " %");
       drawEditScreen(title, val);
       break;
     }
     case MENU_FREQ_PRESET_SEL: {
-      const char* items[4] = { "Kezi ertek", "30 Hz", "20000 Hz", "Vissza" };
+      const char* items[4] = { "Kézi érték", "30 Hz", "20000 Hz", "Vissza" };
       drawMenuList("FREKVENCIA", items, 4, menuCursor);
       break;
     }
@@ -364,13 +457,13 @@ void drawMenu() {
     case MENU_FAN_LOGIC_LIST: {
       SwitchLogicChannel &ch = curLogicFan();
       int n = 0;
-      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? UI_GREEN : UI_RED); n++;
+      rows[n].label = "Állapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? UI_GREEN : UI_RED); n++;
       if (currentMode == 4) {
         const char* labels[4] = {"K1N-K2N", "K1N-K2C", "K1C-K2N", "K1C-K2C"};
         for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], true); rows[n].valColor = UI_CYAN; n++; }
       } else {
         rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], true); rows[n].valColor = UI_CYAN; n++;
-        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], true); rows[n].valColor = UI_CYAN; n++;
+        rows[n].label = "K1 Zárt";    rows[n].value = logicValLabel(ch.val[2], true); rows[n].valColor = UI_CYAN; n++;
       }
       rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("LOGIKA", rows, n, menuCursor);
@@ -379,94 +472,94 @@ void drawMenu() {
     case MENU_FAN_LOGIC_EDIT: {
       SwitchLogicChannel &ch = curLogicFan();
       int v = ch.val[menuLogicIdx];
-      rows[0] = { "PWM", v < 0 ? "GORBE SZERINT" : (String(v) + " %"), UI_CYAN };
+      rows[0] = { "PWM", v < 0 ? "GÖRBE SZERINT" : (String(v) + " %"), UI_CYAN };
       rows[1] = { "Frekvencia", String(ch.freq[menuLogicIdx]) + " Hz", UI_CYAN };
       rows[2] = { "Vissza", "", UI_WHITE };
-      drawValueList("LOGIKA ERTEK", rows, 3, menuCursor);
+      drawValueList("LOGIKA ÉRTÉK", rows, 3, menuCursor);
       break;
     }
     case MENU_FAN_LOGIC_VAL_EDIT: {
       int v = curLogicFan().val[menuLogicIdx];
-      String val = v < 0 ? "GORBE SZERINT" : (String(v) + " %");
-      String hint = (currentMode == 3) ? "(-1=gorbe, 0-100=fix %)" : "(0-100=fix %)";
-      drawEditScreen("PWM ERTEK", val, hint);
+      String val = v < 0 ? "GÖRBE SZERINT" : (String(v) + " %");
+      String hint = (currentMode == 3) ? "(-1=görbe, 0-100=fix %)" : "(0-100=fix %)";
+      drawEditScreen("PWM ÉRTÉK", val, hint);
       break;
     }
 
     case MENU_RELAY_SUB: {
-      rows[0] = { "Auto/Kezi", curRelayAuto() ? "AUTOMATA" : "KEZI", (uint16_t)(curRelayAuto() ? UI_GREEN : UI_ORANGE) };
+      rows[0] = { "Auto/Kézi", curRelayAuto() ? "AUTOMATA" : "KÉZI", (uint16_t)(curRelayAuto() ? UI_GREEN : UI_ORANGE) };
       int pin = (menuRelayTarget == 1) ? RELAY1_PIN : RELAY2_PIN;
-      rows[1] = { "Kezi Be/Ki", digitalRead(pin) ? "BE" : "KI", (uint16_t)(digitalRead(pin) ? UI_GREEN : UI_RED) };
+      rows[1] = { "Kézi Be/Ki", digitalRead(pin) ? "BE" : "KI", (uint16_t)(digitalRead(pin) ? UI_GREEN : UI_RED) };
       int n = 2;
-      // mode3 ("1 kapcsolo+1 homero"): VAN homero ES kapcsolo is, ezert
+      // mode3 ("1 kapcsoló + 1 hőmérő"): VAN homero ES kapcsolo is, ezert
       // mindket lehetoseg (Termosztat ES Logika) elerheto egyszerre.
       if (currentMode == 3 || !isSwitchMode()) {
-        rows[n] = { "Termosztat", curThermRelay().enabled ? "BE" : "KI", (uint16_t)(curThermRelay().enabled ? UI_GREEN : UI_RED) }; n++;
+        rows[n] = { "Termosztát", curThermRelay().enabled ? "BE" : "KI", (uint16_t)(curThermRelay().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       if (currentMode == 3 || isSwitchMode()) {
         rows[n] = { "Logika", curLogicRelay().enabled ? "BE" : "KI", (uint16_t)(curLogicRelay().enabled ? UI_GREEN : UI_RED) }; n++;
       }
       RelayTimer &curRt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
-      rows[n] = { "Kapuzas", curRt.enabled ? "BE" : "KI", (uint16_t)(curRt.enabled ? UI_GREEN : UI_RED) }; n++;
+      rows[n] = { "Kapuzás", curRt.enabled ? "BE" : "KI", (uint16_t)(curRt.enabled ? UI_GREEN : UI_RED) }; n++;
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
-      drawValueList(menuRelayTarget == 1 ? "RELE 1" : "RELE 2", rows, n, menuCursor);
+      drawValueList(menuRelayTarget == 1 ? "RELÉ 1" : "RELÉ 2", rows, n, menuCursor);
       break;
     }
     case MENU_RELAY_HOLD_LIST: {
       RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
-      const char* lockNames[3] = { "NINCS", "IDO ALAPU", "JELVALTASIG" };
+      const char* lockNames[3] = { "NINCS", "IDŐ ALAPÚ", "JELVÁLTÁSIG" };
       const char* stateNames[3] = { "BE", "KI", "MIND" };
       rows[0] = { "Be/Ki", rt.enabled ? "BEKAPCSOLVA" : "KIKAPCSOLVA", (uint16_t)(rt.enabled ? UI_GREEN : UI_RED) };
-      rows[1] = { "Mod", rt.timerMode == 0 ? "FIX IDO" : "MAX IDO", UI_CYAN };
-      rows[2] = { "Idotartam", String(rt.onDurationSec) + " mp", UI_CYAN };
-      rows[3] = { "Zarolas", lockNames[rt.lockMode], UI_CYAN };
+      rows[1] = { "Mód", rt.timerMode == 0 ? "FIX IDŐ" : "MAX IDŐ", UI_CYAN };
+      rows[2] = { "Időtartam", String(rt.onDurationSec) + " mp", UI_CYAN };
+      rows[3] = { "Zárolás", lockNames[rt.lockMode], UI_CYAN };
       int n = 4;
-      if (rt.lockMode == 1) { rows[n].label = "Zarolas ideje"; rows[n].value = String(rt.cooldownSec) + " mp"; rows[n].valColor = UI_CYAN; n++; }
-      rows[n].label = "Allapot"; rows[n].value = stateNames[rt.stateFilter]; rows[n].valColor = UI_CYAN; n++;
+      if (rt.lockMode == 1) { rows[n].label = "Zárolás ideje"; rows[n].value = String(rt.cooldownSec) + " mp"; rows[n].valColor = UI_CYAN; n++; }
+      rows[n].label = "Állapot"; rows[n].value = stateNames[rt.stateFilter]; rows[n].valColor = UI_CYAN; n++;
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
-      drawValueList("KAPUZAS", rows, n, menuCursor);
+      drawValueList("KAPUZÁS", rows, n, menuCursor);
       break;
     }
     case MENU_RELAY_LOCKMODE_SEL: {
-      const char* items[4] = { "Nincs zarolas", "Ido alapu", "Jelvaltasig", "Vissza" };
-      drawMenuList("ZAROLAS MODJA", items, 4, menuCursor);
+      const char* items[4] = { "Nincs zárolás", "Idő alapú", "Jelváltásig", "Vissza" };
+      drawMenuList("ZÁROLÁS MÓDJA", items, 4, menuCursor);
       break;
     }
     case MENU_RELAY_STATE_SEL: {
-      const char* items[4] = { "BE (csak bekapcsolasra)", "KI (csak kikapcsolasra)", "MIND (mindket iranyra)", "Vissza" };
-      drawMenuList("ALLAPOT VALASZTAS", items, 4, menuCursor);
+      const char* items[4] = { "BE (csak bekapcsolásra)", "KI (csak kikapcsolásra)", "MIND (mindkét irányra)", "Vissza" };
+      drawMenuList("ÁLLAPOT VÁLASZTÁS", items, 4, menuCursor);
       break;
     }
     case MENU_RELAY_HOLD_EDIT: {
       RelayTimer &rt = (menuRelayTarget == 1) ? relayTimerR1 : relayTimerR2;
-      String title = menuEditField == 0 ? "IDOTARTAM" : "ZAROLAS IDEJE";
+      String title = menuEditField == 0 ? "IDŐTARTAM" : "ZÁROLÁS IDEJE";
       int val = menuEditField == 0 ? rt.onDurationSec : rt.cooldownSec;
       String hint = menuEditField == 0
         ? (rt.timerMode == 0 ? "(fix ideig tart)" : "(max ennyi ideig tarthat)")
-        : "(a szakasz vege utan)";
-      drawEditScreen(title, String(val) + " masodperc", hint);
+        : "(a szakasz vége után)";
+      drawEditScreen(title, String(val) + " másodperc", hint);
       break;
     }
     case MENU_RELAY_SENSOR_SEL: {
       int n = 0;
-      if (currentMode == 2) { rows[n].label = "NTC1 (Ho)"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
-                               rows[n].label = "Paratartalom"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
+      if (currentMode == 2) { rows[n].label = "NTC1 (Hő)"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
+                               rows[n].label = "Páratartalom"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
       else if (currentMode == 1) { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
       else { rows[n].label = "NTC1"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
              rows[n].label = "NTC2"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++; }
       rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
-      drawValueList("ERZEKELO VALASZTAS", rows, n, menuCursor);
+      drawValueList("ÉRZÉKELŐ VÁLASZTÁS", rows, n, menuCursor);
       break;
     }
     case MENU_RELAY_THERM_LIST: {
       ThermRelay &tr = curThermRelay();
       bool isHum = (tr.sensor == 3);
-      rows[0] = { "Erzekelo", sensorLabel(tr.sensor), UI_CYAN };
-      rows[1] = { "Allapot", tr.enabled ? "BE" : "KI", (uint16_t)(tr.enabled ? UI_GREEN : UI_RED) };
+      rows[0] = { "Érzékelő", sensorLabel(tr.sensor), UI_CYAN };
+      rows[1] = { "Állapot", tr.enabled ? "BE" : "KI", (uint16_t)(tr.enabled ? UI_GREEN : UI_RED) };
       rows[2] = { "Bekapcsol", String(tr.ton, isHum ? 0 : 1) + (isHum ? "%" : "C"), UI_CYAN };
       rows[3] = { "Kikapcsol", String(tr.toff, isHum ? 0 : 1) + (isHum ? "%" : "C"), UI_CYAN };
       rows[4] = { "Vissza", "", UI_WHITE };
-      drawValueList("RELE TERMOSZTAT", rows, 5, menuCursor);
+      drawValueList("RELÉ TERMOSZTÁT", rows, 5, menuCursor);
       break;
     }
     case MENU_RELAY_THERM_EDIT: {
@@ -480,13 +573,13 @@ void drawMenu() {
     case MENU_RELAY_LOGIC_LIST: {
       SwitchLogicChannel &ch = curLogicRelay();
       int n = 0;
-      rows[n].label = "Allapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? UI_GREEN : UI_RED); n++;
+      rows[n].label = "Állapot"; rows[n].value = ch.enabled ? "BE" : "KI"; rows[n].valColor = (uint16_t)(ch.enabled ? UI_GREEN : UI_RED); n++;
       if (currentMode == 4) {
         const char* labels[4] = {"K1N-K2N", "K1N-K2C", "K1C-K2N", "K1C-K2C"};
         for (int i = 0; i < 4; i++) { rows[n].label = labels[i]; rows[n].value = logicValLabel(ch.val[i], false); rows[n].valColor = (uint16_t)(ch.val[i] > 0 ? UI_GREEN : UI_CYAN); n++; }
       } else {
         rows[n].label = "K1 Nyitott"; rows[n].value = logicValLabel(ch.val[0], false); rows[n].valColor = (uint16_t)(ch.val[0] < 0 ? UI_YELLOW : (ch.val[0] > 0 ? UI_GREEN : UI_CYAN)); n++;
-        rows[n].label = "K1 Zart";    rows[n].value = logicValLabel(ch.val[2], false); rows[n].valColor = (uint16_t)(ch.val[2] < 0 ? UI_YELLOW : (ch.val[2] > 0 ? UI_GREEN : UI_CYAN)); n++;
+        rows[n].label = "K1 Zárt";    rows[n].value = logicValLabel(ch.val[2], false); rows[n].valColor = (uint16_t)(ch.val[2] < 0 ? UI_YELLOW : (ch.val[2] > 0 ? UI_GREEN : UI_CYAN)); n++;
       }
       rows[n].label = "Vissza"; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
       drawValueList("LOGIKA", rows, n, menuCursor);
@@ -494,9 +587,9 @@ void drawMenu() {
     }
     case MENU_RELAY_LOGIC_EDIT: {
       int v = curLogicRelay().val[menuLogicIdx];
-      String val = v < 0 ? "TERMOSZTATOT KOVETI" : (v != 0 ? "BEKAPCSOLVA" : "KIKAPCSOLVA");
-      String hint = (currentMode == 3) ? "(Fel/Le: KI/BE/Termosztat)" : "(Fel/Le: KI/BE)";
-      drawEditScreen("LOGIKA ERTEK", val, hint);
+      String val = v < 0 ? "TERMOSZTÁTOT KÖVETI" : (v != 0 ? "BEKAPCSOLVA" : "KIKAPCSOLVA");
+      String hint = (currentMode == 3) ? "(Fel/Le: KI/BE/Termosztát)" : "(Fel/Le: KI/BE)";
+      drawEditScreen("LOGIKA ÉRTÉK", val, hint);
       break;
     }
 
@@ -507,16 +600,16 @@ void drawMenu() {
 
     case MENU_WIFI_SCAN_LIST: {
       if (wifiMenuScanCount == 0) {
-        rows[0] = { "Nincs talalhato halozat", "", UI_RED };
+        rows[0] = { "Nincs található hálózat", "", UI_RED };
         rows[1] = { "Vissza", "", UI_WHITE };
-        drawValueList("WIFI HALOZATOK", rows, 2, menuCursor);
+        drawValueList("WIFI HÁLÓZATOK", rows, 2, menuCursor);
       } else {
         int n = 0;
         for (int i = 0; i < wifiMenuScanCount && n < 11; i++) {
           rows[n].label = wifiMenuScanSsids[i]; rows[n].value = ""; rows[n].valColor = UI_WHITE; n++;
         }
         rows[n] = { "Vissza", "", UI_WHITE }; n++;
-        drawValueList("WIFI HALOZATOK", rows, n, menuCursor);
+        drawValueList("WIFI HÁLÓZATOK", rows, n, menuCursor);
       }
       break;
     }
@@ -629,28 +722,64 @@ void handleMenuInput(ButtonEvent ev) {
       break;
 
     case MENU_COMP_LIST: {
-      // Csak azokat a sorokat mutatjuk, amik az aktuális módban valós NTC-t
-      // jelentenek (ugyanaz a logika, mint a draw-ágban).
+      // Csak azokat a sorokat mutatjuk, amik az aktuális módban valós hőmérőt
+      // jelentenek (ugyanaz a logika, mint a rajzoló ágban).
       int n = 0;
       if (currentMode == 0) n = 2;
       else if (currentMode == 1 || currentMode == 3) n = 1;
-      int count = (n == 0 ? 1 : n) + 1; // (+"Nincs NTC" hely VAGY a sorok) + Vissza
+      int count = (n == 0 ? 1 : n) + 1; // (+"Nincs hőmérő" hely VAGY a sorok) + Vissza
       if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
       else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 2; }
       else if (ev == BTN_SELECT) {
-        if (n > 0 && menuCursor == 0) { menuEditField = 0; menuScreen = MENU_COMP_EDIT; }
-        else if (n > 1 && menuCursor == 1) { menuEditField = 1; menuScreen = MENU_COMP_EDIT; }
+        if (n > 0 && menuCursor < n) { menuSensTarget = menuCursor; menuScreen = MENU_SENS_LIST; menuCursor = 0; }
         else { menuScreen = MENU_SETTINGS_SUB; menuCursor = 2; }
       }
       break;
     }
 
-    case MENU_COMP_EDIT: {
-      float &val = (menuEditField == 0) ? tempCompNTC1 : tempCompNTC2;
-      if (ev == BTN_UP) val = constrain(val + 0.1f, -20.0f, 20.0f);
-      else if (ev == BTN_DOWN) val = constrain(val - 0.1f, -20.0f, 20.0f);
-      else if (ev == BTN_SELECT || ev == BTN_BACK) { markDirty(); menuScreen = MENU_COMP_LIST; menuCursor = menuEditField; }
+    case MENU_SENS_LIST: {
+      SensField f[9];
+      int n = sensBuildFields(menuSensTarget, f);
+      if (menuCursor >= n) menuCursor = 0;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % n;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + n) % n;
+      else if (ev == BTN_BACK) { menuScreen = MENU_COMP_LIST; menuCursor = menuSensTarget; }
+      else if (ev == BTN_SELECT) {
+        SensField sel = f[menuCursor];
+        if (sel == SF_TYPE) { menuScreen = MENU_SENS_TYPE_SEL; menuCursor = sensCfg[menuSensTarget].type < 4 ? sensCfg[menuSensTarget].type : 3; }
+        else if (sel == SF_BACK) { menuScreen = MENU_COMP_LIST; menuCursor = menuSensTarget; }
+        else if (sel != SF_LIVE) { menuSensField = sel; menuScreen = MENU_SENS_EDIT; }
+      }
+      break;
+    }
+
+    case MENU_SENS_EDIT: {
+      if (ev == BTN_UP) { sensEditStep(menuSensTarget, (SensField)menuSensField, +1); markDirty(); }
+      else if (ev == BTN_DOWN) { sensEditStep(menuSensTarget, (SensField)menuSensField, -1); markDirty(); }
+      else if (ev == BTN_SELECT || ev == BTN_BACK) {
+        markDirty();
+        SensField f[9];
+        int n = sensBuildFields(menuSensTarget, f);
+        int pos = 0;
+        for (int i = 0; i < n; i++) if (f[i] == (SensField)menuSensField) pos = i;
+        menuScreen = MENU_SENS_LIST; menuCursor = pos;
+      }
+      break;
+    }
+
+    case MENU_SENS_TYPE_SEL: {
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 5;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 5) % 5;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SENS_LIST; menuCursor = 0; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor < 4) {
+          if (menuCursor != 3) applySensorPreset(sensCfg[menuSensTarget], (uint8_t)menuCursor); // az "Egyedi" nem ír felül semmit
+          sensCfg[menuSensTarget].type = (uint8_t)menuCursor;
+          markDirty();
+        }
+        menuScreen = MENU_SENS_LIST; menuCursor = 0;
+      }
       break;
     }
 
@@ -742,7 +871,7 @@ void handleMenuInput(ButtonEvent ev) {
     }
 
     case MENU_FAN_SUB: {
-      // mode3-ban ("1 kapcsolo+1 homero") MINDKET lehetoseg elerheto.
+      // mode3-ban ("1 kapcsoló + 1 hőmérő") MINDKET lehetoseg elerheto.
       bool hasCurve = (currentMode == 3 || !isSwitchMode());
       bool hasLogic = (currentMode == 3 || isSwitchMode());
       int idxCurve = hasCurve ? 4 : -1;
@@ -1144,7 +1273,7 @@ void handleMenuInput(ButtonEvent ev) {
 
     case MENU_WIFI_SCAN_LIST: {
       int count = wifiMenuScanCount + 1; // + "Vissza"
-      if (wifiMenuScanCount == 0) count = 2; // "Nincs talalhato..." sor + "Vissza"
+      if (wifiMenuScanCount == 0) count = 2; // "Nincs található..." sor + "Vissza"
       if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % count;
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + count) % count;
       else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 4; }

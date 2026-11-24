@@ -91,6 +91,12 @@ void applyThermostat() {
   // is, ha a hiszterézis "gondolata" időközben nem változik.
   if (thermR1.enabled && relay1Auto) {
     float t = getSensorTemp(thermR1.sensor);
+    if (isnan(t)) {
+      // Szenzorhiba: biztonságos állapot = KI (különben egy szakadt szenzornál
+      // a fűtés tartósan bekapcsolva maradhatna).
+      thermR1.state = false;
+      setRelayAutomation(1, false);
+    } else {
     if (thermR1.ton < thermR1.toff) { // fűtés
       if (!thermR1.state && t <= thermR1.ton)  thermR1.state = true;
       if (thermR1.state  && t >= thermR1.toff) thermR1.state = false;
@@ -99,9 +105,16 @@ void applyThermostat() {
       if (thermR1.state  && t <= thermR1.toff) thermR1.state = false;
     }
     setRelayAutomation(1, thermR1.state);
+    }
   }
   if (thermR2.enabled && relay2Auto) {
     float t = getSensorTemp(thermR2.sensor);
+    if (isnan(t)) {
+      // Szenzorhiba: biztonságos állapot = KI (különben egy szakadt szenzornál
+      // a fűtés tartósan bekapcsolva maradhatna).
+      thermR2.state = false;
+      setRelayAutomation(2, false);
+    } else {
     if (thermR2.ton < thermR2.toff) { // fűtés
       if (!thermR2.state && t <= thermR2.ton)  thermR2.state = true;
       if (thermR2.state  && t >= thermR2.toff) thermR2.state = false;
@@ -110,6 +123,7 @@ void applyThermostat() {
       if (thermR2.state  && t <= thermR2.toff) thermR2.state = false;
     }
     setRelayAutomation(2, thermR2.state);
+    }
   }
 }
 

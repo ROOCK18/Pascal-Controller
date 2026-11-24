@@ -157,7 +157,7 @@ void loop() {
   // változhat (WiFi.onEvent) - ezért ezen a képernyőn gombesemény nélkül is
   // rendszeresen újra kell rajzolni, hogy lásd a valós idejű állapotot.
   static unsigned long lastWifiConnectingRedraw = 0;
-  if (menuScreen == MENU_WIFI_CONNECTING && now - lastWifiConnectingRedraw > 300) {
+  if ((menuScreen == MENU_WIFI_CONNECTING || menuScreen == MENU_SENS_LIST) && now - lastWifiConnectingRedraw > 300) {
     lastWifiConnectingRedraw = now;
     drawMenu();
   }

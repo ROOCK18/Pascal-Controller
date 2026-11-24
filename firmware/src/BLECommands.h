@@ -4,6 +4,55 @@
 #pragma once
 
 // ============================================================
+// SZENZOR-PARAMÉTEREK (PT1000 / NTC)
+// Parancs: SET_SENS:<1|2>:<type 0-3>:<r0>:<t0>:<beta>:<rSeries>:<vSupply>
+//   type: 0=PT1000, 1=NTC 10k, 2=NTC 100k, 3=Egyedi. Választ: SENS_OK
+// Parancs: GET_SENS:<1|2>  ->  LOAD_SENS:<n>:<type>:<r0>:<t0>:<beta>:<rSeries>:<vSupply>:<komp>
+// Parancs: GET_SENSRAW     ->  SENSRAW:<mV1>:<R1>:<mV2>:<R2>  (R="-" ha nincs érvényes mérés)
+// ============================================================
+void handleGetSens(const String &which) {
+  int n = which.toInt();
+  if (n < 1 || n > 2) return;
+  const SensorCfg &c = sensCfg[n - 1];
+  float comp = (n == 1) ? tempCompNTC1 : tempCompNTC2;
+  notifyLine("LOAD_SENS:" + String(n) + ":" + String(c.type) + ":" + String(c.r0, 1) + ":" + String(c.t0, 1) + ":" +
+             String(c.beta, 0) + ":" + String(c.rSeries, 1) + ":" + String(c.vSupply, 2) + ":" + String(comp, 1));
+}
+
+void handleSetSens(const String &body) {
+  String tok[7]; int n = 0, start = 0;
+  while (n < 7) {
+    int c = body.indexOf(':', start);
+    if (c < 0) { tok[n++] = body.substring(start); break; }
+    tok[n++] = body.substring(start, c);
+    start = c + 1;
+  }
+  if (n < 7) { notifyLine("ERROR:SET_SENS hianyos parameter"); return; }
+  int idx = tok[0].toInt();
+  int type = tok[1].toInt();
+  float r0 = tok[2].toFloat(), t0 = tok[3].toFloat(), beta = tok[4].toFloat();
+  float rs = tok[5].toFloat(), vs = tok[6].toFloat();
+  if (idx < 1 || idx > 2 || type < 0 || type > 3 ||
+      !(r0 >= 1 && r0 <= 1000000) || !(t0 >= -50 && t0 <= 150) || !(beta >= 500 && beta <= 10000) ||
+      !(rs >= 10 && rs <= 1000000) || !(vs >= 1.0f && vs <= 6.0f)) {
+    notifyLine("ERROR:SET_SENS ervenytelen ertek");
+    return;
+  }
+  SensorCfg &c = sensCfg[idx - 1];
+  c.type = (uint8_t)type; c.r0 = r0; c.t0 = t0; c.beta = beta; c.rSeries = rs; c.vSupply = vs;
+  markDirty();
+  notifyLine("SENS_OK");
+}
+
+void handleGetSensRaw() {
+  String out = "SENSRAW";
+  for (int i = 0; i < 2; i++) {
+    out += ":" + String(sensLastMv[i], 0) + ":" + (isnan(sensLastR[i]) ? String("-") : String(sensLastR[i], 1));
+  }
+  notifyLine(out);
+}
+
+// ============================================================
 // BLE CALLBACKS
 // ============================================================
 class MyServerCallbacks : public NimBLEServerCallbacks {
@@ -126,7 +175,9 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
     else if (receivedString.startsWith("SET_MODE:")) {
       // Szenzor-elrendezés választó (Settings ModePicker) - ezen a hardveren
       // fixen 2 NTC van, de tároljuk/visszaigazoljuk, ha mégis állítanák.
-      currentMode = receivedString.substring(9).toInt();
+      int newMode = receivedString.substring(9).toInt();
+      if (newMode < 0 || newMode > 4) { notifyLine("ERROR:ervenytelen mod"); return; }
+      currentMode = newMode;
       idleNeedsFullClear = true; // ne maradjon az előző mód kijelzés-maradványa
       markDirty();
       notifyLine("MODE_OK");
@@ -163,6 +214,8 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
       handleGetRHold("R1");
       handleGetRHold("R2");
       handleGetComp();
+      handleGetSens("1");
+      handleGetSens("2");
       handleGetDisplay();
       handleGetDatePos();
     }
@@ -212,6 +265,15 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
     }
     else if (receivedString.startsWith("SET_COMP:")) {
       handleSetComp(receivedString.substring(9));
+    }
+    else if (receivedString.startsWith("SET_SENS:")) {
+      handleSetSens(receivedString.substring(9));
+    }
+    else if (receivedString.startsWith("GET_SENS:")) {
+      handleGetSens(receivedString.substring(9));
+    }
+    else if (receivedString == "GET_SENSRAW") {
+      handleGetSensRaw();
     }
     else if (receivedString == "GET_COMP") {
       handleGetComp();

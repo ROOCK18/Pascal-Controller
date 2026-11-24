@@ -35,6 +35,7 @@ public partial class Settings : ContentPage
         _ble = CrossBluetoothLE.Current;
         _adapter = CrossBluetoothLE.Current.Adapter;
         DevicesListView.ItemsSource = _deviceList;
+        InitSensPickers();
         BluetoothManager.Initialize(_adapter);
         LoadConnectedDevice();
     }
@@ -146,6 +147,10 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_COMP");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:1");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:2");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -181,6 +186,10 @@ public partial class Settings : ContentPage
             await BluetoothManager.WriteAsync("GET_STATE");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_COMP");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:1");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:2");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
@@ -219,6 +228,8 @@ public partial class Settings : ContentPage
             }
             else if (d.StartsWith("LOAD_COMP:"))
                 ParseLoadComp(d.Substring(10));
+            else if (d.StartsWith("LOAD_SENS:"))
+                ParseLoadSens(d.Substring(10));
             else if (d.StartsWith("LOAD_DISPLAY:"))
                 ParseLoadDisplay(d.Substring(13));
             else if (d.StartsWith("LOAD_DATEPOS:"))
@@ -334,6 +345,114 @@ public partial class Settings : ContentPage
         float n2 = ParseFloatInvariant(CompNtc2Entry.Text, 0f);
         await BluetoothManager.WriteAsync($"SET_COMP:{n1.ToString("F1", CultureInfo.InvariantCulture)}:{n2.ToString("F1", CultureInfo.InvariantCulture)}");
         await DisplayAlert("Siker", "Kompenzáció elmentve.", "OK");
+    }
+
+    // ════════════════════════════════════════
+    // SZENZOR-BEÁLLÍTÁSOK (PT1000 / NTC)
+    // ════════════════════════════════════════
+    // Típusok: 0 = PT1000, 1 = NTC 10k, 2 = NTC 100k, 3 = Egyedi (a firmware azonos sorrendje)
+    private static readonly string[] SensTypeNames = { "PT1000", "NTC 10k", "NTC 100k", "Egyedi" };
+    private bool _sensLoading = false;
+
+    private void InitSensPickers()
+    {
+        if (SensType1Picker.Items.Count == 0) foreach (var n in SensTypeNames) SensType1Picker.Items.Add(n);
+        if (SensType2Picker.Items.Count == 0) foreach (var n in SensTypeNames) SensType2Picker.Items.Add(n);
+    }
+
+    // Az előbeállítások megegyeznek a firmware applySensorPreset() értékeivel.
+    private static (float r0, float t0, float beta, float rs, float vs)? SensPreset(int type) => type switch
+    {
+        0 => (1000f, 0f, 3977f, 1200f, 3.3f),
+        1 => (10000f, 25f, 3977f, 10000f, 3.3f),
+        2 => (100000f, 25f, 3950f, 100000f, 3.3f),
+        _ => null
+    };
+
+    private static string F(float v, string fmt) => v.ToString(fmt, CultureInfo.InvariantCulture);
+
+    private void ApplySensVisibility(int n)
+    {
+        var picker = n == 1 ? SensType1Picker : SensType2Picker;
+        bool ntc = picker.SelectedIndex > 0; // PT1000-nél nincs alap hőfok és béta
+        (n == 1 ? SensT0Box1 : SensT0Box2).IsVisible = ntc;
+        (n == 1 ? SensBetaBox1 : SensBetaBox2).IsVisible = ntc;
+    }
+
+    private void OnSensTypeChanged(object sender, EventArgs e)
+    {
+        int n = ReferenceEquals(sender, SensType1Picker) ? 1 : 2;
+        var picker = n == 1 ? SensType1Picker : SensType2Picker;
+        ApplySensVisibility(n);
+        if (_sensLoading || picker.SelectedIndex < 0) return;
+
+        var p = SensPreset(picker.SelectedIndex);
+        if (p == null) return; // Egyedi: a jelenlegi értékek maradnak
+        (n == 1 ? SensR0Entry1 : SensR0Entry2).Text = F(p.Value.r0, "F0");
+        (n == 1 ? SensT0Entry1 : SensT0Entry2).Text = F(p.Value.t0, "F0");
+        (n == 1 ? SensBetaEntry1 : SensBetaEntry2).Text = F(p.Value.beta, "F0");
+        (n == 1 ? SensRsEntry1 : SensRsEntry2).Text = F(p.Value.rs, "F0");
+        (n == 1 ? SensVsEntry1 : SensVsEntry2).Text = F(p.Value.vs, "F1");
+    }
+
+    // LOAD_SENS:<n>:<type>:<r0>:<t0>:<beta>:<rs>:<vs>:<komp>
+    private void ParseLoadSens(string body)
+    {
+        var p = body.Split(':');
+        if (p.Length < 7 || !int.TryParse(p[0], out int n) || n < 1 || n > 2) return;
+        if (!int.TryParse(p[1], out int type)) type = 0;
+        InitSensPickers();
+        _sensLoading = true;
+        try
+        {
+            (n == 1 ? SensType1Picker : SensType2Picker).SelectedIndex = Math.Clamp(type, 0, 3);
+            (n == 1 ? SensR0Entry1 : SensR0Entry2).Text = p[2];
+            (n == 1 ? SensT0Entry1 : SensT0Entry2).Text = p[3];
+            (n == 1 ? SensBetaEntry1 : SensBetaEntry2).Text = p[4];
+            (n == 1 ? SensRsEntry1 : SensRsEntry2).Text = p[5];
+            (n == 1 ? SensVsEntry1 : SensVsEntry2).Text = p[6];
+        }
+        finally { _sensLoading = false; }
+        ApplySensVisibility(n);
+        (n == 1 ? SensBlock1 : SensBlock2).IsVisible = true;
+        SaveSensButton.IsVisible = true;
+        CompPanel.IsVisible = true;
+    }
+
+    // Séma-visszatöltés: a LOAD_SENS sor utolsó mezője (kompenzáció) a SET_COMP-hoz tartozik, a SET_SENS-ből kimarad.
+    private static string LoadSensToSet(string body)
+    {
+        var p = body.Split(':');
+        if (p.Length < 7) return null;
+        return "SET_SENS:" + string.Join(":", p.Take(7));
+    }
+
+    private async void OnSaveSensClicked(object sender, EventArgs e)
+    {
+        if (!CheckBLE()) return;
+        for (int n = 1; n <= 2; n++)
+        {
+            if (!(n == 1 ? SensBlock1 : SensBlock2).IsVisible) continue;
+            int type = (n == 1 ? SensType1Picker : SensType2Picker).SelectedIndex;
+            if (type < 0) type = 0;
+            float r0 = ParseFloatInvariant((n == 1 ? SensR0Entry1 : SensR0Entry2).Text, 1000f);
+            float t0 = ParseFloatInvariant((n == 1 ? SensT0Entry1 : SensT0Entry2).Text, 0f);
+            float beta = ParseFloatInvariant((n == 1 ? SensBetaEntry1 : SensBetaEntry2).Text, 3977f);
+            float rs = ParseFloatInvariant((n == 1 ? SensRsEntry1 : SensRsEntry2).Text, 1200f);
+            float vs = ParseFloatInvariant((n == 1 ? SensVsEntry1 : SensVsEntry2).Text, 3.3f);
+
+            // Ugyanazok a határok, mint a firmware SET_SENS ellenőrzése
+            if (r0 < 1 || r0 > 1000000 || t0 < -50 || t0 > 150 || beta < 500 || beta > 10000 ||
+                rs < 10 || rs > 1000000 || vs < 1.0f || vs > 6.0f)
+            {
+                await DisplayAlert("Hibás érték", $"{n}. szenzor: valamelyik érték a megengedett tartományon kívül van.\n" +
+                    "Ellenállás: 1–1 000 000 Ω, alap hőfok: −50…150 °C, béta: 500–10000, tápfeszültség: 1–6 V.", "OK");
+                return;
+            }
+            await BluetoothManager.WriteAsync($"SET_SENS:{n}:{type}:{F(r0, "F1")}:{F(t0, "F1")}:{F(beta, "F0")}:{F(rs, "F1")}:{F(vs, "F2")}");
+            await Task.Delay(200);
+        }
+        await DisplayAlert("Siker", "Szenzor-beállítások elmentve.", "OK");
     }
 
     // ════════════════════════════════════════
@@ -935,6 +1054,7 @@ public partial class Settings : ContentPage
         if (!connected)
         {
             CompPanel.IsVisible = false;
+            SensBlock1.IsVisible = false; SensBlock2.IsVisible = false; SaveSensButton.IsVisible = false;
             DisplayPanel.IsVisible = false;
             DateTimePanel.IsVisible = false;
             CollapseAllSections();
@@ -1032,6 +1152,10 @@ public partial class Settings : ContentPage
             await BluetoothManager.WriteAsync("GET_STATE");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_COMP");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:1");
+            await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_SENS:2");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
@@ -1131,6 +1255,10 @@ public partial class Settings : ContentPage
         await BluetoothManager.WriteAsync("GET_STATE");
         await Task.Delay(250);
         await BluetoothManager.WriteAsync("GET_COMP");
+        await Task.Delay(150);
+        await BluetoothManager.WriteAsync("GET_SENS:1");
+        await Task.Delay(150);
+        await BluetoothManager.WriteAsync("GET_SENS:2");
         await Task.Delay(250);
         await BluetoothManager.WriteAsync("GET_DISPLAY");
         await Task.Delay(250);
@@ -1236,6 +1364,7 @@ public partial class Settings : ContentPage
     {
         if (line.StartsWith("STATE:")) return "SET_MODE:" + line.Substring(6);
         if (line.StartsWith("LOAD_COMP:")) return "SET_COMP:" + line.Substring(10);
+        if (line.StartsWith("LOAD_SENS:")) return LoadSensToSet(line.Substring(10));
         if (line.StartsWith("LOAD_DISPLAY:")) return "SET_DISPLAY:" + line.Substring(13);
         if (line.StartsWith("LOAD_DATEPOS:")) return "SET_DATEPOS:" + line.Substring(13);
         if (line.StartsWith("LOAD_THERM:")) return "SET_THERM:" + line.Substring(11);

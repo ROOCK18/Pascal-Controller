@@ -93,12 +93,68 @@
                 <Border x:Name="CompPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15" IsVisible="False">
                     <VerticalStackLayout Spacing="10">
                         <Grid ColumnDefinitions="*,Auto">
-                            <Label Grid.Column="0" Text="Hőmérő kompenzáció" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
+                            <Label Grid.Column="0" Text="Hőmérő beállítások" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
                             <Label Grid.Column="1" x:Name="CompExpandIcon" Text="&#9660;" TextColor="{StaticResource White}" FontSize="14" VerticalOptions="Center" />
                             <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnCompHeaderTapped"/></Grid.GestureRecognizers>
                         </Grid>
                         <VerticalStackLayout x:Name="CompDetailsPanel" Spacing="10" IsVisible="False">
-                            <Label Text="Hozzáadódik a mért NTC hőfokhoz (lehet negatív is)." TextColor="#AEAEB2" FontSize="12" />
+                            <VerticalStackLayout x:Name="SensBlock1" Spacing="6" IsVisible="False">
+                                <Label Text="1. szenzor" TextColor="{StaticResource White}" FontAttributes="Bold" />
+                                <Picker x:Name="SensType1Picker" Title="Szenzor típusa" SelectedIndexChanged="OnSensTypeChanged" />
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+                                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
+                                        <Label Text="Névleges ellenállás (Ω)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensR0Entry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
+                                        <Label Text="Soros ellenállás (Ω)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensRsEntry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout x:Name="SensT0Box1" Grid.Row="1" Grid.Column="0" Spacing="4">
+                                        <Label Text="Alap hőfok (°C)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensT0Entry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout x:Name="SensBetaBox1" Grid.Row="1" Grid.Column="1" Spacing="4">
+                                        <Label Text="Béta (β)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensBetaEntry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="4">
+                                        <Label Text="Tápfeszültség (V)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensVsEntry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout x:Name="SensBlock2" Spacing="6" IsVisible="False">
+                                <Label Text="2. szenzor" TextColor="{StaticResource White}" FontAttributes="Bold" />
+                                <Picker x:Name="SensType2Picker" Title="Szenzor típusa" SelectedIndexChanged="OnSensTypeChanged" />
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+                                    <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
+                                        <Label Text="Névleges ellenállás (Ω)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensR0Entry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
+                                        <Label Text="Soros ellenállás (Ω)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensRsEntry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout x:Name="SensT0Box2" Grid.Row="1" Grid.Column="0" Spacing="4">
+                                        <Label Text="Alap hőfok (°C)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensT0Entry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout x:Name="SensBetaBox2" Grid.Row="1" Grid.Column="1" Spacing="4">
+                                        <Label Text="Béta (β)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensBetaEntry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="4">
+                                        <Label Text="Tápfeszültség (V)" TextColor="#AEAEB2" FontSize="12" />
+                                        <Entry x:Name="SensVsEntry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </VerticalStackLayout>
+                            <Border x:Name="SaveSensButton" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45" IsVisible="False">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveSensClicked"/></Border.GestureRecognizers>
+                                <Label Text="SZENZOR-BEÁLLÍTÁSOK MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Label Text="Kompenzáció: hozzáadódik a mért hőfokhoz (lehet negatív is)." TextColor="#AEAEB2" FontSize="12" />
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                 <VerticalStackLayout Grid.Column="0" Spacing="4">
                                     <Label Text="NTC1 (°C)" TextColor="#AEAEB2" FontSize="12" />
