@@ -207,6 +207,10 @@ public static class BluetoothManager
         lock (_reconnectLock) { _reconnectCts?.Cancel(); }
     }
 
+    // Kézi csatlakozás előtt: a háttérben futó újracsatlakozást le kell állítani, különben ugyanahhoz az
+    // eszközhöz két csatlakozási kísérlet futna egyszerre.
+    public static void StopAutoReconnect() => CancelReconnect();
+
     private static async Task ReconnectLoopAsync(Guid id, CancellationToken ct)
     {
         int attempt = 0;

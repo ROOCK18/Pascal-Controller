@@ -68,9 +68,14 @@ public partial class Settings : ContentPage
     private void Adapter_DeviceDiscovered(object sender,
         Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
     {
-        if (!_scanned.Any(d => d.Id == e.Device.Id) &&
-            !string.IsNullOrEmpty(e.Device.Name))
-            MainThread.BeginInvokeOnMainThread(() => { _scanned.Add(e.Device); RefreshDeviceList(); });
+        if (string.IsNullOrEmpty(e.Device.Name)) return;
+        // A lista a UI szálon módosul, ezért az ellenőrzés is ott fut (a keresés másik szálról hív).
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_scanned.Any(d => d.Id == e.Device.Id)) return;
+            _scanned.Add(e.Device);
+            RefreshDeviceList();
+        });
     }
 
     private async void OnBTSearchClicked(object sender, EventArgs e)
@@ -182,6 +187,7 @@ public partial class Settings : ContentPage
         border.BackgroundColor = (Color)Application.Current.Resources["PrimaryRed"];
         border.Stroke = (Color)Application.Current.Resources["PrimaryRed"];
 
+        BluetoothManager.StopAutoReconnect();
         try
         {
             ScanIndicator.IsRunning = true;
@@ -256,6 +262,7 @@ public partial class Settings : ContentPage
             border.BackgroundColor = (Color)Application.Current.Resources["DarkGray"];
             border.Stroke = (Color)Application.Current.Resources["LightGray"];
             _selectedDeviceRow = null;
+            BluetoothManager.StartAutoReconnect();   // a kézi próbálkozás elbukott: folytatódhat a háttér-újracsatlakozás
             await DisplayAlert("Hiba", "Csatlakozás sikertelen!", "OK");
         }
         finally

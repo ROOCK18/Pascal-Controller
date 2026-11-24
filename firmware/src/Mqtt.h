@@ -135,13 +135,18 @@ static String mqttOnOff(bool b) { return b ? String("ON") : String("OFF"); }
 
 static void mqttPublishStates(bool full) {
   int i = 0;
-  if (currentMode <= 3) mqttPubIf(i, "temp1", mqttTemp(ntc1Temperature), full); i++;
-  if (currentMode == 0) mqttPubIf(i, "temp2", mqttTemp(ntc2Temperature), full); i++;
-  if (currentMode == 2) mqttPubIf(i, "hum", mqttTemp(humidity), full); i++;
-  if (currentMode == 3) mqttPubIf(i, "k1", mqttOnOff(isSwitchClosed(NTC2_PIN)), full);
-  else if (currentMode == 4) mqttPubIf(i, "k1", mqttOnOff(isSwitchClosed(NTC1_PIN)), full);
+  // A cache-indexek rögzítettek (módtól függetlenül ugyanaz a sorrend), a közzététel módfüggő.
+  if (currentMode <= 3) { mqttPubIf(i, "temp1", mqttTemp(ntc1Temperature), full); }
   i++;
-  if (currentMode == 4) mqttPubIf(i, "k2", mqttOnOff(isSwitchClosed(NTC2_PIN)), full); i++;
+  if (currentMode == 0) { mqttPubIf(i, "temp2", mqttTemp(ntc2Temperature), full); }
+  i++;
+  if (currentMode == 2) { mqttPubIf(i, "hum", mqttTemp(humidity), full); }
+  i++;
+  if (currentMode == 3) { mqttPubIf(i, "k1", mqttOnOff(isSwitchClosed(NTC2_PIN)), full); }
+  else if (currentMode == 4) { mqttPubIf(i, "k1", mqttOnOff(isSwitchClosed(NTC1_PIN)), full); }
+  i++;
+  if (currentMode == 4) { mqttPubIf(i, "k2", mqttOnOff(isSwitchClosed(NTC2_PIN)), full); }
+  i++;
   mqttPubIf(i++, "relay1", mqttOnOff(digitalRead(RELAY1_PIN)), full);
   mqttPubIf(i++, "relay2", mqttOnOff(digitalRead(RELAY2_PIN)), full);
   mqttPubIf(i++, "fan1/state", mqttOnOff(pwmFan > 0), full);
@@ -220,6 +225,7 @@ static void mqttTask(void *) {
   mqttInitIds();
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(100));
+    const MqttCfg cfg = mqttCfg; // pillanatkép: a beállítást másik szál módosíthatja, a task végig ugyanazt használja
 
     if (mqttReconf) {
       mqttReconf = false;
@@ -229,7 +235,7 @@ static void mqttTask(void *) {
 
     bool wifiOk = (WiFi.status() == WL_CONNECTED);
     bool busy = otaInProgress || wifiOtaInProgress || otaUrlPending; // frissítés alatt a hálózat az OTA-é
-    if (!mqttCfg.enabled || mqttCfg.host[0] == 0) {
+    if (!cfg.enabled || cfg.host[0] == 0) {
       if (mqttClient.connected()) mqttClient.disconnect();
       mqttState = 0;
       continue;
@@ -244,15 +250,15 @@ static void mqttTask(void *) {
       mqttState = 2;
       if (mqttLastAttempt != 0 && millis() - mqttLastAttempt < 10000) continue; // 10 mp-es újrapróbálás
       mqttLastAttempt = millis();
-      mqttClient.setServer(mqttCfg.host, mqttCfg.port);
+      mqttClient.setServer(cfg.host, cfg.port);
       mqttClient.setBufferSize(1200);
       mqttClient.setKeepAlive(30);
       mqttClient.setSocketTimeout(5);
       mqttClient.setCallback(mqttOnMessage);
       String lwt = mqttBase + "/status";
       bool ok;
-      if (mqttCfg.user[0])
-        ok = mqttClient.connect(mqttId.c_str(), mqttCfg.user, mqttCfg.pass, lwt.c_str(), 0, true, "offline");
+      if (cfg.user[0])
+        ok = mqttClient.connect(mqttId.c_str(), cfg.user, cfg.pass, lwt.c_str(), 0, true, "offline");
       else
         ok = mqttClient.connect(mqttId.c_str(), nullptr, nullptr, lwt.c_str(), 0, true, "offline");
       if (!ok) continue;

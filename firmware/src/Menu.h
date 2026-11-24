@@ -317,7 +317,7 @@ void drawMenu() {
       const char* st[4] = { "kikapcsolva", "nincs WiFi", "csatlakozik...", "csatlakozva" };
       uint16_t stCol = (mqttState == 3) ? UI_GREEN : (mqttState == 0 ? UI_WHITE : UI_YELLOW);
       String broker = mqttCfg.host[0] ? (String(mqttCfg.host) + ":" + String(mqttCfg.port)) : String("nincs (app)");
-      rows[0] = { "Bekapcsolva", mqttCfg.enabled ? "BE" : "KI", mqttCfg.enabled ? UI_GREEN : UI_RED };
+      rows[0] = { "Bekapcsolva", mqttCfg.enabled ? "BE" : "KI", (uint16_t)(mqttCfg.enabled ? UI_GREEN : UI_RED) };
       rows[1] = { "Állapot", st[mqttState < 4 ? mqttState : 0], stCol };
       rows[2] = { "Bróker", broker, UI_CYAN };
       rows[3] = { "Név", String(mqttCfg.name), UI_CYAN };
@@ -328,7 +328,7 @@ void drawMenu() {
 
     case MENU_BLEPIN: {
       rows[0] = { "PIN", String(blePin), UI_YELLOW };
-      rows[1] = { "Védelem", bleAuthRequired ? "BE" : "KI", bleAuthRequired ? UI_GREEN : UI_RED };
+      rows[1] = { "Védelem", bleAuthRequired ? "BE" : "KI", (uint16_t)(bleAuthRequired ? UI_GREEN : UI_RED) };
       rows[2] = { "Új PIN generálása", "", UI_CYAN };
       rows[3] = { "Vissza", "", UI_WHITE };
       drawValueList("BLE VÉDELEM", rows, 4, menuCursor);

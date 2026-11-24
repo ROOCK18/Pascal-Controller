@@ -84,21 +84,10 @@ void setup() {
 
   pinMode(NTC1_PIN, INPUT);
   pinMode(NTC2_PIN, INPUT);
-  pinMode(RELAY1_PIN, OUTPUT);
-  pinMode(RELAY2_PIN, OUTPUT);
   // NTC1_PIN/NTC2_PIN: nincs szükség pinMode-ra itt, az analogRead/readDHT11
   // dinamikusan kezeli a lábakat mód szerint (lásd isSwitchClosed/readDHT11).
   pinMode(BTN_LEFT, INPUT_PULLUP);   // GPIO0 - belső pull-up szükséges (lásd fent)
   pinMode(BTN_RIGHT, INPUT);         // GPIO35 - csak bemenet, gyári/külső pull-up-ra támaszkodik
-  pinMode(FAN1_ON, OUTPUT);
-  pinMode(FAN2_ON, OUTPUT);
-  pinMode(RGB_ON, OUTPUT);
-
-  digitalWrite(FAN1_ON, LOW);
-  digitalWrite(FAN2_ON, LOW);
-  digitalWrite(RGB_ON, LOW);
-  digitalWrite(RELAY1_PIN, LOW);
-  digitalWrite(RELAY2_PIN, LOW);
 
   setupPWM();
   loadAllSettings(); // mentett beállítások visszatöltése (áramszünet utáni állapot-visszaállítás)

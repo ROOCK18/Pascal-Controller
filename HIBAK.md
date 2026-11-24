@@ -59,5 +59,13 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - **N5/N6** (jelek, kinézet): csak hardveren ellenőrizhető.
 - **Hardver**: a DH_ON a GPIO36-on van, ami csak bemenet – át kell kötni GPIO21/22-re (lásd a beszélgetést).
 
+
+## Utolsó átnézés (firmware + app)
+- **App – versenyhelyzet:** a keresés szálán futott a duplikáció-ellenőrzés, miközben a UI szál módosította a listát (`Collection was modified` kivétel esélye). Az ellenőrzés és a módosítás most a UI szálon fut.
+- **App – párhuzamos csatlakozás:** kézi csatlakozáskor a háttér-újracsatlakozás ugyanahhoz az eszközhöz is próbálkozhatott. Kézi csatlakozás előtt most leáll (`StopAutoReconnect()`), sikertelen kézi próbálkozás után újraindul.
+- **Firmware – MQTT:** a task egy pillanatkép-másolatot használ a beállításokból (a BLE szál módosíthatja azokat), az állapot-közzététel kódja áttekinthetőbb lett (a fordító félrevezető behúzást jelzett).
+- **Firmware – apróságok:** szűkítő konverzió a menü sor-inicializálójában, `printf` formátum (`%lu`), felesleges ismételt `pinMode` hívások a `setup()`-ban.
+- A fordító `-Wall -Wextra` mellett a saját forrásokban további gyanús helyet nem jelzett.
+
 ## Fordítás / környezet
 - A PlatformIO a `~/.platformio/penv`-et megosztja a VS Code bővítménnyel; 2026-11-24 09:05-kor a bővítmény újraépítette, és a parancssoros (`python -m platformio`) fordítás emiatt hibával áll le (`No pyvenv.cfg file`). A fenti javítások **fordítása emiatt nem lett újra ellenőrizve**; a VS Code-ban (`Build`) ellenőrizhető.

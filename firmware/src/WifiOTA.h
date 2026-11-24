@@ -245,7 +245,7 @@ void handleOtaUrl(const String &body) {
   delay(200);
   NimBLEDevice::deinit(true);
   delay(200);
-  Serial.printf("BLE leallitva letoltes elott. Szabad memoria: %u byte\n", ESP.getFreeHeap());
+  Serial.printf("BLE leallitva letoltes elott. Szabad memoria: %lu byte\n", (unsigned long)ESP.getFreeHeap());
   drawOtaStatus("LETÖLTÉS...", downloadLabel);
 
   // FONTOS: a GitHub release-letöltési URL-ek szinte mindig átirányítanak
