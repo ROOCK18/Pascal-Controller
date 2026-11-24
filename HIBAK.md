@@ -94,3 +94,10 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - A csatorna szenzora a termosztátjáé; páratartalom-forrásnál az 1. hőmérő hőmérséklete számít. Az RGB-nek nincs figyelmeztetése (nincs szenzora).
 - A Közeledés a háttér-kapcsolat jelzését az Android nem engedi teljesen elrejteni: minimális fontosságú, néma értesítés marad az értesítési panel alján.
 - Hardveren / telefonon nem próbáltam: CALERT értesítés, közeledés legördülő elrendezés.
+
+## 5.5.0 – RGB automatikák: ismert korlátok
+- Az RGB kézi színállítása (kör, csúszka, ON/OFF) Automata állapotban is megy, de az automatika a következő változásnál (időzítő-esemény, görbe-érték, közeledés) felülírja; tartós kézi vezérléshez Kézi állapot kell.
+- Az időzítő a legutóbbi elmúlt mai eseményt tartja érvényben; éjfél után, az első esemény előtt a görbék (ha be vannak kapcsolva) vagy az utolsó állapot marad.
+- A napszak-görbe az eszköz órájára épül: ha az óra nincs szinkronban (TIME), a görbe is eltér.
+- Az RGB-közeledés "amíg ott vagyok" módja a telefon becsült távolságára épül (RSSI); a távozást a telefon jelzi, kapcsolatvesztésnél az eszköz 15 mp után magától.
+- Hardveren / telefonon nem próbáltam: átmenet-motor, időzítő, görbék, közeledés-felfutás, Automata/Kézi.

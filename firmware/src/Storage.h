@@ -77,6 +77,11 @@ void saveAllSettings() {
   prefs.putBytes("alertCfg", &alertCfg, sizeof(alertCfg));
   prefs.putBytes("proxCh", proxCh, sizeof(proxCh));
   prefs.putBytes("chAlert", chAlert, sizeof(chAlert));
+  prefs.putBool("rgbAuto", rgbAuto);
+  prefs.putBytes("rgbTimer", &rgbTimerCfg, sizeof(rgbTimerCfg));
+  prefs.putBytes("rgbTherm", &rgbThermCfg, sizeof(rgbThermCfg));
+  prefs.putBytes("rgbDay", &rgbDayCfg, sizeof(rgbDayCfg));
+  prefs.putBytes("rgbProx", &rgbProxCfg, sizeof(rgbProxCfg));
 
   prefs.end();
 }
@@ -166,6 +171,11 @@ void loadAllSettings() {
   loadStructIfMatching("alertCfg", alertCfg);
   loadStructIfMatching("proxCh", proxCh);
   loadStructIfMatching("chAlert", chAlert);
+  rgbAuto = prefs.getBool("rgbAuto", false);
+  loadStructIfMatching("rgbTimer", rgbTimerCfg);
+  loadStructIfMatching("rgbTherm", rgbThermCfg);
+  loadStructIfMatching("rgbDay", rgbDayCfg);
+  loadStructIfMatching("rgbProx", rgbProxCfg);
 
   prefs.end();
 }

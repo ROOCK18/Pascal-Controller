@@ -4,13 +4,13 @@
 // A telefon (app) közeledéskor "PROX_TRIGGER" parancsot küld. Az eszköz ilyenkor azokat a csatornákat
 // kapcsolja, amelyeknél a közeledés-automatika be van kapcsolva ÉS az automatika is be van kapcsolva
 // (a ventilátor/relé "Automata" állapotban van) - ugyanúgy, ahogy a többi automatikus szabály is csak
-// Automata módban dolgozik. Az RGB-nek nincs Automata/Kézi módja, ott a közeledés-kapcsoló önmagában dönt.
+// Automata módban dolgozik. Az RGB közeledése külön van kezelve (RgbAuto.h: szín, felfutás, világítási mód),
+// az is csak Automata üzemmódban működik.
 //
-// Csatornánként: be/ki, érték (ventilátor: % ; relé/RGB: nincs) és időtartam (mp):
+// Csatornánként (ventilátor, relé): be/ki, érték (ventilátor: %) és időtartam (mp):
 //   ventilátor: a megadott % -ra áll az időtartam alatt, utána visszaáll az előző értékre (0 mp = marad)
 //   relé:       az időtartamra BE (impulzus) vagy KI (action), 0 mp = a relé "Kapuzás" beállított ideje;
 //               az időtartam alatt az automatika nem írja felül, utána az automatika veszi át újra
-//   RGB:        az időtartamra BE vagy KI (action); utána az ellenkezőjére áll (0 mp = marad)
 // ============================================================
 #pragma once
 
@@ -27,7 +27,7 @@ static bool proxChannelAuto(int i) {
     case 1: return fan2Auto;
     case 2: return relay1Auto;
     case 3: return relay2Auto;
-    default: return true;   // RGB: nincs Automata/Kézi mód
+    default: return rgbAuto;   // RGB
   }
 }
 
@@ -39,6 +39,7 @@ void proxTrigger(int only = -1) {
   unsigned long now = millis();
   for (int i = 0; i < PROX_CH; i++) {
     if (only >= 0 && i != only) continue;
+    if (i == 4) { if (rgbProxTrigger()) applied++; continue; }   // RGB: lásd RgbAuto.h (saját beállítás, csak Automata üzemmódban)
     ProxCh &p = proxCh[i];
     if (!p.enabled || !proxChannelAuto(i)) continue;
     applied++;
@@ -48,18 +49,13 @@ void proxTrigger(int only = -1) {
       setPWM(i == 0 ? 3 : 4, proxFanDuty(i));
       proxActive[i] = p.durSec > 0;
       proxEnd[i] = now + (unsigned long)p.durSec * 1000UL;
-    } else if (i < 4) {
+    } else {
       int relay = i - 1;   // 2 -> 1. relé, 3 -> 2. relé
       uint32_t sec = p.durSec > 0 ? p.durSec : (relay == 1 ? relayTimerR1 : relayTimerR2).onDurationSec;
       proxForceOn[i] = (p.action != 2);
       proxActive[i] = true;
       proxEnd[i] = now + (unsigned long)sec * 1000UL;
       digitalWrite(relay == 1 ? RELAY1_PIN : RELAY2_PIN, proxForceOn[i] ? HIGH : LOW);
-    } else {
-      proxForceOn[4] = (p.action != 2);
-      digitalWrite(RGB_ON, proxForceOn[4] ? HIGH : LOW);
-      proxActive[4] = p.durSec > 0;
-      proxEnd[4] = now + (unsigned long)p.durSec * 1000UL;
     }
   }
   notifyLine("PROX_OK:" + String(applied));
@@ -75,7 +71,7 @@ void applyProxOverrides() {
       int want = expired ? proxPrior[i] : proxFanDuty(i);
       if (expired) proxActive[i] = false;
       if (pwm != want) setPWM(i == 0 ? 3 : 4, want);
-    } else if (i < 4) {
+    } else {
       int pin = (i == 2) ? RELAY1_PIN : RELAY2_PIN;
       if (expired) {
         proxActive[i] = false;
@@ -83,9 +79,6 @@ void applyProxOverrides() {
       } else {
         digitalWrite(pin, proxForceOn[i] ? HIGH : LOW);
       }
-    } else {
-      if (expired) { proxActive[4] = false; digitalWrite(RGB_ON, proxForceOn[4] ? LOW : HIGH); }
-      else digitalWrite(RGB_ON, proxForceOn[4] ? HIGH : LOW);
     }
   }
 }

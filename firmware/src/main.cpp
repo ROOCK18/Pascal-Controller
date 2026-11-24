@@ -52,6 +52,7 @@
 #include "Timers.h"
 #include "Storage.h"
 #include "Alerts.h"
+#include "RgbAuto.h"
 #include "Prox.h"
 #include "Buttons.h"
 #include "Menu.h"
@@ -242,6 +243,7 @@ void loop() {
     applyProxOverrides(); // ... és az aktív közeledés-művelet is
   }
   checkAlerts();          // riasztások (szenzorhiba / hőmérséklet-határ) -> értesítés az appnak
+  applyRgbAutomation();   // RGB: átmenet-motor + időzítő / görbék / közeledés (csak Automata üzemmódban)
 
   // ── Gombok: menü navigáció, vagy idle képernyőn belépés a menübe ──
   ButtonEvent btnEv = pollButtons();

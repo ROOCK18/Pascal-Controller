@@ -145,6 +145,7 @@ public static class ProximityService
         UpdateAllArming(cfg, dist, now);
         _lastSeen[cfg.Id] = now;
         await FireEligibleAsync(cfg, dist);
+        await CheckRgbLeaveAsync(cfg, dist);
     }
 
     private static string Key(string id, string ch) => id + "/" + ch;
@@ -190,6 +191,20 @@ public static class ProximityService
             _outsideSince.Remove(Key(cfg.Id, ch));
             await BluetoothManager.WriteAsync($"PROX_TRIGGER:{ch}");
             await Task.Delay(150);
+            if (ch == "RGB") _rgbInside.Add(cfg.Id);
         }
+    }
+
+    // RGB "amíg ott vagyok" mód: ha a telefon az újraélesedés távolságán (X méter) kívülre megy, jelezzük az eszköznek a távozást.
+    // (Ha a kapcsolat megszakad, az eszköz 15 mp után magától távozottnak veszi.)
+    private static readonly HashSet<string> _rgbInside = new();
+
+    private static async Task CheckRgbLeaveAsync(SavedDevice cfg, double dist)
+    {
+        if (!_rgbInside.Contains(cfg.Id)) return;
+        if (!cfg.ProxChannels.TryGetValue("RGB", out var c) || !c.Enabled || c.RgbMode != 1) { _rgbInside.Remove(cfg.Id); return; }
+        if (dist <= c.RearmMeters) return;
+        _rgbInside.Remove(cfg.Id);
+        await BluetoothManager.WriteAsync("PROX_LEAVE:RGB");
     }
 }

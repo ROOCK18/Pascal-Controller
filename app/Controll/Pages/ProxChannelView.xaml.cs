@@ -25,8 +25,12 @@ public partial class ProxChannelView : ContentView
         _init = true;
 
         bool fan = Kind == "Fan";
+        bool rgb = Kind == "Rgb";
         FanValueBox.IsVisible = fan;
-        ActionBox.IsVisible = !fan;
+        ActionBox.IsVisible = Kind == "Relay";
+        RgbBox.IsVisible = rgb;
+        LblDur.IsVisible = !rgb;      // az RGB-nek külön felfutási / világítási / lefutási ideje van
+        DurEntry.IsVisible = !rgb;
         switch (Kind)
         {
             case "Relay":
@@ -36,10 +40,8 @@ public partial class ProxChannelView : ContentView
                 LblIntro.Text = "Amikor a telefon a megadott távolságon belülre ér, a relé végrehajtja ezt (csak Automata állapotban). Az időtartam alatt az automatika nem írja felül.";
                 break;
             case "Rgb":
-                ActionPicker.Items.Add("BE");
-                ActionPicker.Items.Add("KI");
-                LblDur.Text = "Meddig (mp) - 0: marad";
-                LblIntro.Text = "Amikor a telefon a megadott távolságon belülre ér, az RGB ezt csinálja. Az időtartam után az ellenkezőjére áll (0 mp: marad).";
+                RgbModePicker.SelectedIndex = 1;
+                LblIntro.Text = "Amikor a telefon a megadott távolságon belülre ér, az RGB a beállított színnel, a felfutási idővel elkezd világítani (csak Automata állapotban). Az \"Amíg ott vagyok\" módban a távozást az Újraélesedés X métere adja.";
                 break;
             default:
                 LblDur.Text = "Meddig (mp) - 0: marad az érték";
@@ -71,7 +73,13 @@ public partial class ProxChannelView : ContentView
         RearmMetersEntry.Text = c.RearmMeters.ToString("0.#", CultureInfo.InvariantCulture);
         RearmSecEntry.Text = c.RearmSec.ToString(CultureInfo.InvariantCulture);
         EnabledSwitch.IsToggled = c.Enabled;
+        if (Kind == "Rgb") RgbModePicker.SelectedIndex = Math.Clamp(c.RgbMode, 0, 2);
         UpdateRearmVisibility();
+    }
+
+    private void OnRgbModeChanged(object? sender, EventArgs e)
+    {
+        RgbHoldBox.IsVisible = RgbModePicker.SelectedIndex == 2;
     }
 
     private void UpdateRearmVisibility()
@@ -93,7 +101,14 @@ public partial class ProxChannelView : ContentView
     // LOAD_PROX:<csatorna>:<be>:<érték>:<időtartam>[:<művelet>] - az eszközön tárolt rész
     private void OnData(string data)
     {
-        if (string.IsNullOrEmpty(data) || !data.StartsWith("LOAD_PROX:" + ChannelKey + ":")) return;
+        if (string.IsNullOrEmpty(data)) return;
+        if (Kind == "Rgb")
+        {
+            // az RGB közeledése külön parancsot használ (LOAD_RGBPROX); a LOAD_PROX:RGB sort figyelmen kívül hagyjuk
+            if (data.StartsWith("LOAD_RGBPROX:")) OnRgbData(data.Substring(13).Trim());
+            return;
+        }
+        if (!data.StartsWith("LOAD_PROX:" + ChannelKey + ":")) return;
         var p = data.Substring(10).Trim().Split(':');
         if (p.Length < 4) return;
         MainThread.BeginInvokeOnMainThread(() =>
@@ -111,6 +126,37 @@ public partial class ProxChannelView : ContentView
                 {
                     if (!sd.ProxChannels.TryGetValue(ChannelKey, out var cc)) sd.ProxChannels[ChannelKey] = cc = new ProxChannelCfg();
                     cc.Enabled = en;
+                });
+                ProximityService.Refresh();
+                BackgroundHost.Update();
+            }
+        });
+    }
+
+    // LOAD_RGBPROX:<be>:<RRGGBB>:<fényerő>:<felfutás mp>:<mód 0/1/2>:<világítás mp>:<lefutás mp>
+    private void OnRgbData(string body)
+    {
+        var p = body.Split(':');
+        if (p.Length < 7) return;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            bool en = p[0] == "1";
+            int mode = int.TryParse(p[4], out int mo) ? Math.Clamp(mo, 0, 2) : 1;
+            EnabledSwitch.IsToggled = en;
+            RgbColor.Hex = p[1];
+            RgbPctEntry.Text = p[2];
+            RgbRampUpEntry.Text = p[3];
+            RgbModePicker.SelectedIndex = mode;
+            RgbHoldEntry.Text = p[5];
+            RgbRampDownEntry.Text = p[6];
+            var id = DeviceId;
+            if (id != null && BluetoothManager.FindSaved(id) != null)
+            {
+                BluetoothManager.UpdateSaved(id, sd =>
+                {
+                    if (!sd.ProxChannels.TryGetValue(ChannelKey, out var cc)) sd.ProxChannels[ChannelKey] = cc = new ProxChannelCfg();
+                    cc.Enabled = en;
+                    cc.RgbMode = mode;
                 });
                 ProximityService.Refresh();
                 BackgroundHost.Update();
@@ -141,7 +187,8 @@ public partial class ProxChannelView : ContentView
             await page.DisplayAlertAsync("Hibás érték", "A fordulatszám 0 és 100 közötti szám legyen.", "OK");
             return;
         }
-        if (!int.TryParse((DurEntry.Text ?? "").Trim(), out int seconds) || seconds < 0 || seconds > 65535)
+        int seconds = 0;
+        if (Kind != "Rgb" && (!int.TryParse((DurEntry.Text ?? "").Trim(), out seconds) || seconds < 0 || seconds > 65535))
         {
             await page.DisplayAlertAsync("Hibás érték", "Az időtartam 0 és 65535 másodperc közötti szám legyen.", "OK");
             return;
@@ -160,15 +207,42 @@ public partial class ProxChannelView : ContentView
             await page.DisplayAlertAsync("Hibás érték", "Az idő 1 és 86400 másodperc közötti szám legyen.", "OK");
             return;
         }
-        int action = (Kind != "Fan" && ActionPicker.SelectedIndex == 1) ? 2 : 0;
+        int action = (Kind == "Relay" && ActionPicker.SelectedIndex == 1) ? 2 : 0;
+
+        // RGB: szín, fényerő, felfutás, világítási mód, világítási idő, lefutás
+        int rgbPct = 100, rgbUp = 0, rgbHold = 0, rgbDown = 0;
+        int rgbMode = Math.Clamp(RgbModePicker.SelectedIndex, 0, 2);
+        if (Kind == "Rgb")
+        {
+            if (!int.TryParse((RgbPctEntry.Text ?? "").Trim(), out rgbPct) || rgbPct < 0 || rgbPct > 100)
+            {
+                await page.DisplayAlertAsync("Hibás érték", "A fényerő 0 és 100 közötti szám legyen.", "OK");
+                return;
+            }
+            if (!int.TryParse((RgbRampUpEntry.Text ?? "").Trim(), out rgbUp) || rgbUp < 0 || rgbUp > 3600
+                || !int.TryParse((RgbRampDownEntry.Text ?? "").Trim(), out rgbDown) || rgbDown < 0 || rgbDown > 3600)
+            {
+                await page.DisplayAlertAsync("Hibás érték", "A felfutási és a lefutási idő 0 és 3600 másodperc közötti szám legyen.", "OK");
+                return;
+            }
+            if (rgbMode == 2 && (!int.TryParse((RgbHoldEntry.Text ?? "").Trim(), out rgbHold) || rgbHold < 0 || rgbHold > 65535))
+            {
+                await page.DisplayAlertAsync("Hibás érték", "A világítási idő 0 és 65535 másodperc közötti szám legyen.", "OK");
+                return;
+            }
+            if (rgbMode != 2 && int.TryParse((RgbHoldEntry.Text ?? "").Trim(), out int h0)) rgbHold = Math.Clamp(h0, 0, 65535);
+        }
 
         if (enabled) await NotificationService.EnsurePermissionAsync();
 
         BluetoothManager.UpdateSaved(id, sd => sd.ProxChannels[ChannelKey] = new ProxChannelCfg
         {
-            Enabled = enabled, Meters = meters, RearmMode = rearmMode, RearmMeters = rearmMeters, RearmSec = rearmSec
+            Enabled = enabled, Meters = meters, RearmMode = rearmMode, RearmMeters = rearmMeters, RearmSec = rearmSec, RgbMode = rgbMode
         });
-        await BluetoothManager.WriteAsync($"SET_PROX:{ChannelKey}:{(enabled ? 1 : 0)}:{value}:{seconds}:{action}");
+        if (Kind == "Rgb")
+            await BluetoothManager.WriteAsync($"SET_RGBPROX:{(enabled ? 1 : 0)}:{RgbColor.Hex}:{rgbPct}:{rgbUp}:{rgbMode}:{rgbHold}:{rgbDown}");
+        else
+            await BluetoothManager.WriteAsync($"SET_PROX:{ChannelKey}:{(enabled ? 1 : 0)}:{value}:{seconds}:{action}");
 
         ProximityService.Refresh();
         BackgroundHost.Update();

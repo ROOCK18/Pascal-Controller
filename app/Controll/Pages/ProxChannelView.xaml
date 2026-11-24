@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Controll.Pages"
              x:Class="Controll.Pages.ProxChannelView">
 
     <!-- Egy csatorna közeledés-beállítása: legördülő (alapból összecsukva). Lenyitva azonnal látszik minden beállítás,
@@ -32,6 +33,30 @@
             <VerticalStackLayout x:Name="ActionBox" Spacing="4">
                 <Label Text="Mit csináljon" TextColor="Gray" FontSize="12" />
                 <Picker x:Name="ActionPicker" TextColor="White" BackgroundColor="#3A3A3A" />
+            </VerticalStackLayout>
+
+            <!-- RGB: szín, fényerő, felfutás, világítási mód, lefutás (csak az RGB automatikák oldalon) -->
+            <VerticalStackLayout x:Name="RgbBox" Spacing="6" IsVisible="False">
+                <Label Text="Szín (ezzel világít fel)" TextColor="Gray" FontSize="12" />
+                <pages:ColorField x:Name="RgbColor" />
+                <Label Text="Fényerő (%)" TextColor="Gray" FontSize="12" />
+                <Entry x:Name="RgbPctEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="100" />
+                <Label Text="Felfutási idő (mp) - ennyi idő alatt fényesedik fel" TextColor="Gray" FontSize="12" />
+                <Entry x:Name="RgbRampUpEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="5" />
+                <Label Text="Világítási mód" TextColor="Gray" FontSize="12" />
+                <Picker x:Name="RgbModePicker" TextColor="White" BackgroundColor="#3A3A3A" SelectedIndexChanged="OnRgbModeChanged">
+                    <Picker.Items>
+                        <x:String>Csak felkapcsol (utána az automatika dönt)</x:String>
+                        <x:String>Amíg ott vagyok világít</x:String>
+                        <x:String>X mp-ig világít</x:String>
+                    </Picker.Items>
+                </Picker>
+                <VerticalStackLayout x:Name="RgbHoldBox" Spacing="4">
+                    <Label Text="Világítási idő (mp) a felfutás után" TextColor="Gray" FontSize="12" />
+                    <Entry x:Name="RgbHoldEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="60" />
+                </VerticalStackLayout>
+                <Label Text="Lefutási idő (mp) - kikapcsoláskor ennyi idő alatt halványul le (0 = azonnal)" TextColor="Gray" FontSize="12" />
+                <Entry x:Name="RgbRampDownEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="5" />
             </VerticalStackLayout>
 
             <Label x:Name="LblDur" Text="Meddig (mp)" TextColor="Gray" FontSize="12" />

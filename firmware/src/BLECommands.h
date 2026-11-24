@@ -390,6 +390,24 @@ void handleBleCommand(String receivedString) {
     else if (receivedString == "GET_ALERT") {
       handleGetAlert();
     }
+    else if (receivedString.startsWith("SET_RGBTIMER:")) {
+      handleSetRgbTimer(receivedString.substring(13));
+    }
+    else if (receivedString.startsWith("SET_RGBTHERM:")) {
+      handleSetRgbTherm(receivedString.substring(13));
+    }
+    else if (receivedString.startsWith("SET_RGBDAY:")) {
+      handleSetRgbDay(receivedString.substring(11));
+    }
+    else if (receivedString.startsWith("SET_RGBPROX:")) {
+      handleSetRgbProx(receivedString.substring(12));
+    }
+    else if (receivedString == "GET_RGBAUTO") {
+      handleGetRgbAuto();
+    }
+    else if (receivedString == "PROX_LEAVE:RGB") {
+      rgbProxLeaveCmd();
+    }
     else if (receivedString.startsWith("SET_CALERT:")) {
       handleSetChAlert(receivedString.substring(11));
     }
@@ -491,6 +509,7 @@ void handleBleCommand(String receivedString) {
         bool en = body.substring(c + 1).toInt() != 0;
         if (target == "F1") fan1Auto = en;
         else if (target == "F2") fan2Auto = en;
+        else if (target == "RGB") rgbSetAuto(en);
         else if (target == "R1") { if (en && !relay1Auto) { relayTimerR1.timedActive = false; relayTimerR1.cooldownActive = false; relayTimerR1.waitingForReversal = false; } relay1Auto = en; }
         else if (target == "R2") { if (en && !relay2Auto) { relayTimerR2.timedActive = false; relayTimerR2.cooldownActive = false; relayTimerR2.waitingForReversal = false; } relay2Auto = en; }
         markDirty();

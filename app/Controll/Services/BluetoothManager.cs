@@ -36,6 +36,9 @@ public class ProxChannelCfg
     public int    RearmMode   { get; set; } = 1;
     public double RearmMeters { get; set; } = 15;
     public int    RearmSec    { get; set; } = 30;
+    // Csak az RGB-nél: világítási mód (0 = csak felkapcsol, 1 = amíg ott vagyok, 2 = X mp-ig) - az "amíg ott vagyok" módban
+    // az app jelzi az eszköznek, ha a telefon az újraélesedés távolságán (RearmMeters) kívülre ment
+    public int    RgbMode     { get; set; } = 1;
 }
 
 public static class BluetoothManager

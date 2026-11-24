@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Controll.Pages"
              x:Class="Controll.Pages.RGB">
 
     <VerticalStackLayout Spacing="10" Padding="12">
@@ -118,8 +119,8 @@
         </VerticalStackLayout>
 
         <!-- HSV kör + pötty -->
-        <Grid HeightRequest="300"
-              WidthRequest="300"
+        <Grid HeightRequest="270"
+              WidthRequest="270"
               HorizontalOptions="Center"
               VerticalOptions="Center"
               BackgroundColor="Transparent">
@@ -147,7 +148,10 @@
             </Border>
         </Grid>
 
-        <!-- RGB automatikák (külön oldal, ott állítható a közeledés) -->
+        <!-- RGB Automata / Kézi: Automata állapotban az RGB automatikák (időzítő, görbék, közeledés) vezérelnek -->
+        <pages:RgbAutoToggle HorizontalOptions="Center" />
+
+        <!-- RGB automatikák (külön oldal: időzítő, görbék, közeledés) -->
         <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
             <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRgbAutoClicked"/></Border.GestureRecognizers>
             <Label Text="RGB automatikák" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>

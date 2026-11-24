@@ -124,6 +124,59 @@ struct AlertCfg {
 };
 AlertCfg alertCfg;
 
+// ============================================================
+// RGB automatikák (lásd RgbAuto.h): időzítő, hőmérséklet-görbe, napszak-görbe, közeledés
+// ============================================================
+struct RgbSlot {                 // időzítő esemény: adott időpontban be/ki, szín, fényerő, felfutás
+  uint8_t h = 0, m = 0;
+  uint8_t on = 1;                // 1 = BE, 0 = KI
+  uint8_t r = 255, g = 255, b = 255;
+  uint8_t pct = 100;             // fényerő %
+  uint16_t rampSec = 0;          // felfutási (BE) / lefutási (KI) idő
+};
+struct RgbTimerCfg {
+  bool enabled = false;
+  uint8_t days = 0x7F;           // 0. bit = hétfő ... 6. bit = vasárnap
+  uint8_t count = 0;
+  RgbSlot slots[5];
+};
+struct RgbThermPt {              // hőmérséklet-görbe pont
+  float temp = 20.0f;
+  uint8_t r = 255, g = 255, b = 255;
+  uint8_t pct = 100;
+};
+struct RgbThermCfg {
+  bool enabled = false;
+  uint8_t sensor = 1;            // 1 = NTC1, 2 = NTC2
+  uint8_t count = 0;
+  RgbThermPt pts[5];
+};
+struct RgbDayPt {                // napszak-görbe pont
+  uint16_t minute = 0;           // 0..1439
+  uint8_t r = 255, g = 255, b = 255;
+  uint8_t pct = 100;
+};
+struct RgbDayCfg {
+  bool enabled = false;
+  uint8_t days = 0x7F;
+  uint8_t count = 0;
+  RgbDayPt pts[10];
+};
+struct RgbProxCfg {              // közeledés: X méteren belülre érve felfut a beállított színnel
+  bool enabled = false;
+  uint8_t r = 255, g = 255, b = 255;
+  uint8_t pct = 100;
+  uint16_t rampUpSec = 5;        // felfutási idő
+  uint8_t mode = 1;              // 0 = csak felkapcsol, 1 = amíg ott vagyok, 2 = X mp-ig világít
+  uint16_t holdSec = 60;         // mode 2: világítási idő a felfutás után
+  uint16_t rampDownSec = 5;      // lefutási idő kikapcsoláskor
+};
+bool rgbAuto = false;            // Automata (true) / Kézi (false)
+RgbTimerCfg rgbTimerCfg;
+RgbThermCfg rgbThermCfg;
+RgbDayCfg   rgbDayCfg;
+RgbProxCfg  rgbProxCfg;
+
 // Csatornánkénti figyelmeztetés (0=F1, 1=F2, 2=R1, 3=R2): lásd Alerts.h. A csatorna szenzora a termosztátjáé.
 struct ChAlert {
   bool enabled = false;   // a csatorna figyelmeztetései be vannak kapcsolva

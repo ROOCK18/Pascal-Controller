@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.4.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.5.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,7 +18,7 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.4.0)
+## Firmware (v5.5.0)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
@@ -72,13 +72,27 @@ indításakor egyszer meg kell nyitni). A távolság a BLE jelerősségből (RSS
 - **Beállítások → Automatikus csatlakozás közeledéskor:** csak annyi, hogy az app az eszköz X méteres közelében magától csatlakozik. Vezérlés nincs itt.
 - **Csatornánkénti közeledés** a vezérlés helyén: Vezérlés → Automatikák beállítása → a Ventilátor 1-2 és Relé 1-2 kártyák alján egy
   "Közeledés" legördülő (reléknél a Kapuzás alatt, ventilátornál a kártya legalján). Lenyitva azonnal látszik minden beállítás, legfelül a
-  *bekapcsolva* kapcsolóval: *távolság (méter)*, *mit csináljon* (ventilátor: fordulatszám %; relé/RGB: BE vagy KI),
+  *bekapcsolva* kapcsolóval: *távolság (méter)*, *mit csináljon* (ventilátor: fordulatszám %; relé: BE vagy KI),
   *meddig* (mp), *újraélesedés* (teljes kapcsolatszakadás után / ha X méteren kívül vagyok / X mp múlva, ha X méteren kívül vagyok).
-  Az RGB-nek külön oldala van: RGB oldal → "RGB automatikák" gomb → ugyanez a Közeledés legördülő.
+  Az RGB-nek külön oldala van: RGB oldal → "RGB automatikák" gomb (lásd lent).
 - **Szabály:** az eszköz csak azt a ventilátort/relét kapcsolja, amelyik **Automata** állapotban van (mint a többi automatika); az RGB-nek nincs
   Automata/Kézi módja. Ventilátor: az időtartam végén visszaáll az előző értékre; relé: az időtartam alatt az automatika nem írja felül, utána átveszi;
   RGB: az időtartam után az ellenkezőjére áll (0 mp: marad). Reléknél a 0 mp a relé "Kapuzás" beállított ideje.
 - A távolságot és az újraélesedést az app tárolja (az app méri), a "mit/meddig" és a bekapcsolás az eszközön is tárolódik (`SET_PROX`, `PROX_TRIGGER:<csatorna>`). Firmware 5.3.1 szükséges.
+
+**RGB automatikák (v5.5.0):** az RGB oldalon (és az RGB automatikák oldal tetején) egy **Automata / Kézi** kapcsoló van; az automatikák
+csak Automata állapotban működnek, Kézi állapotban egyik sem ír az RGB-re. RGB oldal → "RGB automatikák" gomb: négy legördülő
+(mindegyik lenyitva azonnal mutat mindent, legfelül a *bekapcsolva* kapcsolóval):
+- **Időzítő:** napok (H-V), max. 5 slot: *időpont, BE/KI, szín, fényerő %, átmeneti idő* (BE: felfutás, KI: lefutás). A legutóbbi elmúlt mai esemény érvényes a következőig.
+- **Hőmérséklet-görbe:** forrás (1. vagy 2. hőmérő), max. 5 pont: *hőmérséklet, szín, fényerő %*; a pontok között folyamatos átmenet.
+- **Napszak-görbe:** napok, max. 10 pont: *napszak (óó:pp), szín, fényerő %*; a pontok között folyamatos átmenet, éjfélen át körbeér; indítás nincs, magától fut.
+- **Közeledés:** X méteren belülre érve a beállított *színnel* és *fényerővel* elkezd világítani a *felfutási idővel*. *Világítási mód:* csak felkapcsol
+  (utána a többi automatika dönt) / amíg ott vagyok világít (a távozást az Újraélesedés X métere adja; ha a kapcsolat 15 mp-ig megszakad, az eszköz távozottnak veszi) /
+  X mp-ig világít; a kikapcsolás a *lefutási idővel* történik.
+
+Elsőbbség: **közeledés → időzítő → napszak-görbe → hőmérséklet-görbe**. Az eszköz az átmeneteket lineárisan, az átmenet-motoron át adja ki.
+BLE: `SET_AUTO:RGB:<0/1>`, `SET_RGBTIMER`, `SET_RGBTHERM`, `SET_RGBDAY`, `SET_RGBPROX`, `GET_RGBAUTO` (válasz: `LOAD_RGBAUTO/TIMER/THERM/DAY/PROX`), `PROX_LEAVE:RGB`.
+Az eddigi RGB-közeledés (BE/KI az időtartamra) megszűnt: helyét a fenti Közeledés vette át, és csak Automata állapotban működik.
 
 **Figyelmeztetések csatornánként (v5.4.0):** Vezérlés → Automatikák beállítása → a Ventilátor 1-2 és Relé 1-2 kártyák alján, a Közeledés alatt egy "Figyelmeztetés" legördülő (bekapcsolóval): *szenzorhiba*, *túl alacsony hőmérséklet* (alsó határ), *túl magas hőmérséklet* (felső határ). A csatorna szenzora a termosztátjáé (1. vagy 2. hőmérő). Az eszköz `CALERT:<csatorna>:<állapot>:<érték>` sort küld (`SET_CALERT` / `GET_CALERT`), az app ebből a csatorna nevével ír értesítést. Az RGB-nek nincs szenzora, ott nincs figyelmeztetés. A Beállítások → Értesítések panel (a két hőmérőre közös riasztás) változatlan.
 
