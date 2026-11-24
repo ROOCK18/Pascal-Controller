@@ -1,4 +1,6 @@
-﻿namespace Controll;
+﻿using Controll.Services;
+
+namespace Controll;
 
 public partial class App : Application
 {
@@ -15,6 +17,9 @@ public partial class App : Application
     {
         base.OnStart();
         BluetoothManager.Initialize(Plugin.BLE.CrossBluetoothLE.Current.Adapter);
+        AlertService.Initialize();          // riasztások -> telefonos értesítés
+        ProximityService.Refresh();         // közeledés érzékelés (ha be van állítva)
+        BackgroundHost.Update();            // háttérszolgáltatás (közeledés / riasztás-figyelés)
         BluetoothManager.StartAutoReconnect(allowPicker: true);
     }
 

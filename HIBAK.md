@@ -82,3 +82,9 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - Megjegyzés: szenzorhibánál (NaN) a termosztátrelé KI-re áll; a ventilátorgörbe ilyenkor a görbe utolsó (legnagyobb) pontját használja – szándékosan biztonságos oldal.
 - Hardveren nem próbáltam (BLE+PIN, OTA, MQTT, DHT11, PT1000, új kijelző-kinézet, propeller-sebesség).
 - **N7** (súlyos, javítva): a Beállítások menü 9 elemű, de a `drawMenuList()` csak 8 soros tömböt használt, ezért a lista alsó elemeinél (BLE védelem, Factory reset, Vissza) tömbön kívüli olvasás → az eszköz újraindult. Most 12 soros a tömb, és a szám le van korlátozva.
+
+## 5.2.0 – új funkciók: ismert korlátok
+- A közeledés-távolság a BLE jelerősségből becsült, nem pontos mérés (falak, test, telefon: több méter eltérés).
+- A háttérfigyelés Android előtér-szolgáltatás: az appot telefon-újraindítás után egyszer meg kell nyitni.
+- A riasztás-értesítés csak kapcsolódott (hatótávon belüli) telefonra érkezik; távoli értesítéshez MQTT/Home Assistant kell (a riasztás MQTT-s bejelentése még nincs megvalósítva).
+- Hardveren / telefonon nem próbáltam: közeledés-csatlakozás, relé-impulzus, ALERT értesítés, előtér-szolgáltatás.

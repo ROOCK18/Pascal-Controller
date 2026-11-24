@@ -78,7 +78,7 @@ String buildPositionText(uint8_t pos) {
 // ---------------- Objektumok ----------------
 // Az app (Data oldal) kártyás kinézete: sötét kártyák 1px kerettel, halvány felirat,
 // piros érték; aktív relé/ventilátor/kapcsoló = piros kártya, inaktív = #3A3A3C.
-static lv_obj_t *idLeft, *idCenter, *idRight, *idWifi, *idBt, *idMode;
+static lv_obj_t *idLeft, *idCenter, *idRight, *idWifi, *idBt, *idMode, *idAlert;
 static lv_obj_t *idTile[2], *idTileTitle[2], *idTileVal[2];
 static lv_obj_t *idFanCard[2], *idFanName[2], *idFanSpin[2], *idFanVal[2];
 static lv_obj_t *idRelCard[2], *idRelName[2], *idRelTxt[2];
@@ -179,6 +179,8 @@ void ui_idle_build() {
   lv_obj_set_flex_align(idRight, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_column(idRight, 6, 0);
   lv_obj_align(idRight, LV_ALIGN_TOP_RIGHT, -6, 0);
+  idAlert = ui_label(idRight, FONT_S, PAL_ACCENT, "!");
+  lv_obj_add_flag(idAlert, LV_OBJ_FLAG_HIDDEN);   // riasztás esetén piros felkiáltójel
   idWifi = ui_label(idRight, FONT_S, PAL_TEXT, LV_SYMBOL_WIFI);
   idBt = ui_label(idRight, FONT_S, PAL_BLUE, LV_SYMBOL_BLUETOOTH);
   idMode = ui_label(idRight, FONT_S, PAL_ACCENT, "");
@@ -255,7 +257,7 @@ void displayInfo() {
   static int lastLayoutMode = -1;
   static String lastLeft = "\x01", lastCenter = "\x01";
   static int lastMode = -1;
-  static int lastBt = -1, lastWifi = -1;
+  static int lastBt = -1, lastWifi = -1, lastAlert = -1;
   static int lastR[2] = { -1, -1 };
   static float lastT1 = -999, lastT2 = -999, lastHum = -999;
   static int lastSw1 = -1, lastSw2 = -1;
@@ -267,7 +269,7 @@ void displayInfo() {
   if (force) {
     force = false;
     lastLayoutMode = -1; lastLeft = "\x01"; lastCenter = "\x01"; lastMode = -1;
-    lastBt = lastWifi = lastSw1 = lastSw2 = -1; lastR[0] = lastR[1] = -1;
+    lastBt = lastWifi = lastAlert = lastSw1 = lastSw2 = -1; lastR[0] = lastR[1] = -1;
     lastT1 = lastT2 = lastHum = -999; lastFan[0] = lastFan[1] = -1; lastRgb = 0xFFFFFFFF;
   }
 
@@ -294,6 +296,11 @@ void displayInfo() {
   if (btNow != lastBt) {
     lastBt = btNow;
     if (btNow) lv_obj_remove_flag(idBt, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(idBt, LV_OBJ_FLAG_HIDDEN);
+  }
+  int alertNow = alertActive() ? 1 : 0;
+  if (alertNow != lastAlert) {
+    lastAlert = alertNow;
+    if (alertNow) lv_obj_remove_flag(idAlert, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(idAlert, LV_OBJ_FLAG_HIDDEN);
   }
   if (currentMode != lastMode) { lastMode = currentMode; ui_set_text(idMode, MODE_SHORT[currentMode]); }
 

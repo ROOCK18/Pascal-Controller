@@ -384,6 +384,24 @@ void handleBleCommand(String receivedString) {
     else if (receivedString == "GET_COMP") {
       handleGetComp();
     }
+    else if (receivedString.startsWith("SET_ALERT:")) {
+      handleSetAlert(receivedString.substring(10));
+    }
+    else if (receivedString == "GET_ALERT") {
+      handleGetAlert();
+    }
+    else if (receivedString.startsWith("PULSE:")) {
+      // PULSE:<R1|R2>:<mp>  - a relé <mp> másodpercre bekapcsol (0 = a "Kapuzás" beállított ideje), majd kikapcsol
+      String body = receivedString.substring(6);
+      int c = body.indexOf(':');
+      if (c > 0) {
+        int relay = (body.substring(0, c) == "R2") ? 2 : 1;
+        long sec = body.substring(c + 1).toInt();
+        if (sec <= 0) sec = (relay == 1 ? relayTimerR1 : relayTimerR2).onDurationSec;
+        startRelayPulse(relay, (uint32_t)constrain(sec, 1L, 3600L));
+        notifyLine("PULSE_OK");
+      }
+    }
     else if (receivedString.startsWith("SET_DISPLAY:")) {
       handleSetDisplay(receivedString.substring(12));
     }

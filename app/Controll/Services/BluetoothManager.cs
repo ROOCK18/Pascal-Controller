@@ -16,6 +16,12 @@ public class SavedDevice
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string Location { get; set; } = "";
+
+    // ── Közeledés érzékelés (ProximityService) ──
+    public bool   ProxEnabled  { get; set; }
+    public double ProxMeters   { get; set; } = 10;          // ennyi méteren (becsült) belül csatlakozik / hajtja végre a műveletet
+    public string ProxAction   { get; set; } = "none";      // none | r1pulse | r2pulse | r1on | r1off | r2on | r2off | rgbon | rgboff
+    public int    ProxPulseSec { get; set; }                // impulzus ideje; 0 = a relé "Kapuzás" beállított ideje
 }
 
 public static class BluetoothManager
@@ -210,6 +216,7 @@ public static class BluetoothManager
             return;
         }
         if (!Guid.TryParse(targetId, out var id)) return;
+        if (saved.Any(s => s.Id == targetId && s.ProxEnabled)) return;   // a közeledés-érzékelés csatlakoztat (ProximityService)
         CancellationToken ct;
         lock (_reconnectLock)
         {
@@ -303,6 +310,8 @@ public static class BluetoothManager
             await WriteAsync($"TIME:{n.Hour:D2}:{n.Minute:D2}:{n.Second:D2}");
             await Task.Delay(150);
             await WriteAsync("GET_STATE");
+            await Task.Delay(150);
+            await WriteAsync("GET_ALERT");   // az aktív riasztások újraküldése (AlertService)
             return true;
         }
         catch (Exception ex)
@@ -510,6 +519,33 @@ public static class BluetoothManager
         if (s == null) { s = new SavedDevice { Id = id, Name = name ?? "" }; list.Add(s); }
         s.Location = location ?? "";
         SaveDeviceList(list);
+    }
+
+    // Egy mentett eszköz módosítása (pl. közeledés-beállítások).
+    public static void UpdateSaved(string id, Action<SavedDevice> change)
+    {
+        var list = GetSavedDevices();
+        var s = list.FirstOrDefault(d => d.Id == id);
+        if (s == null) return;
+        change(s);
+        SaveDeviceList(list);
+    }
+
+    // Az automatikus csatlakozás engedélyezett-e (a felhasználó kézzel lecsatlakozás után kikapcsolja).
+    public static bool AutoConnectAllowed => _autoReconnectEnabled;
+
+    // Közeledés-érzékeléskor: csatlakozás a már látott eszközhöz (a háttér-újracsatlakozás előtte leáll).
+    public static async Task<bool> ConnectNearbyAsync(IDevice device)
+    {
+        if (_adapter == null || IsConnected) return IsConnected;
+        StopAutoReconnect();
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            await Adapter.ConnectToDeviceAsync(device, new ConnectParameters(false, true), cts.Token);
+            return await SetupConnectionAsync(device, auto: true);
+        }
+        catch (Exception ex) { Debug.WriteLine($"Közeledés-csatlakozás: {ex.Message}"); return false; }
     }
 
     public static void ForgetSaved(string id)

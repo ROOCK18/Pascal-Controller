@@ -208,6 +208,52 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <!-- ══════════ ÉRTESÍTÉSEK (RIASZTÁSOK) - lenyitható ══════════ -->
+                <Border x:Name="AlertPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15" IsVisible="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Értesítések (riasztások)" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
+                            <Label Grid.Column="1" x:Name="AlertExpandIcon" Text="&#9660;" TextColor="{StaticResource White}" FontSize="14" VerticalOptions="Center" />
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnAlertHeaderTapped"/></Grid.GestureRecognizers>
+                        </Grid>
+                        <VerticalStackLayout x:Name="AlertDetailsPanel" Spacing="10" IsVisible="False">
+                            <Label Text="Az eszköz értesítést küld a telefonra, ha a hőmérő meghibásodik, vagy a hőmérséklet kilép a megadott határok közül. Az értesítés akkor érkezik meg, ha a telefon kapcsolatban van az eszközzel (Bluetooth hatótávon belül, a háttérfigyelés bekapcsolva). Távoli értesítéshez használd az MQTT / Home Assistant kapcsolatot." TextColor="#AEAEB2" FontSize="12" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Riasztások bekapcsolva" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" x:Name="AlertEnabledSwitch" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Szenzorhiba (szakadt szál, rövidzár, értelmezhetetlen érték)" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" x:Name="AlertFaultSwitch" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Túl alacsony hőmérséklet" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" x:Name="AlertLowSwitch" />
+                            </Grid>
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Alsó határ (°C) - ez alatt riaszt" TextColor="#AEAEB2" FontSize="12" />
+                                <Entry x:Name="AlertLowEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="5" />
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Túl magas hőmérséklet" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" x:Name="AlertHighSwitch" />
+                            </Grid>
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Felső határ (°C) - ez felett riaszt" TextColor="#AEAEB2" FontSize="12" />
+                                <Entry x:Name="AlertHighEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="35" />
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="Háttérben is figyeljen (állandó értesítés a sávban)" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" x:Name="AlertBgSwitch" />
+                            </Grid>
+                            <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveAlertClicked"/></Border.GestureRecognizers>
+                                <Label Text="ÉRTESÍTÉSEK MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <!-- ══════════ KIJELZŐ - lenyitható ══════════ -->
                 <Border x:Name="DisplayPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15" IsVisible="False">
                     <VerticalStackLayout Spacing="10">
@@ -426,6 +472,55 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <!-- ══════════ KÖZELEDÉS ÉRZÉKELÉS - lenyitható, mindig látszik ══════════ -->
+                <Border x:Name="ProximityPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Közeledés érzékelés" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
+                            <Label Grid.Column="1" x:Name="ProxExpandIcon" Text="&#9660;" TextColor="{StaticResource White}" FontSize="14" VerticalOptions="Center" />
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnProxHeaderTapped"/></Grid.GestureRecognizers>
+                        </Grid>
+                        <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
+                            <Label Text="Ha az eszköz a megadott távolságon belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet (pl. kapu nyitása). A távolság a Bluetooth jelerősségből becsült érték: falak, test és környezet miatt több méteres eltérés is lehet. A működéshez a háttérfigyelés (állandó értesítés) fut." TextColor="#AEAEB2" FontSize="12" />
+                            <Label x:Name="LblProxEmpty" Text="Előbb csatlakozz egy eszközhöz, hogy mentett eszköz legyen." TextColor="#AEAEB2" FontSize="12" />
+                            <VerticalStackLayout x:Name="ProxFields" Spacing="10">
+                                <Label Text="Eszköz" TextColor="#AEAEB2" FontSize="12" />
+                                <Picker x:Name="ProxDevicePicker" Title="Válassz eszközt" SelectedIndexChanged="OnProxDeviceChanged" />
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0" Text="Közeledés érzékelés ennél az eszköznél" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                    <Switch Grid.Column="1" x:Name="ProxEnabledSwitch" />
+                                </Grid>
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Távolság (méter) - ezen belül csatlakozik és hajtja végre a műveletet" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="ProxMetersEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="10" />
+                                </VerticalStackLayout>
+                                <Label Text="Művelet" TextColor="#AEAEB2" FontSize="12" />
+                                <Picker x:Name="ProxActionPicker" Title="Válassz műveletet">
+                                    <Picker.Items>
+                                        <x:String>Csak csatlakozás (nincs művelet)</x:String>
+                                        <x:String>Relé 1 impulzus (pl. kapu)</x:String>
+                                        <x:String>Relé 2 impulzus</x:String>
+                                        <x:String>Relé 1 BE</x:String>
+                                        <x:String>Relé 1 KI</x:String>
+                                        <x:String>Relé 2 BE</x:String>
+                                        <x:String>Relé 2 KI</x:String>
+                                        <x:String>RGB BE</x:String>
+                                        <x:String>RGB KI</x:String>
+                                    </Picker.Items>
+                                </Picker>
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Impulzus ideje (mp) - 0: a relé Kapuzás beállított ideje" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="ProxPulseEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="0" />
+                                </VerticalStackLayout>
+                                <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked"/></Border.GestureRecognizers>
+                                    <Label Text="KÖZELEDÉS BEÁLLÍTÁSOK MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <!-- ══════════ ESZKÖZ KERESÉSE - csak akkor látszik, ha NINCS csatlakozás ══════════ -->
                 <VerticalStackLayout x:Name="DeviceSearchSection" Spacing="12">
                     <Border x:Name="BtnSearch"
@@ -435,6 +530,9 @@
                     </Border>
 
                     <ActivityIndicator x:Name="ScanIndicator" IsRunning="False" Color="{StaticResource PrimaryRed}" HorizontalOptions="Center" />
+
+                    <Label x:Name="LblDeviceListHeader" Text="Mentett eszközök" IsVisible="False"
+                           TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
 
                     <CollectionView x:Name="DevicesListView" SelectionMode="None">
                         <CollectionView.ItemTemplate>

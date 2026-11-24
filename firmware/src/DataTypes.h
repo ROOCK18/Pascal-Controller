@@ -113,6 +113,17 @@ ThermFan   thermF1, thermF2;
 ThermRelay thermR1, thermR2;
 RelayTimer relayTimerR1, relayTimerR2;
 
+// Riasztás (értesítés a telefonra): lásd Alerts.h
+struct AlertCfg {
+  bool enabled = false;   // fő kapcsoló
+  bool lowOn = false;     // túl alacsony hőmérséklet
+  bool highOn = false;    // túl magas hőmérséklet
+  bool faultOn = true;    // szenzorhiba (szakadt/rövidzár/értelmezhetetlen)
+  float low = 5.0f;       // alsó határ (°C)
+  float high = 35.0f;     // felső határ (°C)
+};
+AlertCfg alertCfg;
+
 // ============================================================
 // KAPCSOLÓ(+HŐMÉRSÉKLET)-LOGIKA (mode=3 vagy mode=4), CSATORNÁNKÉNT
 // axis2Mode: 0 = a 2. tengely K2 kapcsoló (mode 4, "2 kapcsoló")

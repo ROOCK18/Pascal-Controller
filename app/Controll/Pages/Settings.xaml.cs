@@ -117,6 +117,9 @@ public partial class Settings : ContentPage
         _deviceList.Clear();
         foreach (var r in rows) _deviceList.Add(r);
         _selectedDeviceRow = null;
+        LblDeviceListHeader.Text = saved.Count > 0 ? "Mentett eszközök" : "Talált eszközök";
+        LblDeviceListHeader.IsVisible = rows.Count > 0;
+        RefreshProximityPanel();
     }
 
     // Hosszú nyomás (Android) a soron -> hely szerkesztése. Más platformon a ✎ gomb szolgál erre.
@@ -248,6 +251,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_MQTT");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_ALERT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -291,6 +296,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_MQTT");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_ALERT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -332,6 +339,8 @@ public partial class Settings : ContentPage
                 ParseLoadSens(d.Substring(10));
             else if (d.StartsWith("LOAD_MQTT:"))
                 ParseLoadMqtt(d.Substring(10));
+            else if (d.StartsWith("LOAD_ALERT:"))
+                ParseLoadAlert(d.Substring(11));
             else if (d.StartsWith("LOAD_DISPLAY:"))
                 ParseLoadDisplay(d.Substring(13));
             else if (d.StartsWith("LOAD_DATEPOS:"))
@@ -448,6 +457,140 @@ public partial class Settings : ContentPage
         await BluetoothManager.WriteAsync($"SET_COMP:{n1.ToString("F1", CultureInfo.InvariantCulture)}:{n2.ToString("F1", CultureInfo.InvariantCulture)}");
         await DisplayAlertAsync("Siker", "Kompenzáció elmentve.", "OK");
     }
+
+
+    // ════════════════════════════════════════
+    // KÖZELEDÉS ÉRZÉKELÉS (app-oldali, mentett eszközönként)
+    // ════════════════════════════════════════
+    private readonly List<string> _proxIds = new();
+    private bool _proxLoading;
+    private static readonly string[] ProxActionKeys =
+        { "none", "r1pulse", "r2pulse", "r1on", "r1off", "r2on", "r2off", "rgbon", "rgboff" };
+
+    private void RefreshProximityPanel()
+    {
+        _proxLoading = true;
+        try
+        {
+            string? keepId = ProxDevicePicker.SelectedIndex >= 0 && ProxDevicePicker.SelectedIndex < _proxIds.Count
+                ? _proxIds[ProxDevicePicker.SelectedIndex] : null;
+            var saved = BluetoothManager.GetSavedDevices();
+            _proxIds.Clear();
+            ProxDevicePicker.Items.Clear();
+            foreach (var s in saved)
+            {
+                _proxIds.Add(s.Id);
+                ProxDevicePicker.Items.Add(BluetoothManager.DisplayNameFor(s.Id, s.Name));
+            }
+            bool any = saved.Count > 0;
+            ProxFields.IsVisible = any;
+            LblProxEmpty.IsVisible = !any;
+            if (any)
+            {
+                int idx = keepId != null ? _proxIds.IndexOf(keepId) : 0;
+                ProxDevicePicker.SelectedIndex = idx < 0 ? 0 : idx;
+                LoadProxFields();
+            }
+        }
+        finally { _proxLoading = false; }
+    }
+
+    private void LoadProxFields()
+    {
+        int i = ProxDevicePicker.SelectedIndex;
+        if (i < 0 || i >= _proxIds.Count) return;
+        var sd = BluetoothManager.FindSaved(_proxIds[i]);
+        if (sd == null) return;
+        ProxEnabledSwitch.IsToggled = sd.ProxEnabled;
+        ProxMetersEntry.Text = sd.ProxMeters.ToString("0.#", CultureInfo.InvariantCulture);
+        int a = Array.IndexOf(ProxActionKeys, sd.ProxAction);
+        ProxActionPicker.SelectedIndex = a < 0 ? 0 : a;
+        ProxPulseEntry.Text = sd.ProxPulseSec.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private void OnProxDeviceChanged(object? s, EventArgs e)
+    {
+        if (_proxLoading) return;
+        LoadProxFields();
+    }
+
+    private async void OnSaveProxClicked(object sender, EventArgs e)
+    {
+        int i = ProxDevicePicker.SelectedIndex;
+        if (i < 0 || i >= _proxIds.Count) return;
+        if (!double.TryParse((ProxMetersEntry.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double meters)
+            || meters < 1 || meters > 100)
+        {
+            await DisplayAlertAsync("Hibás érték", "A távolság 1 és 100 méter közötti szám legyen.", "OK");
+            return;
+        }
+        if (!int.TryParse((ProxPulseEntry.Text ?? "0").Trim(), out int pulse) || pulse < 0 || pulse > 3600)
+        {
+            await DisplayAlertAsync("Hibás érték", "Az impulzus ideje 0 és 3600 másodperc közötti szám legyen (0: a relé Kapuzás beállított ideje).", "OK");
+            return;
+        }
+        string action = ProxActionKeys[Math.Clamp(ProxActionPicker.SelectedIndex, 0, ProxActionKeys.Length - 1)];
+        bool enabled = ProxEnabledSwitch.IsToggled;
+
+        if (enabled)
+        {
+            // Értesítési engedély (Android 13+): a háttérfigyelés állandó értesítést mutat, és a végrehajtásról is értesít
+            await NotificationService.EnsurePermissionAsync();
+        }
+        BluetoothManager.UpdateSaved(_proxIds[i], sd =>
+        {
+            sd.ProxEnabled = enabled; sd.ProxMeters = meters; sd.ProxAction = action; sd.ProxPulseSec = pulse;
+        });
+        ProximityService.Refresh();
+        BackgroundHost.Update();
+        BluetoothManager.StartAutoReconnect();
+        await DisplayAlertAsync("Siker", enabled
+            ? $"Elmentve. Az app {meters:0.#} méteren belül csatlakozik, művelet: {ProximityService.ActionLabel(action)}."
+            : "Elmentve. A közeledés érzékelés ennél az eszköznél ki van kapcsolva.", "OK");
+    }
+
+    private void OnProxHeaderTapped(object s, EventArgs e) => ToggleSection(ProxDetailsPanel, ProxExpandIcon);
+
+    // ════════════════════════════════════════
+    // ÉRTESÍTÉSEK (RIASZTÁSOK) - az eszközön tárolt határok
+    // ════════════════════════════════════════
+    // LOAD_ALERT:<be>:<alsóBe>:<alsó>:<felsőBe>:<felső>:<szenzorhiba>
+    private void ParseLoadAlert(string body)
+    {
+        var p = body.Split(':');
+        if (p.Length < 6) return;
+        AlertEnabledSwitch.IsToggled = p[0] == "1";
+        AlertLowSwitch.IsToggled = p[1] == "1";
+        AlertLowEntry.Text = p[2];
+        AlertHighSwitch.IsToggled = p[3] == "1";
+        AlertHighEntry.Text = p[4];
+        AlertFaultSwitch.IsToggled = p[5] == "1";
+        AlertBgSwitch.IsToggled = BackgroundHost.MonitorAlerts;
+        AlertPanel.IsVisible = true;
+    }
+
+    private async void OnSaveAlertClicked(object sender, EventArgs e)
+    {
+        if (!CheckBLE()) return;
+        float low = ParseFloatInvariant(AlertLowEntry.Text, 5f);
+        float high = ParseFloatInvariant(AlertHighEntry.Text, 35f);
+        if (AlertLowSwitch.IsToggled && AlertHighSwitch.IsToggled && low >= high)
+        {
+            await DisplayAlertAsync("Hibás érték", "Az alsó határnak kisebbnek kell lennie a felsőnél.", "OK");
+            return;
+        }
+        if (AlertEnabledSwitch.IsToggled) await NotificationService.EnsurePermissionAsync();
+
+        string F(float v) => v.ToString("F1", CultureInfo.InvariantCulture);
+        await BluetoothManager.WriteAsync(
+            $"SET_ALERT:{(AlertEnabledSwitch.IsToggled ? 1 : 0)}:{(AlertLowSwitch.IsToggled ? 1 : 0)}:{F(low)}:" +
+            $"{(AlertHighSwitch.IsToggled ? 1 : 0)}:{F(high)}:{(AlertFaultSwitch.IsToggled ? 1 : 0)}");
+        BackgroundHost.MonitorAlerts = AlertBgSwitch.IsToggled;
+        BackgroundHost.Update();
+        await DisplayAlertAsync("Siker", "Értesítési beállítások elmentve.", "OK");
+    }
+
+    private void OnAlertHeaderTapped(object s, EventArgs e) => ToggleSection(AlertDetailsPanel, AlertExpandIcon);
 
     // ════════════════════════════════════════
     // OKOSOTTHON (MQTT / HOME ASSISTANT)
@@ -1212,6 +1355,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_MQTT");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_ALERT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -1241,6 +1386,7 @@ public partial class Settings : ContentPage
             CompPanel.IsVisible = false;
             SensBlock1.IsVisible = false; SensBlock2.IsVisible = false; SaveSensButton.IsVisible = false;
             MqttPanel.IsVisible = false;
+            AlertPanel.IsVisible = false;
             DisplayPanel.IsVisible = false;
             DateTimePanel.IsVisible = false;
             CollapseAllSections();
@@ -1253,6 +1399,7 @@ public partial class Settings : ContentPage
     {
         CompDetailsPanel.IsVisible = false; CompExpandIcon.Text = "▼";
         MqttDetailsPanel.IsVisible = false; MqttExpandIcon.Text = "▼";
+        AlertDetailsPanel.IsVisible = false; AlertExpandIcon.Text = "▼";
         DisplayDetailsPanel.IsVisible = false; DisplayExpandIcon.Text = "▼";
         DateTimeDetailsPanel.IsVisible = false; DateTimeExpandIcon.Text = "▼";
         WifiDetailsPanel.IsVisible = false; WifiExpandIcon.Text = "▼";
@@ -1352,6 +1499,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_MQTT");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_ALERT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -1395,7 +1544,7 @@ public partial class Settings : ContentPage
     {
         if (string.IsNullOrWhiteSpace(data)) return;
         var d = data.Trim();
-        if ((d.StartsWith("STATE:") || d.StartsWith("LOAD_")) && !d.StartsWith("LOAD_MQTT:"))
+        if ((d.StartsWith("STATE:") || d.StartsWith("LOAD_")) && !d.StartsWith("LOAD_MQTT:") && !d.StartsWith("LOAD_ALERT:"))
             _capturedSchemeLines?.Add(d);
     }
 

@@ -146,6 +146,32 @@ bool relayDirectionGoverned(RelayTimer &rt, bool targetState) {
   return !targetState;                          // KI: csak a KI-re kapcsolás felügyelt
 }
 
+// ── Relé-impulzus (pl. kapunyitás a telefonról): a relé N másodpercre bekapcsol, majd kikapcsol. ──
+// Az impulzus alatt az automatika (termosztát/logika/időzítő) nem tudja kikapcsolni; a végén a relé KI lesz,
+// utána az automatika (ha aktív) a következő ciklusban újra átveszi.
+static bool relayPulseActive[2] = { false, false };
+static unsigned long relayPulseEnd[2] = { 0, 0 };
+
+void startRelayPulse(int relayNum, uint32_t seconds) {
+  int i = (relayNum == 2) ? 1 : 0;
+  relayPulseEnd[i] = millis() + seconds * 1000UL;
+  relayPulseActive[i] = true;
+  digitalWrite(i == 0 ? RELAY1_PIN : RELAY2_PIN, HIGH);
+}
+
+void applyRelayPulses() {
+  for (int i = 0; i < 2; i++) {
+    if (!relayPulseActive[i]) continue;
+    int pin = (i == 0) ? RELAY1_PIN : RELAY2_PIN;
+    if ((long)(millis() - relayPulseEnd[i]) >= 0) {
+      relayPulseActive[i] = false;
+      digitalWrite(pin, LOW);
+    } else {
+      digitalWrite(pin, HIGH);
+    }
+  }
+}
+
 void setRelayAutomation(int relayNum, bool wantOn) {
   int pin = (relayNum == 1) ? RELAY1_PIN : RELAY2_PIN;
   RelayTimer &rt = (relayNum == 1) ? relayTimerR1 : relayTimerR2;

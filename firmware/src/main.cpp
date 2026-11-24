@@ -51,6 +51,7 @@
 #include "SwitchLogic.h"
 #include "Timers.h"
 #include "Storage.h"
+#include "Alerts.h"
 #include "Buttons.h"
 #include "Menu.h"
 #include "Display.h"
@@ -114,6 +115,7 @@ void setup() {
 
 void loop() {
   processBleCommands(); // a BLE parancsok ITT, a fő szálon futnak (a callback csak sorba állítja őket)
+  applyRelayPulses();   // relé-impulzus (PULSE) lejáratának figyelése - OTA alatt is, hogy a relé ne ragadjon be
 
   if (otaInProgress) {
     // OTA alatt kizárólag a queue ürítésére koncentrálunk - semmi mást
@@ -234,7 +236,9 @@ void loop() {
     applyThermostat();
     applySwitchLogic();
     applyTimers();
+    applyRelayPulses();   // az automatika után: az aktív impulzus felülírja
   }
+  checkAlerts();          // riasztások (szenzorhiba / hőmérséklet-határ) -> értesítés az appnak
 
   // ── Gombok: menü navigáció, vagy idle képernyőn belépés a menübe ──
   ButtonEvent btnEv = pollButtons();

@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.1.2** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.2.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,7 +18,7 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.1.2)
+## Firmware (v5.2.0)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
@@ -59,6 +59,22 @@ Megnyitás: `app/Controll.sln` Visual Studio 2022+ programban (.NET MAUI workloa
 (`GitHubOwner` / `GitHubRepo`). Az app tokent nem használ, ezért a megadott repónak
 **publikusnak** kell lennie, és minden release-hez egy `.bin` asset kell. A tag legyen a
 verziószám (pl. `4.9.0`).
+
+## Közeledés érzékelés és értesítések (v5.2.0)
+
+**Közeledés érzékelés** (Beállítások → Közeledés érzékelés, mentett eszközönként): ha az eszköz a megadott távolságon (méter)
+belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet: relé impulzus (pl. kapunyitás),
+relé BE/KI vagy RGB BE/KI. Az impulzus ideje megadható, 0 esetén a relé "Kapuzás" beállított ideje érvényes. A műveletet egy
+közeledés egyszer hajtja végre; újra csak akkor, ha az eszköz előtte legalább fél percre eltűnt, vagy 1,5-szeres távolságon
+kívülre került. A távolság a BLE jelerősségből (RSSI) **becsült**, falak/test/környezet miatt több méteres eltérés lehet.
+A háttérben futáshoz az app Android előtér-szolgáltatást használ (állandó értesítés a sávban); az app indításakor kell
+egyszer megnyitni. Az eszköz firmware-ében a `PULSE:<R1|R2>:<mp>` parancs végzi az impulzust.
+
+**Értesítések / riasztások** (Beállítások → Értesítések, az eszközön tárolt határokkal): szenzorhiba (szakadt szál,
+rövidzár, értelmezhetetlen érték), túl alacsony és túl magas hőmérséklet. Az eszköz `ALERT:<szenzor>:<állapot>:<érték>`
+sort küld, az app ebből Android értesítést készít. A riasztás 5 mp-es késleltetéssel és 0,5 °C hiszterézissel működik, az
+eszköz kijelzőjén piros felkiáltójel jelzi. Az értesítés akkor érkezik meg, ha a telefon kapcsolatban van az eszközzel (BLE
+hatótáv, háttérfigyelés bekapcsolva). Távoli értesítéshez az MQTT / Home Assistant kapcsolat használható.
 
 ## Okosotthon: MQTT + Home Assistant
 
