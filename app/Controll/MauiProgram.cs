@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Controll.Services;
 #if ANDROID
@@ -60,7 +60,7 @@ public static class MauiProgram
 
                 // Kurzor szín (csak Android 10 / API 29 és újabb támogatja
                 // közvetlenül - régebbi verziókon szó nélkül kihagyjuk)
-                if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.Q)
+                if (OperatingSystem.IsAndroidVersionAtLeast(29))
                 {
                     var cursorDrawable = editText.TextCursorDrawable;
                     if (cursorDrawable != null)

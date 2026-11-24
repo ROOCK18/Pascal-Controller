@@ -67,5 +67,11 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - **Firmware – apróságok:** szűkítő konverzió a menü sor-inicializálójában, `printf` formátum (`%lu`), felesleges ismételt `pinMode` hívások a `setup()`-ban.
 - A fordító `-Wall -Wextra` mellett a saját forrásokban további gyanús helyet nem jelzett.
 
+
+## Fordítási figyelmeztetések (0 / 0 követelmény)
+- **App:** 145 figyelmeztetésből 0 maradt. Az elavult MAUI-hívások korszerűsítve (`DisplayAlertAsync`, `DisplayActionSheetAsync`, ablak-alapú oldal-elérés `Windows[0].Page`, `CreateWindow`, `IPlatformApplication`), a platformfüggő hívások verzió-ellenőrzéssel (`IsAndroidVersionAtLeast(29)`, Android min. 26), a kötéseknél `x:DataType` (Release-ben az XC0022). A nullázhatósági jelzéseket a `<Nullable>disable</Nullable>` szüntette meg (nem annotáltam át az 75 helyet).
+- **Firmware:** `-Wall -Wextra -Werror` mellett tiszta fordítás, a harmadik fél könyvtárak sem adnak figyelmeztetést.
+- A build ezt érvényesíti is (`-Werror`, `TreatWarningsAsErrors`).
+
 ## Fordítás / környezet
 - A PlatformIO a `~/.platformio/penv`-et megosztja a VS Code bővítménnyel; 2026-11-24 09:05-kor a bővítmény újraépítette, és a parancssoros (`python -m platformio`) fordítás emiatt hibával áll le (`No pyvenv.cfg file`). A fenti javítások **fordítása emiatt nem lett újra ellenőrizve**; a VS Code-ban (`Build`) ellenőrizhető.

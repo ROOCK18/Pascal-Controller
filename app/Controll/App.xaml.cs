@@ -5,9 +5,10 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
-
-        MainPage = new AppShell();
     }
+
+    protected override Window CreateWindow(IActivationState activationState)
+        => new Window(new AppShell());
 
     // Induláskor és az előtérbe kerüléskor megpróbál újra csatlakozni a legutóbbi eszközhöz.
     protected override void OnStart()

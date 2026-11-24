@@ -89,7 +89,7 @@ public static class GitHubUpdateService
         return result.OrderByDescending(r => r.PublishedAt).ToList();
     }
 
-    public static async Task<byte[]> DownloadFirmwareAsync(FirmwareRelease release, IProgress<double>? progress = null)
+    public static async Task<byte[]> DownloadFirmwareAsync(FirmwareRelease release, IProgress<double> progress = null)
     {
         using var resp = await _http.GetAsync(release.BinAssetUrl, HttpCompletionOption.ResponseHeadersRead);
         resp.EnsureSuccessStatusCode();

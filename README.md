@@ -32,7 +32,7 @@ A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
   A mérés kalibrált mV-olvasás 16-os átlagolással; szakadt/rövidzárt szenzornál az érték „--”, a relé-termosztát KI-re áll.
   A 2,2 kΩ-os felhúzóval a PT1000 ~3,4 ADC-lépés/°C felbontást ad; 100 kΩ-os NTC-vel és PT100-zal **nem** mérhető (a jel telítésbe, ill. túl kicsire esik).
 - Ékezetes betűk: saját Montserrat-alapú betűtípusok (`firmware/src/fonts`, újragenerálás: `bash tools/gen_fonts.sh`, a `-DHU_FONTS=1` build flaggel).
-- Méret: firmware.bin ~1,74 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
+- Méret: firmware.bin ~1,76 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
   Az új partíciós tábla csak USB-s teljes flash-eléssel (`firmware.factory.bin`) kerül fel.
 
 **Még NINCS hardveren kipróbálva.** Ellenőrizendő: a kijelző elforgatása és eltolása (`lgfx_setup.h`, `setRotation(3)`, `offset_x/y`),
@@ -48,7 +48,7 @@ A szövegek ékezet nélküliek (az LVGL beépített betűi csak ASCII-t tartalm
 - Az eszközök hely-nevet kapnak (pl. „Terrárium”): a listában a ✎ gombbal vagy hosszú nyomással (Android), csatlakozva pedig a panelre koppintva szerkeszthető; ugyanitt „Elfelejtés”.
 - A kézi „Lecsatlakozás” kikapcsolja az automatikus csatlakozást, amíg újra kézzel nem csatlakozol.
 
-- .NET 10 MAUI (Android, iOS, MacCatalyst, Windows célplatformok), Plugin.BLE
+- .NET 10 MAUI (Android 8.0 / API 26 vagy újabb; a projektben iOS, MacCatalyst és Windows cél is van), Plugin.BLE
 - Funkciók: vezérlés, adatok, RGB, automatikák (termosztát, logika, kapuzás, időzítők),
   WiFi-beállítás, séma-mentés `.pcscheme` fájlba, firmware-frissítés GitHub release-ből vagy helyi `.bin`-ből
 
@@ -93,3 +93,23 @@ A Google Home, Alexa és Apple Home a Home Assistanton keresztül éri el ezeket
 - Az app az első csatlakozáskor kéri a PIN-t, eszközönként elmenti (SecureStorage), és utána magától igazol.
 - A PIN **sosem megy át BLE-n**: az eszköz véletlen nonce-t küld, az app `HMAC-SHA256(PIN, nonce)`-szal válaszol (`AUTH_BEGIN` → `AUTH_NONCE:` → `AUTH:` → `AUTH_OK`). Hitelesítés nélkül csak a `GET_VER` megy; minden más (OTA, gyári reset, WiFi stb.) `ERROR:AUTH_REQUIRED`-et kap. 5 hibás próba után 1 percre zár.
 - Ha elfelejtetted a PIN-t, az eszköz kijelzőjén megnézheted. Régi firmware-rel (ami nem ismeri az AUTH-ot) az app változatlanul működik.
+
+## Build és minőségi követelmény
+
+**Követelmény: 0 hiba és 0 figyelmeztetés** mind a firmware-ben, mind az appban. Ezt a build maga érvényesíti:
+- **Firmware** (`firmware/platformio.ini`): a saját forrásokra `-Wall -Wextra -Werror`, vagyis egyetlen figyelmeztetés is megállítja a buildet.
+- **App** (`app/Controll/Controll.csproj`): `TreatWarningsAsErrors`.
+
+Fordítás (PowerShellből, Git Bash alól a PlatformIO ESP-IDF telepítője nem fut):
+```powershell
+# firmware
+cd firmware; python -m platformio run
+# app (Android)
+cd app\Controll; dotnet build Controll.csproj -f net10.0-android -c Release
+```
+Az iOS és MacCatalyst célt Windowson nem lehet fordítani (Mac kell hozzá), azt itt nem ellenőriztem.
+
+Megjegyzések:
+- Az app a nullázhatósági elemzést kikapcsolja (`<Nullable>disable</Nullable>`): a régebbi kód nem erre készült, a jelzéseket nem 75 helyen átírással, hanem ezzel szüntettem meg. Új kódnál érdemes visszakapcsolni és fokozatosan annotálni.
+- Az Android minimum 8.0 (API 26), mert a MediaElement ezt kéri.
+- A firmware-ben a harmadik fél könyvtárak verziója rögzített (`platformio.ini`), a platform a pioarduino `55.03.311`.

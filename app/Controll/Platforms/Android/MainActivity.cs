@@ -1,4 +1,4 @@
-﻿using Android.App;
+using Android.App;
 using Android.Content.PM;
 using Android.OS;
 using Android.Widget;
@@ -20,7 +20,7 @@ namespace Controll
     {
         private DateTime _lastBackPressTime = DateTime.MinValue;
 
-        protected override void OnCreate(Bundle? savedInstanceState)
+        protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
@@ -38,7 +38,7 @@ namespace Controll
 
             public override async void HandleOnBackPressed()
             {
-                var shell = Microsoft.Maui.Controls.Application.Current?.MainPage as AppShell;
+                var shell = Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault()?.Page as AppShell;
 
                 if (shell == null)
                 {

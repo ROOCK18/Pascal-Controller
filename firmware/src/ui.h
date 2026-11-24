@@ -432,7 +432,7 @@ void ui_list(const String &title, ValueRow rows[], int count, int cursor) {
     ui_anim_y(hlBar, targetY);
   }
 
-  char buf[12];
+  char buf[24]; // két int és a "/" jel is biztosan elfér
   snprintf(buf, sizeof(buf), "%d/%d", cursor + 1, count);
   ui_set_text(mCount, buf);
   ui_unlock();

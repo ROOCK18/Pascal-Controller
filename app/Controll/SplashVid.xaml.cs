@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Views;
+using CommunityToolkit.Maui.Views;
 
 namespace Controll;
 
@@ -14,6 +14,6 @@ public partial class SplashVid : ContentPage
     private void SplashVideo_MediaEnded(object sender, EventArgs e)
     {
         // Amint a videó lejátszódott, nyissa meg az AppShell-t
-        Application.Current.MainPage = new AppShell();
+        Application.Current.Windows[0].Page = new AppShell();
     }
 }

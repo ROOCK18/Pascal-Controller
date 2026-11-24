@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+using Controll.Services;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -50,7 +51,7 @@ public partial class Note : ContentView
     {
         if (e.Parameter is AppLogEntry entry)
         {
-            await Application.Current.MainPage.Navigation.PushAsync(new NoteEditorPage(entry));
+            await UiHelper.CurrentPage.Navigation.PushAsync(new NoteEditorPage(entry));
         }
     }
 
@@ -67,7 +68,7 @@ public partial class Note : ContentView
         };
 
         _logEntries.Insert(0, newEntry);
-        await Application.Current.MainPage.Navigation.PushAsync(new NoteEditorPage(newEntry));
+        await UiHelper.CurrentPage.Navigation.PushAsync(new NoteEditorPage(newEntry));
     }
 
     private void OnDeleteRowClicked(object sender, EventArgs e)

@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
 
+using Controll.Services;
+
 namespace Controll;
 
 // Egy mentett eszköz: azonosító, a BLE neve és a felhasználó által megadott hely (pl. "Terrárium").
@@ -89,7 +91,7 @@ public static class BluetoothManager
     }
 
     private static Task<string> PromptPinAsync(string message)
-        => MainThread.InvokeOnMainThreadAsync(() => Application.Current.MainPage.DisplayPromptAsync(
+        => MainThread.InvokeOnMainThreadAsync(() => UiHelper.CurrentPage.DisplayPromptAsync(
             "Eszköz PIN", message, "OK", "Mégse", "6 jegyű PIN", 6, Keyboard.Numeric));
 
     // Csatlakozás után hívandó. true = hitelesítve (vagy az eszköz nem kér hitelesítést).
@@ -115,7 +117,7 @@ public static class BluetoothManager
                 case "OK": await SetPinAsync(id, pin); return true;
                 case "NOAUTH": return true;
                 case "LOCKED":
-                    await MainThread.InvokeOnMainThreadAsync(() => Application.Current.MainPage.DisplayAlert(
+                    await MainThread.InvokeOnMainThreadAsync(() => UiHelper.CurrentPage.DisplayAlertAsync(
                         "Zárolva", "Túl sok hibás PIN. Próbáld újra egy perc múlva.", "OK"));
                     return false;
                 default:
@@ -555,7 +557,7 @@ public static class BluetoothManager
 
             var labels = cand.Select(d => $"{DisplayNameFor(d.Id.ToString(), d.Name)}  ({d.Rssi} dBm)").ToList();
             string choice = await MainThread.InvokeOnMainThreadAsync(() =>
-                Application.Current.MainPage.DisplayActionSheet("Melyik eszközre csatlakozzak?", "Mégse", null, labels.ToArray()));
+                UiHelper.CurrentPage.DisplayActionSheetAsync("Melyik eszközre csatlakozzak?", "Mégse", null, labels.ToArray()));
             int idx = labels.IndexOf(choice);
             if (idx < 0) return;
 

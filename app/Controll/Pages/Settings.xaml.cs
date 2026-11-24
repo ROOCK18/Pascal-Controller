@@ -82,7 +82,7 @@ public partial class Settings : ContentPage
     {
         var status = await CheckBTPerm();
         if (status != PermissionStatus.Granted) return;
-        if (!_ble.IsOn) { await DisplayAlert("BT", "Kapcsold be a Bluetooth-t!", "OK"); return; }
+        if (!_ble.IsOn) { await DisplayAlertAsync("BT", "Kapcsold be a Bluetooth-t!", "OK"); return; }
         try
         {
             _scanned.Clear();
@@ -93,7 +93,7 @@ public partial class Settings : ContentPage
             _adapter.ScanTimeout = 5000;
             await _adapter.StartScanningForDevicesAsync();
         }
-        catch (Exception ex) { await DisplayAlert("Hiba", ex.Message, "OK"); }
+        catch (Exception ex) { await DisplayAlertAsync("Hiba", ex.Message, "OK"); }
         finally
         {
             _adapter.DeviceDiscovered -= Adapter_DeviceDiscovered;
@@ -152,7 +152,7 @@ public partial class Settings : ContentPage
 
     private async Task EditDeviceAsync(DeviceRow row)
     {
-        string act = await DisplayActionSheet(row.Title, "Mégse", "Elfelejtés", "Hely szerkesztése");
+        string act = await DisplayActionSheetAsync(row.Title, "Mégse", "Elfelejtés", "Hely szerkesztése");
         if (act == "Hely szerkesztése")
         {
             string loc = await DisplayPromptAsync("Hely", "Hol van ez az eszköz? (pl. Terrárium, Nappali)",
@@ -263,7 +263,7 @@ public partial class Settings : ContentPage
             border.Stroke = (Color)Application.Current.Resources["LightGray"];
             _selectedDeviceRow = null;
             BluetoothManager.StartAutoReconnect();   // a kézi próbálkozás elbukott: folytatódhat a háttér-újracsatlakozás
-            await DisplayAlert("Hiba", "Csatlakozás sikertelen!", "OK");
+            await DisplayAlertAsync("Hiba", "Csatlakozás sikertelen!", "OK");
         }
         finally
         {
@@ -446,7 +446,7 @@ public partial class Settings : ContentPage
         float n1 = ParseFloatInvariant(CompNtc1Entry.Text, 0f);
         float n2 = ParseFloatInvariant(CompNtc2Entry.Text, 0f);
         await BluetoothManager.WriteAsync($"SET_COMP:{n1.ToString("F1", CultureInfo.InvariantCulture)}:{n2.ToString("F1", CultureInfo.InvariantCulture)}");
-        await DisplayAlert("Siker", "Kompenzáció elmentve.", "OK");
+        await DisplayAlertAsync("Siker", "Kompenzáció elmentve.", "OK");
     }
 
     // ════════════════════════════════════════
@@ -484,22 +484,22 @@ public partial class Settings : ContentPage
         string name = (MqttNameEntry.Text ?? "").Trim();
         if (!int.TryParse((MqttPortEntry.Text ?? "").Trim(), out int port) || port < 1 || port > 65535)
         {
-            await DisplayAlert("Hibás érték", "A port 1 és 65535 közötti szám legyen.", "OK");
+            await DisplayAlertAsync("Hibás érték", "A port 1 és 65535 közötti szám legyen.", "OK");
             return;
         }
         if (MqttEnabledSwitch.IsToggled && host.Length == 0)
         {
-            await DisplayAlert("Hiányzó adat", "Add meg a bróker címét.", "OK");
+            await DisplayAlertAsync("Hiányzó adat", "Add meg a bróker címét.", "OK");
             return;
         }
         if (host.Contains('|') || user.Contains('|') || pass.Contains('|') || name.Contains('|'))
         {
-            await DisplayAlert("Hibás érték", "A „|” karakter nem használható.", "OK");
+            await DisplayAlertAsync("Hibás érték", "A „|” karakter nem használható.", "OK");
             return;
         }
         if (host.Length > 63 || user.Length > 31 || pass.Length > 47 || name.Length > 31)
         {
-            await DisplayAlert("Hibás érték", "Valamelyik szöveg túl hosszú (cím: 63, felhasználó: 31, jelszó: 47, név: 31 karakter).", "OK");
+            await DisplayAlertAsync("Hibás érték", "Valamelyik szöveg túl hosszú (cím: 63, felhasználó: 31, jelszó: 47, név: 31 karakter).", "OK");
             return;
         }
         await BluetoothManager.WriteAsync($"SET_MQTT:{(MqttEnabledSwitch.IsToggled ? 1 : 0)}|{host}|{port}|{user}|{pass}|{name}");
@@ -599,7 +599,7 @@ public partial class Settings : ContentPage
             // Ugyanazok a határok, mint a firmware SET_SENS ellenőrzése
             if (r0 < 1 || r0 > 1000000 || t0 < -50 || t0 > 150 || beta < 500 || beta > 10000)
             {
-                await DisplayAlert("Hibás érték", $"{n}. szenzor: valamelyik érték a megengedett tartományon kívül van.\n" +
+                await DisplayAlertAsync("Hibás érték", $"{n}. szenzor: valamelyik érték a megengedett tartományon kívül van.\n" +
                     "Ellenállás: 1–1 000 000 Ω, alap hőfok: −50…150 °C, béta: 500–10000.", "OK");
                 return;
             }
@@ -607,7 +607,7 @@ public partial class Settings : ContentPage
             await BluetoothManager.WriteAsync($"SET_SENS:{n}:{type}:{F(r0, "F1")}:{F(t0, "F1")}:{F(beta, "F0")}:2200.0:3.30");
             await Task.Delay(200);
         }
-        await DisplayAlert("Siker", "Szenzor-beállítások elmentve.", "OK");
+        await DisplayAlertAsync("Siker", "Szenzor-beállítások elmentve.", "OK");
     }
 
     // ════════════════════════════════════════
@@ -638,7 +638,7 @@ public partial class Settings : ContentPage
         int brightness = (int)BrightnessSlider.Value;
         int sleepIdx = SleepTimeoutPicker.SelectedIndex < 0 ? 8 : SleepTimeoutPicker.SelectedIndex;
         await BluetoothManager.WriteAsync($"SET_DISPLAY:{brightness}:{sleepIdx}");
-        await DisplayAlert("Siker", "Kijelző beállítások elmentve.", "OK");
+        await DisplayAlertAsync("Siker", "Kijelző beállítások elmentve.", "OK");
     }
 
     // ════════════════════════════════════════
@@ -671,7 +671,7 @@ public partial class Settings : ContentPage
         int timeFormat = Math.Max(TimeFormatPicker.SelectedIndex, 0);
         int dateFormat = Math.Max(DateFormatPicker.SelectedIndex, 0);
         await BluetoothManager.WriteAsync($"SET_DATEPOS:{clockPos}:{datePos}:{dayNamePos}:{timeFormat}:{dateFormat}");
-        await DisplayAlert("Siker", "Dátum/Idő beállítások elmentve.", "OK");
+        await DisplayAlertAsync("Siker", "Dátum/Idő beállítások elmentve.", "OK");
     }
 
     // ════════════════════════════════════════
@@ -736,7 +736,7 @@ public partial class Settings : ContentPage
         string pass = WifiPasswordEntry.Text ?? "";
         if (string.IsNullOrWhiteSpace(ssid))
         {
-            await DisplayAlert("Hiba", "Előbb keress rá a hálózatokra, és válassz egyet a listából!", "OK");
+            await DisplayAlertAsync("Hiba", "Előbb keress rá a hálózatokra, és válassz egyet a listából!", "OK");
             return;
         }
 
@@ -762,14 +762,14 @@ public partial class Settings : ContentPage
             {
                 WifiStatusDot.Fill = Colors.Red;
                 LblWifiStatus.Text = "WiFi állapot: HIBÁS JELSZÓ";
-                await DisplayAlert("Hibás jelszó", $"A(z) \"{ssid}\" hálózathoz megadott jelszó helytelen.", "OK");
+                await DisplayAlertAsync("Hibás jelszó", $"A(z) \"{ssid}\" hálózathoz megadott jelszó helytelen.", "OK");
             }
             else if (result.StartsWith("FAILED:"))
             {
                 WifiStatusDot.Fill = Colors.Red;
                 string reason = result.Substring(7);
                 LblWifiStatus.Text = $"WiFi állapot: sikertelen ({reason})";
-                await DisplayAlert("Csatlakozás sikertelen", reason, "OK");
+                await DisplayAlertAsync("Csatlakozás sikertelen", reason, "OK");
             }
         }
         finally { }
@@ -778,13 +778,13 @@ public partial class Settings : ContentPage
     private async void OnFactoryResetClicked(object sender, EventArgs e)
     {
         if (!CheckBLE()) return;
-        bool ok = await DisplayAlert("Gyári visszaállítás",
+        bool ok = await DisplayAlertAsync("Gyári visszaállítás",
             "Biztos, hogy visszaállítja a gyári beállításokat?\nMinden mentett beállítás elvész!",
             "IGEN", "MÉGSE");
         if (!ok) return;
 
         await BluetoothManager.WriteAsync("FACTORY_RESET");
-        await DisplayAlert("Gyári visszaállítás", "Az eszköz törli a beállításokat és újraindul.\nCsatlakoztasd újra pár másodperc múlva.", "OK");
+        await DisplayAlertAsync("Gyári visszaállítás", "Az eszköz törli a beállításokat és újraindul.\nCsatlakoztasd újra pár másodperc múlva.", "OK");
         await BluetoothManager.DisconnectDeviceAsync(forget: false); // újraindul -> magától újracsatlakozik
         UpdateLocalUI(false, "Kapcsolat megszakadt");
     }
@@ -802,7 +802,7 @@ public partial class Settings : ContentPage
         {
             await BluetoothManager.WriteAsync($"SET_MODE:{ModePicker.SelectedIndex}");
         }
-        catch (Exception ex) { await DisplayAlert("Hiba", ex.Message, "OK"); }
+        catch (Exception ex) { await DisplayAlertAsync("Hiba", ex.Message, "OK"); }
     }
 
     private async void OnDisconnectClicked(object sender, EventArgs e)
@@ -810,7 +810,7 @@ public partial class Settings : ContentPage
         if (BluetoothManager.ConnectedDevice == null) return;
         await BluetoothManager.DisconnectDeviceAsync();
         UpdateLocalUI(false, "Kapcsolat megszakadt");
-        await DisplayAlert("BT", "Lecsatlakoztatva.", "OK");
+        await DisplayAlertAsync("BT", "Lecsatlakoztatva.", "OK");
     }
 
     // ════════════════════════════════════════
@@ -831,7 +831,7 @@ public partial class Settings : ContentPage
             _releases = await GitHubUpdateService.GetAllReleasesAsync();
             if (_releases.Count == 0)
             {
-                await DisplayAlert("Firmware", "Nem található elérhető release a GitHub repóban.", "OK");
+                await DisplayAlertAsync("Firmware", "Nem található elérhető release a GitHub repóban.", "OK");
                 return;
             }
 
@@ -861,7 +861,7 @@ public partial class Settings : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Hiba", $"Release lista lekérése sikertelen:\n{ex.Message}\n\n" +
+            await DisplayAlertAsync("Hiba", $"Release lista lekérése sikertelen:\n{ex.Message}\n\n" +
                 "Ellenőrizd, hogy be van-e állítva a GitHub repó neve a GitHubUpdateService.cs-ben.", "OK");
         }
         finally { ScanIndicator.IsRunning = false; }
@@ -895,7 +895,7 @@ public partial class Settings : ContentPage
         // és nem kell a lassú BLE-n átküldenie a fájlt.
         if (_deviceWifiConnected)
         {
-            bool okWifi = await DisplayAlert("Online frissítés (WiFi)",
+            bool okWifi = await DisplayAlertAsync("Online frissítés (WiFi)",
                 $"{(downgrade ? "VISSZAÁLLÁS" : "Frissítés")} erre a verzióra: {release.TagName}\n" +
                 $"Fájl: {release.BinAssetName} ({release.BinAssetSize / 1024} KB)\nFolytatod?",
                 "IGEN", "MÉGSE");
@@ -905,7 +905,7 @@ public partial class Settings : ContentPage
             return;
         }
 
-        bool ok = await DisplayAlert("Online frissítés (BLE)",
+        bool ok = await DisplayAlertAsync("Online frissítés (BLE)",
             $"{(downgrade ? "VISSZAÁLLÁS" : "Frissítés")} erre a verzióra: {release.TagName}\n" +
             $"Fájl: {release.BinAssetName} ({release.BinAssetSize / 1024} KB)\nFolytatod?",
             "IGEN", "MÉGSE");
@@ -929,7 +929,7 @@ public partial class Settings : ContentPage
         catch (Exception ex)
         {
             UpdateProgressLayout.IsVisible = false;
-            await DisplayAlert("Hiba", $"Letöltés sikertelen:\n{ex.Message}", "OK");
+            await DisplayAlertAsync("Hiba", $"Letöltés sikertelen:\n{ex.Message}", "OK");
             return;
         }
         finally { ScanIndicator.IsRunning = false; }
@@ -974,7 +974,7 @@ public partial class Settings : ContentPage
 
             UpdateProgressBar.Progress = 1.0;
             LblUpdateStatus.Text = "Letöltés/telepítés folyamatban - kövesd a kijelzőn";
-            await DisplayAlert("WiFi frissítés folyamatban",
+            await DisplayAlertAsync("WiFi frissítés folyamatban",
                 "Az eszköz a saját WiFi kapcsolatán tölti le és telepíti a firmware-t.\n\n" +
                 "A telefon innentől NEM tudja élőben követni - a folyamatot a Pascal-Controller kijelzőjén kövesd. " +
                 "Az eszköz a frissítés végén (sikeresen vagy hiba esetén is) automatikusan újraindul.\n\n" +
@@ -982,7 +982,7 @@ public partial class Settings : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("WiFi OTA hiba", ex.Message, "OK");
+            await DisplayAlertAsync("WiFi OTA hiba", ex.Message, "OK");
         }
         finally
         {
@@ -1008,7 +1008,7 @@ public partial class Settings : ContentPage
             new PickOptions { PickerTitle = "Válassz .bin fájlt" });
         if (picked == null) return;
 
-        bool ok = await DisplayAlert("OTA",
+        bool ok = await DisplayAlertAsync("OTA",
             $"Feltöltés: {picked.FileName}\nPartíció: Minimal SPIFFS (1.9MB APP with OTA)\nFolytatod?",
             "IGEN", "MÉGSE");
         if (!ok) return;
@@ -1133,12 +1133,12 @@ public partial class Settings : ContentPage
             if (BluetoothManager.IsConnected)
                 await BluetoothManager.DisconnectDeviceAsync(forget: false); // az eszköz újraindult -> magától újracsatlakozik
 
-            await DisplayAlert("Siker", "Firmware sikeresen frissítve!\nAz eszköz újraindult.", "OK");
+            await DisplayAlertAsync("Siker", "Firmware sikeresen frissítve!\nAz eszköz újraindult.", "OK");
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"OTA HIBA: {ex.Message}");
-            await DisplayAlert("OTA Hiba", ex.Message, "OK");
+            await DisplayAlertAsync("OTA Hiba", ex.Message, "OK");
         }
         finally
         {
@@ -1300,7 +1300,7 @@ public partial class Settings : ContentPage
     private bool CheckBLE()
     {
         if (BluetoothManager.IsConnected) return true;
-        _ = DisplayAlert("Hiba", "Nincs BLE kapcsolat!", "OK");
+        _ = DisplayAlertAsync("Hiba", "Nincs BLE kapcsolat!", "OK");
         return false;
     }
 
@@ -1406,13 +1406,13 @@ public partial class Settings : ContentPage
         int idx = SchemePicker.SelectedIndex;
         if (idx < 0 || idx >= _schemeFilePaths.Count)
         {
-            await DisplayAlert("Séma betöltése", "Előbb válassz egy mentett sémát a listából.", "OK");
+            await DisplayAlertAsync("Séma betöltése", "Előbb válassz egy mentett sémát a listából.", "OK");
             return;
         }
         string path = _schemeFilePaths[idx];
         string choice = SchemePicker.Items[idx];
 
-        bool confirm = await DisplayAlert("Séma betöltése",
+        bool confirm = await DisplayAlertAsync("Séma betöltése",
             $"Betölti ezt: \"{choice}\"?\nFelülírja a jelenlegi beállításokat az eszközön.",
             "IGEN", "MÉGSE");
         if (!confirm) return;
@@ -1469,13 +1469,13 @@ public partial class Settings : ContentPage
         int idx = SchemePicker.SelectedIndex;
         if (idx < 0 || idx >= _schemeFilePaths.Count)
         {
-            await DisplayAlert("Séma törlése", "Előbb válassz egy mentett sémát a listából.", "OK");
+            await DisplayAlertAsync("Séma törlése", "Előbb válassz egy mentett sémát a listából.", "OK");
             return;
         }
         string path = _schemeFilePaths[idx];
         string choice = SchemePicker.Items[idx];
 
-        bool confirm = await DisplayAlert("Séma törlése",
+        bool confirm = await DisplayAlertAsync("Séma törlése",
             $"Biztos, hogy törlöd ezt a sémát: \"{choice}\"?\nEz nem vonható vissza.",
             "TÖRLÉS", "MÉGSE");
         if (!confirm) return;
@@ -1487,7 +1487,7 @@ public partial class Settings : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Hiba", $"Törlés sikertelen:\n{ex.Message}", "OK");
+            await DisplayAlertAsync("Hiba", $"Törlés sikertelen:\n{ex.Message}", "OK");
         }
 
         RefreshSchemePicker();
@@ -1498,7 +1498,7 @@ public partial class Settings : ContentPage
         int idx = SchemePicker.SelectedIndex;
         if (idx < 0 || idx >= _schemeFilePaths.Count)
         {
-            await DisplayAlert("Megosztás", "Előbb válassz egy mentett sémát a listából.", "OK");
+            await DisplayAlertAsync("Megosztás", "Előbb válassz egy mentett sémát a listából.", "OK");
             return;
         }
 

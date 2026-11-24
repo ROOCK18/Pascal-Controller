@@ -1,5 +1,6 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Controll.Pages"
              x:Class="Controll.Pages.Note"
              BackgroundColor="{StaticResource GraphiteGray}">
 
@@ -14,7 +15,7 @@
                         SelectionMode="None"
                         Margin="0,0,0,10">
             <CollectionView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="pages:AppLogEntry">
                     <Border Padding="0" Margin="5"
                             BackgroundColor="#2C2C2C"
                             StrokeShape="RoundRectangle 10">
