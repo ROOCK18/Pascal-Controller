@@ -819,6 +819,70 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- ══════════════ KÖZELEDÉS (ventilátor 1-2, relé 1-2) ══════════════ -->
+            <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Közeledés" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="ProxExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnProxHeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
+                        <Label Text="Amikor a telefon a Beállításokban megadott távolságon belülre ér, az eszköz végrehajtja azokat a csatornákat, ahol ez be van kapcsolva. Csak akkor, ha az adott csatorna Automata állapotban van, mint a többi automatika szabálya. A közeledés érzékelést a Beállításokban kell bekapcsolni." TextColor="Gray" FontSize="12" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Ventilátor 1" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" x:Name="ProxF1Switch" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Fordulatszám (%)" TextColor="Gray" FontSize="12" />
+                                <Entry x:Name="ProxF1ValueEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="100" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label Text="Időtartam (mp, 0: marad)" TextColor="Gray" FontSize="12" />
+                                <Entry x:Name="ProxF1DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="60" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Ventilátor 2" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" x:Name="ProxF2Switch" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="Fordulatszám (%)" TextColor="Gray" FontSize="12" />
+                                <Entry x:Name="ProxF2ValueEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="100" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label Text="Időtartam (mp, 0: marad)" TextColor="Gray" FontSize="12" />
+                                <Entry x:Name="ProxF2DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="60" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Relé 1" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" x:Name="ProxR1Switch" />
+                        </Grid>
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Impulzus (mp, 0: a relé Kapuzás ideje)" TextColor="Gray" FontSize="12" />
+                            <Entry x:Name="ProxR1DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="0" />
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Relé 2" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" x:Name="ProxR2Switch" />
+                        </Grid>
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Impulzus (mp, 0: a relé Kapuzás ideje)" TextColor="Gray" FontSize="12" />
+                            <Entry x:Name="ProxR2DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="0" />
+                        </VerticalStackLayout>
+                        <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+                            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked"/></Border.GestureRecognizers>
+                            <Label Text="KÖZELEDÉS MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentView>

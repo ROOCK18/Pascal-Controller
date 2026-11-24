@@ -20,8 +20,6 @@ public class SavedDevice
     // ── Közeledés érzékelés (ProximityService) ──
     public bool   ProxEnabled  { get; set; }
     public double ProxMeters   { get; set; } = 10;          // ennyi méteren (becsült) belül csatlakozik / hajtja végre a műveletet
-    public string ProxAction   { get; set; } = "none";      // none | r1pulse | r2pulse | r1on | r1off | r2on | r2off | rgbon | rgboff
-    public int    ProxPulseSec { get; set; }                // impulzus ideje; 0 = a relé "Kapuzás" beállított ideje
     // Mikor élesedjen újra (hajthasson végre újra műveletet):
     //   0 = teljes kapcsolatszakadás után (az eszköz eltűnt, nem látszik)
     //   1 = ha ProxRearmMeters méteren kívül kerül

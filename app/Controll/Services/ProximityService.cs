@@ -24,19 +24,6 @@ public static class ProximityService
 
     public static bool AnyEnabled => BluetoothManager.GetSavedDevices().Any(d => d.ProxEnabled);
 
-    public static string ActionLabel(string key) => key switch
-    {
-        "r1pulse" => "Relé 1 impulzus",
-        "r2pulse" => "Relé 2 impulzus",
-        "r1on" => "Relé 1 BE",
-        "r1off" => "Relé 1 KI",
-        "r2on" => "Relé 2 BE",
-        "r2off" => "Relé 2 KI",
-        "rgbon" => "RGB BE",
-        "rgboff" => "RGB KI",
-        _ => "Csak csatlakozás"
-    };
-
     // A beállítások változása után hívandó: elindítja vagy leállítja a figyelést.
     public static void Refresh()
     {
@@ -184,25 +171,9 @@ public static class ProximityService
         if (!IsArmed(cfg.Id)) return;
         _armed[cfg.Id] = false;   // egy közeledés = egy végrehajtás
         _outsideSince.Remove(cfg.Id);
-        string? cmd = cfg.ProxAction switch
-        {
-            "r1pulse" => $"PULSE:R1:{cfg.ProxPulseSec}",
-            "r2pulse" => $"PULSE:R2:{cfg.ProxPulseSec}",
-            "r1on" => "R1_1",
-            "r1off" => "R1_0",
-            "r2on" => "R2_1",
-            "r2off" => "R2_0",
-            "rgbon" => "RGB_1",
-            "rgboff" => "RGB_0",
-            _ => null
-        };
-        if (cmd != null)
-        {
-            await BluetoothManager.WriteAsync(cmd);
-            await Task.Delay(150);
-        }
-        await BluetoothManager.WriteAsync("PROX_TRIGGER");   // az eszköz a Vezérlés oldalon beállított közeledés-automatikákat is végrehajtja (ha az automatika be van kapcsolva)
+        // Az eszköz a közeledés-műveleteket (ventilátor, relé, RGB) maga hajtja végre, és csak az Automata állapotú csatornákon
+        await BluetoothManager.WriteAsync("PROX_TRIGGER");
         NotificationService.Show("Közeledés érzékelve",
-            $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)}: {ActionLabel(cfg.ProxAction)} végrehajtva.", 3000);
+            $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)}: a közeledés-műveletek elindultak.", 3000);
     }
 }

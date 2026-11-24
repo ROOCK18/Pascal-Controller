@@ -464,8 +464,6 @@ public partial class Settings : ContentPage
     // ════════════════════════════════════════
     private readonly List<string> _proxIds = new();
     private bool _proxLoading;
-    private static readonly string[] ProxActionKeys =
-        { "none", "r1pulse", "r2pulse", "r1on", "r1off", "r2on", "r2off", "rgbon", "rgboff" };
 
     private void RefreshProximityPanel()
     {
@@ -504,9 +502,6 @@ public partial class Settings : ContentPage
         if (sd == null) return;
         ProxEnabledSwitch.IsToggled = sd.ProxEnabled;
         ProxMetersEntry.Text = sd.ProxMeters.ToString("0.#", CultureInfo.InvariantCulture);
-        int a = Array.IndexOf(ProxActionKeys, sd.ProxAction);
-        ProxActionPicker.SelectedIndex = a < 0 ? 0 : a;
-        ProxPulseEntry.Text = sd.ProxPulseSec.ToString(CultureInfo.InvariantCulture);
         ProxRearmPicker.SelectedIndex = Math.Clamp(sd.ProxRearmMode, 0, 2);
         ProxRearmMetersEntry.Text = sd.ProxRearmMeters.ToString("0.#", CultureInfo.InvariantCulture);
         ProxRearmSecEntry.Text = sd.ProxRearmSec.ToString(CultureInfo.InvariantCulture);
@@ -538,12 +533,6 @@ public partial class Settings : ContentPage
             await DisplayAlertAsync("Hibás érték", "A távolság 1 és 100 méter közötti szám legyen.", "OK");
             return;
         }
-        if (!int.TryParse((ProxPulseEntry.Text ?? "0").Trim(), out int pulse) || pulse < 0 || pulse > 3600)
-        {
-            await DisplayAlertAsync("Hibás érték", "Az impulzus ideje 0 és 3600 másodperc közötti szám legyen (0: a relé Kapuzás beállított ideje).", "OK");
-            return;
-        }
-        string action = ProxActionKeys[Math.Clamp(ProxActionPicker.SelectedIndex, 0, ProxActionKeys.Length - 1)];
         bool enabled = ProxEnabledSwitch.IsToggled;
         int rearmMode = Math.Clamp(ProxRearmPicker.SelectedIndex, 0, 2);
         double rearmMeters = 15; int rearmSec = 30;
@@ -567,14 +556,14 @@ public partial class Settings : ContentPage
         }
         BluetoothManager.UpdateSaved(_proxIds[i], sd =>
         {
-            sd.ProxEnabled = enabled; sd.ProxMeters = meters; sd.ProxAction = action; sd.ProxPulseSec = pulse;
+            sd.ProxEnabled = enabled; sd.ProxMeters = meters;
             sd.ProxRearmMode = rearmMode; sd.ProxRearmMeters = rearmMeters; sd.ProxRearmSec = rearmSec;
         });
         ProximityService.Refresh();
         BackgroundHost.Update();
         BluetoothManager.StartAutoReconnect();
         await DisplayAlertAsync("Siker", enabled
-            ? $"Elmentve. Az app {meters:0.#} méteren belül csatlakozik, művelet: {ProximityService.ActionLabel(action)}."
+            ? $"Elmentve. Az app {meters:0.#} méteren belül csatlakozik, és elindítja a Vezérlésben beállított közeledés-műveleteket."
             : "Elmentve. A közeledés érzékelés ennél az eszköznél ki van kapcsolva.", "OK");
     }
 

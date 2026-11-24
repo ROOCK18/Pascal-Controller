@@ -161,6 +161,7 @@ public partial class MainPage : ContentPage
         {
             _ = BluetoothManager.WriteAsync("GET_ALL");
             _ = BluetoothManager.WriteAsync("GET_STATE");
+            _timingPage.RequestProx();
         }
     }
 

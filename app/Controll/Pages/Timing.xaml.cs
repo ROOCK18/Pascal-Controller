@@ -82,6 +82,72 @@ public partial class Timing : ContentView
         // Feliratkozás – ha jön GET_ALL válasz
         BluetoothManager.OnDataReceived -= OnTimingDataReceived;
         BluetoothManager.OnDataReceived += OnTimingDataReceived;
+        BluetoothManager.OnDataReceived -= OnProxDataReceived;
+        BluetoothManager.OnDataReceived += OnProxDataReceived;
+    }
+
+    // ══════════════ KÖZELEDÉS (az eszközön tárolva; az eszköz csak Automata állapotú csatornát kapcsol) ══════════════
+    private static readonly string[] ProxKeys = { "F1", "F2", "R1", "R2" };
+
+    private (Microsoft.Maui.Controls.Switch sw, Entry? val, Entry dur) ProxControls(string key) => key switch
+    {
+        "F1" => (ProxF1Switch, ProxF1ValueEntry, ProxF1DurEntry),
+        "F2" => (ProxF2Switch, ProxF2ValueEntry, ProxF2DurEntry),
+        "R1" => (ProxR1Switch, null, ProxR1DurEntry),
+        _ => (ProxR2Switch, null, ProxR2DurEntry)
+    };
+
+    private void OnProxHeaderTapped(object s, EventArgs e) => ToggleSection(ProxDetailsPanel, ProxExpandIcon);
+
+    // A Timing megnyitásakor hívja a MainPage (a GET_ALL után)
+    public async void RequestProx()
+    {
+        await Task.Delay(800);
+        if (BluetoothManager.IsConnected) await BluetoothManager.WriteAsync("GET_PROX");
+    }
+
+    // LOAD_PROX:<csatorna>:<be>:<érték>:<időtartam>
+    private void OnProxDataReceived(string data)
+    {
+        if (string.IsNullOrEmpty(data) || !data.StartsWith("LOAD_PROX:")) return;
+        var p = data.Substring(10).Trim().Split(':');
+        if (p.Length < 4 || !ProxKeys.Contains(p[0])) return;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var (sw, val, dur) = ProxControls(p[0]);
+            sw.IsToggled = p[1] == "1";
+            if (val != null) val.Text = p[2];
+            dur.Text = p[3];
+        });
+    }
+
+    private async void OnSaveProxClicked(object sender, EventArgs e)
+    {
+        if (!BluetoothManager.IsConnected) return;
+        var page = Shell.Current.CurrentPage;
+        var cmds = new List<string>();
+        foreach (var key in ProxKeys)
+        {
+            var (sw, val, dur) = ProxControls(key);
+            int value = 100;
+            if (val != null && (!int.TryParse((val.Text ?? "").Trim(), out value) || value < 0 || value > 100))
+            {
+                await page.DisplayAlertAsync("Hibás érték", "A fordulatszám 0 és 100 közötti szám legyen.", "OK");
+                return;
+            }
+            if (!int.TryParse((dur.Text ?? "").Trim(), out int seconds) || seconds < 0 || seconds > 65535)
+            {
+                await page.DisplayAlertAsync("Hibás érték", "Az időtartam 0 és 65535 másodperc közötti szám legyen.", "OK");
+                return;
+            }
+            cmds.Add($"SET_PROX:{key}:{(sw.IsToggled ? 1 : 0)}:{value}:{seconds}");
+        }
+        foreach (var c in cmds)
+        {
+            await BluetoothManager.WriteAsync(c);
+            await Task.Delay(150);
+        }
+        await page.DisplayAlertAsync("Siker", "Közeledés beállítások elmentve.", "OK");
     }
 
     // ══════════════ VISSZA GOMB ══════════════

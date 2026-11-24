@@ -481,7 +481,7 @@
                             <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnProxHeaderTapped"/></Grid.GestureRecognizers>
                         </Grid>
                         <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
-                            <Label Text="Ha az eszköz a megadott távolságon belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet (pl. kapu nyitása). A távolság a Bluetooth jelerősségből becsült érték: falak, test és környezet miatt több méteres eltérés is lehet. Ez a beállítás a most csatlakoztatott eszközre vonatkozik. Több mentett eszköz esetén a közeledést mindig az utoljára használt eszközre figyeli az app. A működéshez a háttérfigyelés (állandó értesítés) fut." TextColor="#AEAEB2" FontSize="12" />
+                            <Label Text="Ha az eszköz a megadott távolságon belülre kerül, az app magától csatlakozik hozzá, és elindítja a Vezérlés → Automatikák (ventilátor, relé) és az RGB oldalon beállított közeledés-műveleteket. A távolság a Bluetooth jelerősségből becsült érték: falak, test és környezet miatt több méteres eltérés is lehet. Ez a beállítás a most csatlakoztatott eszközre vonatkozik. Több mentett eszköz esetén a közeledést mindig az utoljára használt eszközre figyeli az app. A működéshez a háttérfigyelés (állandó értesítés) fut." TextColor="#AEAEB2" FontSize="12" />
                             <Label x:Name="LblProxEmpty" Text="Előbb csatlakozz egy eszközhöz, hogy mentett eszköz legyen." TextColor="#AEAEB2" FontSize="12" />
                             <VerticalStackLayout x:Name="ProxFields" Spacing="10">
                                 <Picker x:Name="ProxDevicePicker" IsVisible="False" Title="Válassz eszközt" SelectedIndexChanged="OnProxDeviceChanged" />
@@ -490,28 +490,10 @@
                                     <Switch Grid.Column="1" x:Name="ProxEnabledSwitch" />
                                 </Grid>
                                 <VerticalStackLayout Spacing="4">
-                                    <Label Text="Távolság (méter) - ezen belül csatlakozik és hajtja végre a műveletet" TextColor="#AEAEB2" FontSize="12" />
+                                    <Label Text="Távolság (méter) - ezen belül csatlakozik és indítja a műveleteket" TextColor="#AEAEB2" FontSize="12" />
                                     <Entry x:Name="ProxMetersEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="10" />
                                 </VerticalStackLayout>
-                                <Label Text="Művelet" TextColor="#AEAEB2" FontSize="12" />
-                                <Picker x:Name="ProxActionPicker" Title="Válassz műveletet">
-                                    <Picker.Items>
-                                        <x:String>Csak csatlakozás (nincs művelet)</x:String>
-                                        <x:String>Relé 1 impulzus (pl. kapu)</x:String>
-                                        <x:String>Relé 2 impulzus</x:String>
-                                        <x:String>Relé 1 BE</x:String>
-                                        <x:String>Relé 1 KI</x:String>
-                                        <x:String>Relé 2 BE</x:String>
-                                        <x:String>Relé 2 KI</x:String>
-                                        <x:String>RGB BE</x:String>
-                                        <x:String>RGB KI</x:String>
-                                    </Picker.Items>
-                                </Picker>
-                                <VerticalStackLayout Spacing="4">
-                                    <Label Text="Impulzus ideje (mp) - 0: a relé Kapuzás beállított ideje" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="ProxPulseEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="0" />
-                                </VerticalStackLayout>
-                                <Label Text="Újraélesedés - mikor hajtsa végre újra a műveletet" TextColor="#AEAEB2" FontSize="12" />
+                                <Label Text="Újraélesedés - mikor indítsa újra a műveleteket" TextColor="#AEAEB2" FontSize="12" />
                                 <Picker x:Name="ProxRearmPicker" Title="Válassz" SelectedIndexChanged="OnProxRearmChanged">
                                     <Picker.Items>
                                         <x:String>Teljes kapcsolatszakadás után</x:String>

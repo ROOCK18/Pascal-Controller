@@ -65,22 +65,22 @@ verziószám (pl. `4.9.0`).
 
 ## Közeledés érzékelés és értesítések (v5.2.0)
 
-**Közeledés érzékelés** (Beállítások → Közeledés érzékelés; csak csatlakozva látszik, a csatlakoztatott eszközre vonatkozik, és több mentett eszköz esetén az app mindig az utoljára használt eszközt figyeli): ha az eszköz a megadott távolságon (méter)
-belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet: relé impulzus (pl. kapunyitás),
-relé BE/KI vagy RGB BE/KI. Az impulzus ideje megadható, 0 esetén a relé "Kapuzás" beállított ideje érvényes. A műveletet egy
-közeledés egyszer hajtja végre; újra csak akkor, ha az eszköz előtte legalább fél percre eltűnt, vagy 1,5-szeres távolságon
-kívülre került. A távolság a BLE jelerősségből (RSSI) **becsült**, falak/test/környezet miatt több méteres eltérés lehet.
-A háttérben futáshoz az app Android előtér-szolgáltatást használ (állandó értesítés a sávban); az app indításakor kell
-egyszer megnyitni. Az eszköz firmware-ében a `PULSE:<R1|R2>:<mp>` parancs végzi az impulzust.
+**Közeledés érzékelés** (Beállítások → Közeledés érzékelés; csak csatlakozva látszik, a csatlakoztatott eszközre vonatkozik, és több mentett
+eszköz esetén az app mindig az utoljára használt eszközt figyeli): ha az eszköz a megadott távolságon (méter) belülre kerül, az app
+magától csatlakozik hozzá, és elindítja a közeledés-műveleteket. A Beállításokban nincs vezérlés: itt csak a távolság, az
+újraélesedés és a be/ki kapcsoló állítható. A távolság a BLE jelerősségből (RSSI) **becsült**, falak/test/környezet miatt több
+méteres eltérés lehet. A háttérben futáshoz az app Android előtér-szolgáltatást használ (állandó értesítés a sávban); az app
+indításakor kell egyszer megnyitni.
 
-**Újraélesedés** (mikor hajthat végre újra műveletet), a közeledés-panelen választható: *teljes kapcsolatszakadás után*
-(az eszköz legalább 15 mp-ig nem látszik), *ha X méteren kívül vagyok*, vagy *X mp múlva, ha X méteren kívül vagyok*.
+**Újraélesedés** (mikor indíthatja újra a műveleteket): *teljes kapcsolatszakadás után* (az eszköz legalább 15 mp-ig nem látszik),
+*ha X méteren kívül vagyok*, vagy *X mp múlva, ha X méteren kívül vagyok*.
 
-**Közeledés automatikák csatornánként** (Vezérlés oldal alja, az eszközön tárolva): ventilátor 1-2 (fordulatszám % + időtartam),
-relé 1-2 (impulzus; 0 mp = a Kapuzás ideje), RGB (bekapcsolás az időtartamra). Közeledéskor az app `PROX_TRIGGER`
-parancsot küld, az eszköz pedig csak azokat a csatornákat kapcsolja, ahol ez be van kapcsolva ÉS az automatika is be van
-kapcsolva (a ventilátor/relé Automata állapotú); az RGB-nek nincs Automata/Kézi módja, ott a kapcsoló önmagában dönt.
-A ventilátor az időtartam végén visszaáll az előző értékre. (Firmware 5.3.0 szükséges.)
+**Közeledés-műveletek** (az eszközön tárolva, ahol a vezérlés is van): ventilátor 1-2 és relé 1-2 az **Automatikák** oldalon
+(Vezérlés → Automatikák beállítása → Közeledés), az RGB az **RGB** oldalon. Ventilátor: fordulatszám % + időtartam (a végén
+visszaáll az előző értékre, 0 mp = marad); relé: impulzus (0 mp = a Kapuzás ideje); RGB: bekapcsol az időtartamra (0 mp = marad).
+Közeledéskor az app `PROX_TRIGGER` parancsot küld, az eszköz pedig csak azokat a csatornákat kapcsolja, ahol ez be van kapcsolva
+ÉS az automatika is be van kapcsolva (a ventilátor/relé Automata állapotú); az RGB-nek nincs Automata/Kézi módja, ott a kapcsoló
+önmagában dönt. (Firmware 5.3.0 szükséges.)
 
 **Értesítések / riasztások** (Beállítások → Értesítések, az eszközön tárolt határokkal): szenzorhiba (szakadt szál,
 rövidzár, értelmezhetetlen érték), túl alacsony és túl magas hőmérséklet. Az eszköz `ALERT:<szenzor>:<állapot>:<érték>`
