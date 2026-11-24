@@ -19,6 +19,10 @@ public partial class MainPage : ContentPage
     // Timing példányt megőrizzük hogy sensor update működjön
     private Timing? _timingPage;
 
+    // Térerő (RSSI) lekérdezés a csatlakozott eszközről, 3 mp-enként
+    private IDispatcherTimer? _rssiTimer;
+    private readonly List<int> _rssiHist = new();
+
     public MainPage()
     {
         InitializeComponent();
@@ -171,7 +175,7 @@ public partial class MainPage : ContentPage
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            ConnectionIndicatorMain.Fill = isConnected ? Colors.LimeGreen : Colors.Red;
+            if (isConnected) _ = UpdateRssiAsync(); else SetSignal(null);
 
             if (!isConnected && _currentTabKey != "note" && !_manualOverride)
                 NoConnectionOverlayMain.IsVisible = true;
@@ -184,6 +188,35 @@ public partial class MainPage : ContentPage
             // overlay (fenti IsVisible) már önmagában egyértelműen jelzi az
             // állapotot, nem kell ehhez külön dialógus.
         });
+    }
+
+    // ══════════════ TÉRERŐ ══════════════
+    private async Task UpdateRssiAsync()
+    {
+        var dev = BluetoothManager.ConnectedDevice;
+        if (dev == null || !BluetoothManager.IsConnected) { SetSignal(null); return; }
+        if (BluetoothManager.OtaMode) return;   // firmware-frissítés alatt nem zavarjuk a BLE forgalmat
+        try
+        {
+            if (await dev.UpdateRssiAsync()) SetSignal(dev.Rssi);
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"RSSI: {ex.Message}"); }
+    }
+
+    // rssi == null: nincs kapcsolat. Az érték 3 mérés átlaga (a jel ingadozik).
+    private void SetSignal(int? rssi)
+    {
+        if (rssi == null) _rssiHist.Clear();
+        else { _rssiHist.Add(rssi.Value); while (_rssiHist.Count > 3) _rssiHist.RemoveAt(0); }
+
+        int? avg = rssi == null ? null : (int)Math.Round(_rssiHist.Average());
+        int bars = avg == null ? 0 : avg >= -55 ? 5 : avg >= -65 ? 4 : avg >= -75 ? 3 : avg >= -85 ? 2 : 1;
+        var active = bars <= 1 ? Colors.OrangeRed : Colors.LimeGreen;
+        var off = Color.FromArgb("#3A3A3C");
+        Border[] all = { SigBar1, SigBar2, SigBar3, SigBar4, SigBar5 };
+        for (int i = 0; i < all.Length; i++) all[i].BackgroundColor = i < bars ? active : off;
+        LblRssi.Text = avg == null ? "--" : $"{avg} dBm";
+        LblRssi.TextColor = avg == null ? Colors.Red : Colors.White;
     }
 
     private void OnBrowseTapped(object s, EventArgs e)
@@ -216,6 +249,13 @@ public partial class MainPage : ContentPage
     {
         base.OnAppearing();
         UpdateMainConnectionIndicator(BluetoothManager.IsConnected);
+        if (_rssiTimer == null)
+        {
+            _rssiTimer = Dispatcher.CreateTimer();
+            _rssiTimer.Interval = TimeSpan.FromSeconds(3);
+            _rssiTimer.Tick += async (s, e) => await UpdateRssiAsync();
+        }
+        _rssiTimer.Start();
         if (!string.IsNullOrEmpty(_currentTabKey))
             LoadContent(_currentTabKey);
     }
@@ -223,6 +263,7 @@ public partial class MainPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        _rssiTimer?.Stop();
         // Amikor elnavigálunk a MainPage-ről (pl. Settings-re firmware
         // frissítéshez), a Data oldal háttérben futó lekérdező timere
         // enélkül tovább futna és ütközne az OTA BLE írásokkal.

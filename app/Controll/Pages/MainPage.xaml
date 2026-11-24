@@ -14,13 +14,17 @@
               HeightRequest="40"
               Padding="0">
 
-            <Ellipse x:Name="ConnectionIndicatorMain"
-                 WidthRequest="15"
-                 HeightRequest="15"
-                 Margin="10,0,0,0"
-                 Fill="Red"
-                 VerticalOptions="Center"
-                 HorizontalOptions="Start"/>
+            <!-- Térerő: 5 csík + dBm érték (csatlakozva), egyébként szürke csíkok -->
+            <HorizontalStackLayout x:Name="SignalPanel" Margin="10,0,0,0" Spacing="8" VerticalOptions="Center" HorizontalOptions="Start">
+                <HorizontalStackLayout Spacing="2" HeightRequest="18" VerticalOptions="Center">
+                <Border x:Name="SigBar1" WidthRequest="4" HeightRequest="6" VerticalOptions="End" StrokeThickness="0" StrokeShape="RoundRectangle 1" BackgroundColor="#3A3A3C" />
+                <Border x:Name="SigBar2" WidthRequest="4" HeightRequest="9" VerticalOptions="End" StrokeThickness="0" StrokeShape="RoundRectangle 1" BackgroundColor="#3A3A3C" />
+                <Border x:Name="SigBar3" WidthRequest="4" HeightRequest="12" VerticalOptions="End" StrokeThickness="0" StrokeShape="RoundRectangle 1" BackgroundColor="#3A3A3C" />
+                <Border x:Name="SigBar4" WidthRequest="4" HeightRequest="15" VerticalOptions="End" StrokeThickness="0" StrokeShape="RoundRectangle 1" BackgroundColor="#3A3A3C" />
+                <Border x:Name="SigBar5" WidthRequest="4" HeightRequest="18" VerticalOptions="End" StrokeThickness="0" StrokeShape="RoundRectangle 1" BackgroundColor="#3A3A3C" />
+                </HorizontalStackLayout>
+                <Label x:Name="LblRssi" Text="--" TextColor="#AEAEB2" FontSize="12" FontAttributes="Bold" VerticalOptions="Center" />
+            </HorizontalStackLayout>
 
 
             <Button Text="⚙️" 
