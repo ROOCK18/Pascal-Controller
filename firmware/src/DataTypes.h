@@ -129,6 +129,7 @@ struct ProxCh {
   bool enabled = false;
   uint8_t value = 100;     // ventilátor: fordulatszám % ; relé/RGB: nem használt
   uint16_t durSec = 60;    // időtartam (mp); 0 = ventilátor/RGB: marad, relé: a Kapuzás ideje
+  uint8_t action = 0;      // relé/RGB: 0 = BE az időtartamra, 2 = KI az időtartamra (ventilátornál nem használt)
 };
 ProxCh proxCh[5];
 

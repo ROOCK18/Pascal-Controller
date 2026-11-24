@@ -502,20 +502,7 @@ public partial class Settings : ContentPage
         if (sd == null) return;
         ProxEnabledSwitch.IsToggled = sd.ProxEnabled;
         ProxMetersEntry.Text = sd.ProxMeters.ToString("0.#", CultureInfo.InvariantCulture);
-        ProxRearmPicker.SelectedIndex = Math.Clamp(sd.ProxRearmMode, 0, 2);
-        ProxRearmMetersEntry.Text = sd.ProxRearmMeters.ToString("0.#", CultureInfo.InvariantCulture);
-        ProxRearmSecEntry.Text = sd.ProxRearmSec.ToString(CultureInfo.InvariantCulture);
-        UpdateProxRearmVisibility();
     }
-
-    private void UpdateProxRearmVisibility()
-    {
-        int mode = ProxRearmPicker.SelectedIndex;
-        ProxRearmMetersBox.IsVisible = mode >= 1;
-        ProxRearmSecBox.IsVisible = mode == 2;
-    }
-
-    private void OnProxRearmChanged(object? s, EventArgs e) => UpdateProxRearmVisibility();
 
     private void OnProxDeviceChanged(object? s, EventArgs e)
     {
@@ -534,21 +521,6 @@ public partial class Settings : ContentPage
             return;
         }
         bool enabled = ProxEnabledSwitch.IsToggled;
-        int rearmMode = Math.Clamp(ProxRearmPicker.SelectedIndex, 0, 2);
-        double rearmMeters = 15; int rearmSec = 30;
-        if (rearmMode >= 1
-            && (!double.TryParse((ProxRearmMetersEntry.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out rearmMeters)
-                || rearmMeters <= meters || rearmMeters > 500))
-        {
-            await DisplayAlertAsync("Hibás érték", "Az újraélesedés távolsága nagyobb legyen a közeledési távolságnál (legfeljebb 500 m).", "OK");
-            return;
-        }
-        if (rearmMode == 2 && (!int.TryParse((ProxRearmSecEntry.Text ?? "").Trim(), out rearmSec) || rearmSec < 1 || rearmSec > 86400))
-        {
-            await DisplayAlertAsync("Hibás érték", "Az idő 1 és 86400 másodperc közötti szám legyen.", "OK");
-            return;
-        }
-
         if (enabled)
         {
             // Értesítési engedély (Android 13+): a háttérfigyelés állandó értesítést mutat, és a végrehajtásról is értesít
@@ -557,14 +529,13 @@ public partial class Settings : ContentPage
         BluetoothManager.UpdateSaved(_proxIds[i], sd =>
         {
             sd.ProxEnabled = enabled; sd.ProxMeters = meters;
-            sd.ProxRearmMode = rearmMode; sd.ProxRearmMeters = rearmMeters; sd.ProxRearmSec = rearmSec;
         });
         ProximityService.Refresh();
         BackgroundHost.Update();
         BluetoothManager.StartAutoReconnect();
         await DisplayAlertAsync("Siker", enabled
-            ? $"Elmentve. Az app {meters:0.#} méteren belül csatlakozik, és elindítja a Vezérlésben beállított közeledés-műveleteket."
-            : "Elmentve. A közeledés érzékelés ennél az eszköznél ki van kapcsolva.", "OK");
+            ? $"Elmentve. Az app {meters:0.#} méteren belül magától csatlakozik."
+            : "Elmentve. Az automatikus csatlakozás ennél az eszköznél ki van kapcsolva.", "OK");
     }
 
     private void OnProxHeaderTapped(object s, EventArgs e) => ToggleSection(ProxDetailsPanel, ProxExpandIcon);

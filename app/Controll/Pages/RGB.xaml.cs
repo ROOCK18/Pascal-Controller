@@ -204,6 +204,12 @@ public partial class RGB : ContentView
         _isUpdating = false;
     }
 
+    // RGB automatikák oldal megnyitása
+    private void OnRgbAutoClicked(object sender, TappedEventArgs e)
+    {
+        if (Shell.Current.CurrentPage is MainPage main) main.ShowRgbAuto();
+    }
+
     private async void OnToggleTapped(object sender, TappedEventArgs e)
     {
         _colorEnabled = !_colorEnabled;
@@ -244,39 +250,8 @@ public partial class RGB : ContentView
         {
             BluetoothManager.OnDataReceived -= OnRgbDataReceived;
             BluetoothManager.OnDataReceived += OnRgbDataReceived;
-            BluetoothManager.OnDataReceived -= OnRgbProxReceived;
-            BluetoothManager.OnDataReceived += OnRgbProxReceived;
             await BluetoothManager.WriteAsync("GET_RGB\n");
-            await Task.Delay(300);
-            await BluetoothManager.WriteAsync("GET_PROX");
         }
-    }
-
-    // ------ KÖZELEDÉS (az eszközön tárolva) ------
-    // LOAD_PROX:RGB:<be>:<érték>:<idõtartam>
-    private void OnRgbProxReceived(string data)
-    {
-        if (string.IsNullOrEmpty(data) || !data.StartsWith("LOAD_PROX:RGB:")) return;
-        var p = data.Substring(10).Trim().Split(':');
-        if (p.Length < 4) return;
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            ProxRGBSwitch.IsToggled = p[1] == "1";
-            ProxRGBDurEntry.Text = p[3];
-        });
-    }
-
-    private async void OnSaveProxClicked(object sender, EventArgs e)
-    {
-        if (!BluetoothManager.IsConnected) return;
-        var page = Shell.Current.CurrentPage;
-        if (!int.TryParse((ProxRGBDurEntry.Text ?? "").Trim(), out int seconds) || seconds < 0 || seconds > 65535)
-        {
-            await page.DisplayAlertAsync("Hibás érték", "Az idõtartam 0 és 65535 másodperc közötti szám legyen.", "OK");
-            return;
-        }
-        await BluetoothManager.WriteAsync($"SET_PROX:RGB:{(ProxRGBSwitch.IsToggled ? 1 : 0)}:100:{seconds}");
-        await page.DisplayAlertAsync("Siker", "Közeledés beállítás elmentve.", "OK");
     }
 
     private void OnRgbDataReceived(string data)

@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Controll.Pages.RGB">
 
-    <VerticalStackLayout Spacing="20" Padding="20">
+    <VerticalStackLayout Spacing="10" Padding="12">
 
         <!-- Választott szín + egyedi ON/OFF buborék kapcsoló -->
         <Border HeightRequest="80"
@@ -147,23 +147,10 @@
             </Border>
         </Grid>
 
-        <!-- KÖZELEDÉS: RGB bekapcsolása, amikor a telefon a Beállításokban megadott távolságon belülre ér -->
-        <Border BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" Padding="15" StrokeShape="RoundRectangle 12">
-            <VerticalStackLayout Spacing="10">
-                <Grid ColumnDefinitions="*,Auto">
-                    <Label Grid.Column="0" Text="Közeledés" FontSize="{StaticResource MediumFontSize}" FontAttributes="Bold" VerticalOptions="Center" />
-                    <Switch Grid.Column="1" x:Name="ProxRGBSwitch" />
-                </Grid>
-                <Label Text="Közeledéskor az RGB bekapcsol (a beállított színnel). Az RGB-nek nincs Automata/Kézi módja, ezért a kapcsoló önmagában dönt. A közeledés érzékelést a Beállításokban kell bekapcsolni." TextColor="#AEAEB2" FontSize="12" />
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="Időtartam (mp, 0: bekapcsolva marad)" TextColor="#AEAEB2" FontSize="12" />
-                    <Entry x:Name="ProxRGBDurEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="0" />
-                </VerticalStackLayout>
-                <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
-                    <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked"/></Border.GestureRecognizers>
-                    <Label Text="KÖZELEDÉS MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
-                </Border>
-            </VerticalStackLayout>
+        <!-- RGB automatikák (külön oldal, ott állítható a közeledés) -->
+        <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnRgbAutoClicked"/></Border.GestureRecognizers>
+            <Label Text="RGB automatikák" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>
         </Border>
 
     </VerticalStackLayout>

@@ -20,13 +20,22 @@ public class SavedDevice
     // ── Közeledés érzékelés (ProximityService) ──
     public bool   ProxEnabled  { get; set; }
     public double ProxMeters   { get; set; } = 10;          // ennyi méteren (becsült) belül csatlakozik / hajtja végre a műveletet
-    // Mikor élesedjen újra (hajthasson végre újra műveletet):
+    // Csatornánkénti közeledés-beállítás (kulcs: F1, F2, R1, R2, RGB) - lásd ProxChannelView / ProximityService
+    public Dictionary<string, ProxChannelCfg> ProxChannels { get; set; } = new();
+}
+
+// Egy csatorna közeledés-beállítása (az app méri a távolságot, ezért az appban tárolódik)
+public class ProxChannelCfg
+{
+    public bool   Enabled     { get; set; }
+    public double Meters      { get; set; } = 10;   // ezen a (becsült) távolságon belül hajtja végre
+    // Mikor élesedjen újra (hajthasson végre újra):
     //   0 = teljes kapcsolatszakadás után (az eszköz eltűnt, nem látszik)
-    //   1 = ha ProxRearmMeters méteren kívül kerül
-    //   2 = ProxRearmSec másodperccel azután, hogy ProxRearmMeters méteren kívül van
-    public int    ProxRearmMode   { get; set; } = 1;
-    public double ProxRearmMeters { get; set; } = 15;
-    public int    ProxRearmSec    { get; set; } = 30;
+    //   1 = ha RearmMeters méteren kívül kerül
+    //   2 = RearmSec másodperccel azután, hogy RearmMeters méteren kívül van
+    public int    RearmMode   { get; set; } = 1;
+    public double RearmMeters { get; set; } = 15;
+    public int    RearmSec    { get; set; } = 30;
 }
 
 public static class BluetoothManager
@@ -221,7 +230,7 @@ public static class BluetoothManager
             return;
         }
         if (!Guid.TryParse(targetId, out var id)) return;
-        if (saved.Any(s => s.Id == targetId && s.ProxEnabled)) return;   // a közeledés-érzékelés csatlakoztat (ProximityService)
+        if (saved.Any(s => s.Id == targetId && ProximityService.Wanted(s))) return;   // a közeledés-érzékelés csatlakoztat (ProximityService)
         CancellationToken ct;
         lock (_reconnectLock)
         {

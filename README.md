@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.3.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.3.1** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,7 +18,7 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.3.0)
+## Firmware (v5.3.1)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
@@ -65,22 +65,18 @@ verziószám (pl. `4.9.0`).
 
 ## Közeledés érzékelés és értesítések (v5.2.0)
 
-**Közeledés érzékelés** (Beállítások → Közeledés érzékelés; csak csatlakozva látszik, a csatlakoztatott eszközre vonatkozik, és több mentett
-eszköz esetén az app mindig az utoljára használt eszközt figyeli): ha az eszköz a megadott távolságon (méter) belülre kerül, az app
-magától csatlakozik hozzá, és elindítja a közeledés-műveleteket. A Beállításokban nincs vezérlés: itt csak a távolság, az
-újraélesedés és a be/ki kapcsoló állítható. A távolság a BLE jelerősségből (RSSI) **becsült**, falak/test/környezet miatt több
-méteres eltérés lehet. A háttérben futáshoz az app Android előtér-szolgáltatást használ (állandó értesítés a sávban); az app
-indításakor kell egyszer megnyitni.
+**Közeledés** - az app az UTOLJÁRA használt eszközt figyeli a háttérben (Android előtér-szolgáltatás, állandó értesítéssel; az app
+indításakor egyszer meg kell nyitni). A távolság a BLE jelerősségből (RSSI) **becsült**, falak/test/környezet miatt több méteres eltérés lehet.
 
-**Újraélesedés** (mikor indíthatja újra a műveleteket): *teljes kapcsolatszakadás után* (az eszköz legalább 15 mp-ig nem látszik),
-*ha X méteren kívül vagyok*, vagy *X mp múlva, ha X méteren kívül vagyok*.
-
-**Közeledés-műveletek** (az eszközön tárolva, ahol a vezérlés is van): ventilátor 1-2 és relé 1-2 az **Automatikák** oldalon,
-a saját szekciójukon belül egy "Közeledés" kapcsolóval (bekapcsolva tovább nyílik a szekció a beállításokkal), az RGB az **RGB** oldalon. Ventilátor: fordulatszám % + időtartam (a végén
-visszaáll az előző értékre, 0 mp = marad); relé: impulzus (0 mp = a Kapuzás ideje); RGB: bekapcsol az időtartamra (0 mp = marad).
-Közeledéskor az app `PROX_TRIGGER` parancsot küld, az eszköz pedig csak azokat a csatornákat kapcsolja, ahol ez be van kapcsolva
-ÉS az automatika is be van kapcsolva (a ventilátor/relé Automata állapotú); az RGB-nek nincs Automata/Kézi módja, ott a kapcsoló
-önmagában dönt. (Firmware 5.3.0 szükséges.)
+- **Beállítások → Automatikus csatlakozás közeledéskor:** csak annyi, hogy az app az eszköz X méteres közelében magától csatlakozik. Vezérlés nincs itt.
+- **Csatornánkénti közeledés** a vezérlés helyén: Vezérlés → Automatikák beállítása → a Ventilátor 1-2 és Relé 1-2 szekciókon belül egy
+  "Közeledés" kapcsoló; bekapcsolva tovább nyílik: *távolság (méter)*, *mit csináljon* (ventilátor: fordulatszám %; relé/RGB: BE vagy KI),
+  *meddig* (mp), *újraélesedés* (teljes kapcsolatszakadás után / ha X méteren kívül vagyok / X mp múlva, ha X méteren kívül vagyok).
+  Az RGB-nek külön oldala van: RGB oldal → "RGB automatikák" gomb → Közeledés lenyíló.
+- **Szabály:** az eszköz csak azt a ventilátort/relét kapcsolja, amelyik **Automata** állapotban van (mint a többi automatika); az RGB-nek nincs
+  Automata/Kézi módja. Ventilátor: az időtartam végén visszaáll az előző értékre; relé: az időtartam alatt az automatika nem írja felül, utána átveszi;
+  RGB: az időtartam után az ellenkezőjére áll (0 mp: marad). Reléknél a 0 mp a relé "Kapuzás" beállított ideje.
+- A távolságot és az újraélesedést az app tárolja (az app méri), a "mit/meddig" és a bekapcsolás az eszközön is tárolódik (`SET_PROX`, `PROX_TRIGGER:<csatorna>`). Firmware 5.3.1 szükséges.
 
 **Értesítések / riasztások** (Beállítások → Értesítések, az eszközön tárolt határokkal): szenzorhiba (szakadt szál,
 rövidzár, értelmezhetetlen érték), túl alacsony és túl magas hőmérséklet. Az eszköz `ALERT:<szenzor>:<állapot>:<érték>`

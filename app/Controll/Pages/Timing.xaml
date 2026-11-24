@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Controll.Pages"
              x:Class="Controll.Pages.Timing"
              BackgroundColor="{StaticResource GraphiteGray}">
 
@@ -23,27 +24,7 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Fan1DetailsPanel" Spacing="10" IsVisible="False">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0" Text="Közeledés" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
-                        <Switch Grid.Column="1" x:Name="ProxF1Switch" AutomationId="F1" Toggled="OnProxSwitchToggled" />
-                    </Grid>
-                    <VerticalStackLayout x:Name="ProxF1Panel" Spacing="8" IsVisible="False">
-                        <Label Text="Amikor a telefon a Beállításokban megadott távolságon belülre ér, ez a csatorna végrehajtja az alábbit (csak Automata állapotban)." TextColor="Gray" FontSize="12" />
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                            <VerticalStackLayout Grid.Column="0" Spacing="4">
-                                <Label Text="Fordulatszám (%)" TextColor="Gray" FontSize="12" />
-                                <Entry x:Name="ProxF1ValueEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="100" />
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="1" Spacing="4">
-                                <Label Text="Időtartam (mp, 0: marad)" TextColor="Gray" FontSize="12" />
-                                <Entry x:Name="ProxF1DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="60" />
-                            </VerticalStackLayout>
-                        </Grid>
-                    </VerticalStackLayout>
-                    <Border x:Name="ProxF1Save" IsVisible="False" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
-                        <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked" CommandParameter="F1"/></Border.GestureRecognizers>
-                        <Label Text="KÖZELEDÉS MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Border>
+                    <pages:ProxChannelView x:Name="ProxF1View" ChannelKey="F1" Kind="Fan" />
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Fan1TimerTab" Grid.Column="0"
@@ -261,27 +242,7 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Fan2DetailsPanel" Spacing="10" IsVisible="False">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0" Text="Közeledés" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
-                        <Switch Grid.Column="1" x:Name="ProxF2Switch" AutomationId="F2" Toggled="OnProxSwitchToggled" />
-                    </Grid>
-                    <VerticalStackLayout x:Name="ProxF2Panel" Spacing="8" IsVisible="False">
-                        <Label Text="Amikor a telefon a Beállításokban megadott távolságon belülre ér, ez a csatorna végrehajtja az alábbit (csak Automata állapotban)." TextColor="Gray" FontSize="12" />
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                            <VerticalStackLayout Grid.Column="0" Spacing="4">
-                                <Label Text="Fordulatszám (%)" TextColor="Gray" FontSize="12" />
-                                <Entry x:Name="ProxF2ValueEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="100" />
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="1" Spacing="4">
-                                <Label Text="Időtartam (mp, 0: marad)" TextColor="Gray" FontSize="12" />
-                                <Entry x:Name="ProxF2DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="60" />
-                            </VerticalStackLayout>
-                        </Grid>
-                    </VerticalStackLayout>
-                    <Border x:Name="ProxF2Save" IsVisible="False" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
-                        <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked" CommandParameter="F2"/></Border.GestureRecognizers>
-                        <Label Text="KÖZELEDÉS MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Border>
+                    <pages:ProxChannelView x:Name="ProxF2View" ChannelKey="F2" Kind="Fan" />
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Fan2TimerTab" Grid.Column="0"
@@ -486,21 +447,7 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Relay1DetailsPanel" Spacing="10" IsVisible="False">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0" Text="Közeledés" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
-                        <Switch Grid.Column="1" x:Name="ProxR1Switch" AutomationId="R1" Toggled="OnProxSwitchToggled" />
-                    </Grid>
-                    <VerticalStackLayout x:Name="ProxR1Panel" Spacing="8" IsVisible="False">
-                        <Label Text="Amikor a telefon a Beállításokban megadott távolságon belülre ér, ez a csatorna végrehajtja az alábbit (csak Automata állapotban)." TextColor="Gray" FontSize="12" />
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="Impulzus (mp, 0: a relé Kapuzás ideje)" TextColor="Gray" FontSize="12" />
-                            <Entry x:Name="ProxR1DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="0" />
-                        </VerticalStackLayout>
-                    </VerticalStackLayout>
-                    <Border x:Name="ProxR1Save" IsVisible="False" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
-                        <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked" CommandParameter="R1"/></Border.GestureRecognizers>
-                        <Label Text="KÖZELEDÉS MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Border>
+                    <pages:ProxChannelView x:Name="ProxR1View" ChannelKey="R1" Kind="Relay" />
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Relay1TimerTab" Grid.Column="0"
@@ -694,21 +641,7 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Relay2DetailsPanel" Spacing="10" IsVisible="False">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0" Text="Közeledés" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
-                        <Switch Grid.Column="1" x:Name="ProxR2Switch" AutomationId="R2" Toggled="OnProxSwitchToggled" />
-                    </Grid>
-                    <VerticalStackLayout x:Name="ProxR2Panel" Spacing="8" IsVisible="False">
-                        <Label Text="Amikor a telefon a Beállításokban megadott távolságon belülre ér, ez a csatorna végrehajtja az alábbit (csak Automata állapotban)." TextColor="Gray" FontSize="12" />
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="Impulzus (mp, 0: a relé Kapuzás ideje)" TextColor="Gray" FontSize="12" />
-                            <Entry x:Name="ProxR2DurEntry" TextColor="White" BackgroundColor="#3A3A3A" Keyboard="Numeric" HeightRequest="40" Text="0" />
-                        </VerticalStackLayout>
-                    </VerticalStackLayout>
-                    <Border x:Name="ProxR2Save" IsVisible="False" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
-                        <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveProxClicked" CommandParameter="R2"/></Border.GestureRecognizers>
-                        <Label Text="KÖZELEDÉS MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Border>
+                    <pages:ProxChannelView x:Name="ProxR2View" ChannelKey="R2" Kind="Relay" />
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Relay2TimerTab" Grid.Column="0"

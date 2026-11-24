@@ -18,6 +18,8 @@ public partial class MainPage : ContentPage
 
     // Timing példányt megőrizzük hogy sensor update működjön
     private Timing? _timingPage;
+    private RgbAuto? _rgbAutoPage;
+    private bool _isRgbAutoVisible = false;
 
     // Térerő (RSSI) lekérdezés a csatlakozott eszközről, 3 mp-enként
     private IDispatcherTimer? _rssiTimer;
@@ -76,6 +78,7 @@ public partial class MainPage : ContentPage
             _navigationHistory.Add(_currentTabKey);
 
         _isTimingVisible = false;
+        _isRgbAutoVisible = false;
         _currentTabKey   = tabKey;
         SetActiveTab(tabKey);
         LoadContent(tabKey);
@@ -171,6 +174,22 @@ public partial class MainPage : ContentPage
         SwitchTab("controll");
     }
 
+    // ══════════════ RGB AUTOMATIKÁK NAVIGÁCIÓ ══════════════
+    public void ShowRgbAuto()
+    {
+        _rgbAutoPage ??= new RgbAuto();
+        ContentArea.Content = _rgbAutoPage;
+        _isRgbAutoVisible = true;
+        _isTimingVisible = false;
+        if (BluetoothManager.IsConnected) _rgbAutoPage.RequestProx();
+    }
+
+    public void ShowRgbFromAuto()
+    {
+        _isRgbAutoVisible = false;
+        SwitchTab("RGB");
+    }
+
     // ══════════════ BT ÁLLAPOT ══════════════
     private void UpdateMainConnectionIndicator(bool isConnected)
     {
@@ -242,6 +261,11 @@ public partial class MainPage : ContentPage
         {
             ShowControlFromTiming();
             return true; // esemény elfogyasztva - az app nem lép ki/navigál el
+        }
+        if (_isRgbAutoVisible)
+        {
+            ShowRgbFromAuto();
+            return true;
         }
         return base.OnBackButtonPressed();
     }

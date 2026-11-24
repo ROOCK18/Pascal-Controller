@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Controll.Pages"
+             x:Class="Controll.Pages.RgbAuto"
+             BackgroundColor="{StaticResource GraphiteGray}">
+
+    <!-- RGB automatikák: egyelőre egyetlen lenyíló, a közeledés -->
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="16">
+
+            <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="44">
+                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnBackClicked"/></Border.GestureRecognizers>
+                <Label Text="← Vissza az RGB-hez" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
+
+            <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Közeledés" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                        <Label Grid.Column="1" x:Name="ProxExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnProxHeaderTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
+                        <pages:ProxChannelView x:Name="ProxRgbView" ChannelKey="RGB" Kind="Rgb" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

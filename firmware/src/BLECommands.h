@@ -399,6 +399,12 @@ void handleBleCommand(String receivedString) {
     else if (receivedString == "PROX_TRIGGER") {
       proxTrigger();
     }
+    else if (receivedString.startsWith("PROX_TRIGGER:")) {
+      // PROX_TRIGGER:<F1|F2|R1|R2|RGB> - csak az adott csatorna közeledés-művelete
+      String ch = receivedString.substring(13);
+      ch.trim();
+      for (int i = 0; i < PROX_CH; i++) if (ch == PROX_NAMES[i]) { proxTrigger(i); break; }
+    }
     else if (receivedString.startsWith("PULSE:")) {
       // PULSE:<R1|R2>:<mp>  - a relé <mp> másodpercre bekapcsol (0 = a "Kapuzás" beállított ideje), majd kikapcsol
       String body = receivedString.substring(6);
