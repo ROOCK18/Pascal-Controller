@@ -241,8 +241,8 @@ void drawMenu() {
       break;
 
     case MENU_SETTINGS_SUB: {
-      const char* items[7] = { "Mód", "Dátum/Idő", "Szenzor beállítások", "Kijelző", "WiFi", "Factory reset", "Vissza" };
-      drawMenuList("BEÁLLÍTÁSOK", items, 7, menuCursor);
+      const char* items[8] = { "Mód", "Dátum/Idő", "Szenzor beállítások", "Kijelző", "WiFi", "MQTT", "Factory reset", "Vissza" };
+      drawMenuList("BEÁLLÍTÁSOK", items, 8, menuCursor);
       break;
     }
 
@@ -316,6 +316,19 @@ void drawMenu() {
       for (int i = 0; i < 4; i++) { rows[n].label = SENS_TYPE_NAMES[i]; rows[n].value = (i == sensCfg[menuSensTarget].type) ? "AKTÍV" : ""; rows[n].valColor = UI_GREEN; n++; }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList("SZENZOR TÍPUSA", rows, n, menuCursor);
+      break;
+    }
+
+    case MENU_MQTT_LIST: {
+      const char* st[4] = { "kikapcsolva", "nincs WiFi", "csatlakozik...", "csatlakozva" };
+      uint16_t stCol = (mqttState == 3) ? UI_GREEN : (mqttState == 0 ? UI_WHITE : UI_YELLOW);
+      String broker = mqttCfg.host[0] ? (String(mqttCfg.host) + ":" + String(mqttCfg.port)) : String("nincs (app)");
+      rows[0] = { "Bekapcsolva", mqttCfg.enabled ? "BE" : "KI", mqttCfg.enabled ? UI_GREEN : UI_RED };
+      rows[1] = { "Állapot", st[mqttState < 4 ? mqttState : 0], stCol };
+      rows[2] = { "Bróker", broker, UI_CYAN };
+      rows[3] = { "Név", String(mqttCfg.name), UI_CYAN };
+      rows[4] = { "Vissza", "", UI_WHITE };
+      drawValueList("MQTT", rows, 5, menuCursor);
       break;
     }
 
@@ -659,8 +672,8 @@ void handleMenuInput(ButtonEvent ev) {
       break;
 
     case MENU_SETTINGS_SUB:
-      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 7;
-      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 7) % 7;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 8;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 8) % 8;
       else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 0; }
       else if (ev == BTN_SELECT) {
         switch (menuCursor) {
@@ -674,8 +687,9 @@ void handleMenuInput(ButtonEvent ev) {
             menuScreen = MENU_WIFI_SCANNING;
             wifiMenuScanRequested = true;
             break;
-          case 5: menuScreen = MENU_FACTORY_CONFIRM; break;
-          case 6: menuScreen = MENU_MAIN; menuCursor = 0; break;
+          case 5: menuScreen = MENU_MQTT_LIST; menuCursor = 0; break;
+          case 6: menuScreen = MENU_FACTORY_CONFIRM; break;
+          case 7: menuScreen = MENU_MAIN; menuCursor = 0; break;
         }
       }
       break;
@@ -783,9 +797,19 @@ void handleMenuInput(ButtonEvent ev) {
       break;
     }
 
+    case MENU_MQTT_LIST:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 5;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 5) % 5;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 5; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 0) { mqttCfg.enabled = !mqttCfg.enabled; mqttReconf = true; markDirty(); } // a bróker adatai az appból állíthatók
+        else if (menuCursor == 4) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 5; }
+      }
+      break;
+
     case MENU_FACTORY_CONFIRM:
       if (ev == BTN_SELECT) { factoryReset(); /* nem tér vissza - ujraindul */ }
-      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 5; }
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 6; }
       break;
 
     case MENU_TIME_LIST:
