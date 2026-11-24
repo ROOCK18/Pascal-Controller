@@ -149,6 +149,7 @@ public partial class ProxChannelView : ContentView
             RgbModePicker.SelectedIndex = mode;
             RgbHoldEntry.Text = p[5];
             RgbRampDownEntry.Text = p[6];
+            RgbCapSwitch.IsToggled = p.Length >= 8 && p[7] == "1";
             var id = DeviceId;
             if (id != null && BluetoothManager.FindSaved(id) != null)
             {
@@ -240,7 +241,7 @@ public partial class ProxChannelView : ContentView
             Enabled = enabled, Meters = meters, RearmMode = rearmMode, RearmMeters = rearmMeters, RearmSec = rearmSec, RgbMode = rgbMode
         });
         if (Kind == "Rgb")
-            await BluetoothManager.WriteAsync($"SET_RGBPROX:{(enabled ? 1 : 0)}:{RgbColor.Hex}:{rgbPct}:{rgbUp}:{rgbMode}:{rgbHold}:{rgbDown}");
+            await BluetoothManager.WriteAsync($"SET_RGBPROX:{(enabled ? 1 : 0)}:{RgbColor.Hex}:{rgbPct}:{rgbUp}:{rgbMode}:{rgbHold}:{rgbDown}:{(RgbCapSwitch.IsToggled ? 1 : 0)}");
         else
             await BluetoothManager.WriteAsync($"SET_PROX:{ChannelKey}:{(enabled ? 1 : 0)}:{value}:{seconds}:{action}");
 

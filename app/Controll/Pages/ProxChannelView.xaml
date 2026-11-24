@@ -41,6 +41,11 @@
                 <pages:ColorField x:Name="RgbColor" />
                 <Label Text="Fényerő (%)" TextColor="Gray" FontSize="12" />
                 <Entry x:Name="RgbPctEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="100" />
+                <HorizontalStackLayout Spacing="10">
+                    <Label Text="Fényerő a napszak-görbéhez igazodik" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                    <Switch x:Name="RgbCapSwitch" />
+                </HorizontalStackLayout>
+                <Label Text="Bekapcsolva a közeledés legfeljebb akkora fényerővel kapcsol fel, mint amennyi a Napszak-görbe pillanatnyi fényereje (pl. este kevesebb). Ha a görbe nem fut, a fenti fényerő érvényes." TextColor="Gray" FontSize="11" />
                 <Label Text="Felfutási idő (mp) - ennyi idő alatt fényesedik fel" TextColor="Gray" FontSize="12" />
                 <Entry x:Name="RgbRampUpEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="5" />
                 <Label Text="Világítási mód" TextColor="Gray" FontSize="12" />

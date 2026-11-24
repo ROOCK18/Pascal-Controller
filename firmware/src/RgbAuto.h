@@ -96,6 +96,27 @@ void rgbProxLeaveCmd() {
   if (rgbProxActive && rgbProxCfg.mode == 1) rgbProxLeave();
 }
 
+// A napszak-görbe pillanatnyi értéke (szín + fényerő %). false, ha a görbe nem fut (ki van kapcsolva, nincs pontja,
+// vagy az adott napon nem él).
+static bool rgbDayNow(uint8_t &tr, uint8_t &tg, uint8_t &tb, uint8_t &tp) {
+  if (!(rgbDayCfg.enabled && rgbDayCfg.count > 0 && rgbRunsToday(rgbDayCfg.days))) return false;
+  int nowMin = hr * 60 + min_t;
+  int n = rgbDayCfg.count;
+  int prev = -1, next = -1;
+  for (int i = 0; i < n; i++) if (rgbDayCfg.pts[i].minute <= nowMin) prev = i;       // a pontok növekvő sorrendben vannak
+  for (int i = n - 1; i >= 0; i--) if (rgbDayCfg.pts[i].minute > nowMin) next = i;
+  int prevMin, nextMin;
+  const RgbDayPt *a, *b;
+  if (prev < 0) { a = &rgbDayCfg.pts[n - 1]; prevMin = (int)a->minute - 1440; } else { a = &rgbDayCfg.pts[prev]; prevMin = (int)a->minute; }
+  if (next < 0) { b = &rgbDayCfg.pts[0]; nextMin = (int)b->minute + 1440; } else { b = &rgbDayCfg.pts[next]; nextMin = (int)b->minute; }
+  float span = (float)(nextMin - prevMin);
+  float f = span <= 0.0f ? 0.0f : (float)(nowMin - prevMin) / span;
+  f = constrain(f, 0.0f, 1.0f);
+  tr = rgbLerp8(a->r, b->r, f); tg = rgbLerp8(a->g, b->g, f); tb = rgbLerp8(a->b, b->b, f);
+  tp = rgbLerp8(a->pct, b->pct, f);
+  return true;
+}
+
 // Az átmenet-motor lépése + az automatikák kiértékelése. Minden loop()-ban hívandó.
 void applyRgbAutomation() {
   if (!rgbAuto) {
@@ -126,7 +147,13 @@ void applyRgbAutomation() {
   // 1) közeledés
   if (rgbProxActive) {
     if (rgbSrc != RS_PROX || rgbSrcKey != rgbProxSerial) {
-      rgbGoto(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b, rgbProxCfg.pct, true, rgbProxCfg.rampUpSec);
+      // Fényerő: a közeledésnél beállított érték, de ha kérted, legfeljebb a napszak-görbe pillanatnyi fényereje
+      uint8_t pct = rgbProxCfg.pct;
+      if (rgbProxCfg.capByDay) {
+        uint8_t dr, dg, db, dp;
+        if (rgbDayNow(dr, dg, db, dp) && dp < pct) pct = dp;
+      }
+      rgbGoto(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b, pct, pct > 0, rgbProxCfg.rampUpSec);
       rgbSrc = RS_PROX; rgbSrcKey = rgbProxSerial;
     }
     return;
@@ -156,21 +183,7 @@ void applyRgbAutomation() {
   uint8_t tr = 0, tg = 0, tb = 0, tp = 0;
   uint8_t src = RS_NONE;
 
-  if (rgbDayCfg.enabled && rgbDayCfg.count > 0 && rgbRunsToday(rgbDayCfg.days)) {
-    int nowMin = hr * 60 + min_t;
-    int n = rgbDayCfg.count;
-    int prev = -1, next = -1;
-    for (int i = 0; i < n; i++) if (rgbDayCfg.pts[i].minute <= nowMin) prev = i;       // a pontok növekvő sorrendben vannak
-    for (int i = n - 1; i >= 0; i--) if (rgbDayCfg.pts[i].minute > nowMin) next = i;
-    int prevMin, nextMin;
-    const RgbDayPt *a, *b;
-    if (prev < 0) { a = &rgbDayCfg.pts[n - 1]; prevMin = (int)a->minute - 1440; } else { a = &rgbDayCfg.pts[prev]; prevMin = (int)a->minute; }
-    if (next < 0) { b = &rgbDayCfg.pts[0]; nextMin = (int)b->minute + 1440; } else { b = &rgbDayCfg.pts[next]; nextMin = (int)b->minute; }
-    float span = (float)(nextMin - prevMin);
-    float f = span <= 0.0f ? 0.0f : (float)(nowMin - prevMin) / span;
-    f = constrain(f, 0.0f, 1.0f);
-    tr = rgbLerp8(a->r, b->r, f); tg = rgbLerp8(a->g, b->g, f); tb = rgbLerp8(a->b, b->b, f);
-    tp = rgbLerp8(a->pct, b->pct, f);
+  if (rgbDayNow(tr, tg, tb, tp)) {
     have = true; src = RS_DAY;
   } else if (rgbThermCfg.enabled && rgbThermCfg.count > 0) {
     float t = getSensorTemp(rgbThermCfg.sensor);
@@ -320,11 +333,13 @@ void handleSetRgbDay(const String &body) {
   notifyLine("RGBAUTO_OK");
 }
 
-// SET_RGBPROX:<be>:<RRGGBB>:<fényerő>:<felfutás mp>:<mód 0/1/2>:<világítás mp>:<lefutás mp>
+// SET_RGBPROX:<be>:<RRGGBB>:<fényerő>:<felfutás mp>:<mód 0/1/2>:<világítás mp>:<lefutás mp>[:<napszak-görbéhez igazodik 0/1>]
 void handleSetRgbProx(const String &body) {
-  String t[7];
-  if (rgbSplit(body, ':', t, 7) < 7) return;
+  String t[8];
+  int n = rgbSplit(body, ':', t, 8);
+  if (n < 7) return;
   RgbProxCfg c;
+  c.capByDay = (n >= 8 && t[7].toInt() != 0) ? 1 : 0;
   c.enabled = t[0].toInt() != 0;
   rgbParseHex(t[1], c.r, c.g, c.b);
   c.pct = (uint8_t)constrain(t[2].toInt(), 0, 100);
@@ -364,7 +379,7 @@ void handleGetRgbAuto() {
 
   notifyLine("LOAD_RGBPROX:" + String(rgbProxCfg.enabled ? 1 : 0) + ":" + rgbHex(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b) + ":" +
              String(rgbProxCfg.pct) + ":" + String(rgbProxCfg.rampUpSec) + ":" + String(rgbProxCfg.mode) + ":" +
-             String(rgbProxCfg.holdSec) + ":" + String(rgbProxCfg.rampDownSec));
+             String(rgbProxCfg.holdSec) + ":" + String(rgbProxCfg.rampDownSec) + ":" + String(rgbProxCfg.capByDay ? 1 : 0));
 }
 
 // SET_AUTO:RGB:<0/1>

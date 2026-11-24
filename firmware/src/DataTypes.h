@@ -166,6 +166,7 @@ struct RgbProxCfg {              // közeledés: X méteren belülre érve felfu
   bool enabled = false;
   uint8_t r = 255, g = 255, b = 255;
   uint8_t pct = 100;
+  uint8_t capByDay = 0;          // 1 = a fényerő legfeljebb a napszak-görbe pillanatnyi fényereje (a struktúra méretét nem változtatja: kitöltő bájt helyén van)
   uint16_t rampUpSec = 5;        // felfutási idő
   uint8_t mode = 1;              // 0 = csak felkapcsol, 1 = amíg ott vagyok, 2 = X mp-ig világít
   uint16_t holdSec = 60;         // mode 2: világítási idő a felfutás után
