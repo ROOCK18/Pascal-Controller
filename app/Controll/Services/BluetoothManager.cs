@@ -555,6 +555,7 @@ public static class BluetoothManager
         SaveDeviceList(list);
         if (_sessionLastId == id) _sessionLastId = null;
         if (GetPrefOrNull("BTDeviceId") == id) { Preferences.Remove("BTDeviceId"); Preferences.Remove("BTDeviceName"); }
+        if (GetPrefOrNull("BTLastUsedId") == id) Preferences.Remove("BTLastUsedId");
     }
 
     // device == null: a "legutóbb csatlakozott" jelölés törlése (a mentett lista megmarad).
@@ -573,6 +574,7 @@ public static class BluetoothManager
         if (!string.IsNullOrEmpty(device.Name)) s.Name = device.Name;
         SaveDeviceList(list);
         Preferences.Set("BTDeviceId", id);
+        Preferences.Set("BTLastUsedId", id);   // az utoljára használt eszköz: lecsatlakozás után is megmarad (közeledés érzékelés)
         Preferences.Set("BTDeviceName", s.Name ?? "");
         Preferences.Set("BTAutoOff", false);
         _sessionLastId = id;
@@ -580,6 +582,8 @@ public static class BluetoothManager
     }
 
     public static string? GetSavedDeviceId() => GetPrefOrNull("BTDeviceId");
+    // Az utoljára használt (csatlakoztatott) eszköz; kézi lecsatlakozás után is megmarad.
+    public static string? LastUsedId => GetPrefOrNull("BTLastUsedId") ?? GetPrefOrNull("BTDeviceId");
     public static string? GetSavedDeviceName()
     {
         var id = GetSavedDeviceId();

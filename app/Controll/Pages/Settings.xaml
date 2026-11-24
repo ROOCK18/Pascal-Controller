@@ -33,13 +33,13 @@
                             IsVisible="False"
                             BackgroundColor="{StaticResource PrimaryRed}"
                             StrokeShape="RoundRectangle 40,0,0,40"
-                            WidthRequest="50"
+                            WidthRequest="120"
                             HeightRequest="40"
                             Padding="0">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnDisconnectClicked" />
                         </Border.GestureRecognizers>
-                        <Label Text="X" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                        <Label Text="Átcsatlakozás" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" VerticalOptions="Center" />
                     </Border>
                 </Grid>
             </Border>
@@ -473,7 +473,7 @@
                 </Border>
 
                 <!-- ══════════ KÖZELEDÉS ÉRZÉKELÉS - lenyitható, mindig látszik ══════════ -->
-                <Border x:Name="ProximityPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15">
+                <Border x:Name="ProximityPanel" IsVisible="False" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15">
                     <VerticalStackLayout Spacing="10">
                         <Grid ColumnDefinitions="*,Auto">
                             <Label Grid.Column="0" Text="Közeledés érzékelés" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
@@ -481,11 +481,10 @@
                             <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnProxHeaderTapped"/></Grid.GestureRecognizers>
                         </Grid>
                         <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
-                            <Label Text="Ha az eszköz a megadott távolságon belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet (pl. kapu nyitása). A távolság a Bluetooth jelerősségből becsült érték: falak, test és környezet miatt több méteres eltérés is lehet. A működéshez a háttérfigyelés (állandó értesítés) fut." TextColor="#AEAEB2" FontSize="12" />
+                            <Label Text="Ha az eszköz a megadott távolságon belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet (pl. kapu nyitása). A távolság a Bluetooth jelerősségből becsült érték: falak, test és környezet miatt több méteres eltérés is lehet. Ez a beállítás a most csatlakoztatott eszközre vonatkozik. Több mentett eszköz esetén a közeledést mindig az utoljára használt eszközre figyeli az app. A működéshez a háttérfigyelés (állandó értesítés) fut." TextColor="#AEAEB2" FontSize="12" />
                             <Label x:Name="LblProxEmpty" Text="Előbb csatlakozz egy eszközhöz, hogy mentett eszköz legyen." TextColor="#AEAEB2" FontSize="12" />
                             <VerticalStackLayout x:Name="ProxFields" Spacing="10">
-                                <Label Text="Eszköz" TextColor="#AEAEB2" FontSize="12" />
-                                <Picker x:Name="ProxDevicePicker" Title="Válassz eszközt" SelectedIndexChanged="OnProxDeviceChanged" />
+                                <Picker x:Name="ProxDevicePicker" IsVisible="False" Title="Válassz eszközt" SelectedIndexChanged="OnProxDeviceChanged" />
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Grid.Column="0" Text="Közeledés érzékelés ennél az eszköznél" TextColor="{StaticResource White}" VerticalOptions="Center" />
                                     <Switch Grid.Column="1" x:Name="ProxEnabledSwitch" />

@@ -472,8 +472,9 @@ public partial class Settings : ContentPage
         _proxLoading = true;
         try
         {
-            string? keepId = ProxDevicePicker.SelectedIndex >= 0 && ProxDevicePicker.SelectedIndex < _proxIds.Count
-                ? _proxIds[ProxDevicePicker.SelectedIndex] : null;
+            string? keepId = BluetoothManager.IsConnected ? BluetoothManager.GetSavedDeviceId()
+                : (ProxDevicePicker.SelectedIndex >= 0 && ProxDevicePicker.SelectedIndex < _proxIds.Count
+                    ? _proxIds[ProxDevicePicker.SelectedIndex] : null);
             var saved = BluetoothManager.GetSavedDevices();
             _proxIds.Clear();
             ProxDevicePicker.Items.Clear();
@@ -952,8 +953,9 @@ public partial class Settings : ContentPage
     {
         if (BluetoothManager.ConnectedDevice == null) return;
         await BluetoothManager.DisconnectDeviceAsync();
-        UpdateLocalUI(false, "Kapcsolat megszakadt");
-        await DisplayAlertAsync("BT", "Lecsatlakoztatva.", "OK");
+        UpdateLocalUI(false, "Átcsatlakozás: válassz eszközt");
+        RefreshDeviceList();
+        OnBTSearchClicked(this, EventArgs.Empty);   // rögtön megkeresi a hatótávban lévő eszközöket
     }
 
     // ════════════════════════════════════════
@@ -1378,6 +1380,8 @@ public partial class Settings : ContentPage
         // Eszközkeresés csak akkor látszik, ha NINCS aktív kapcsolat - ha már
         // csatlakoztál, nincs értelme tovább mutatni a keresés/lista UI-t.
         DeviceSearchSection.IsVisible = !connected;
+        ProximityPanel.IsVisible = connected;   // közeledés-beállítás csak csatlakozva (a csatlakoztatott eszközre); egyébként csak az eszközkereső látszik
+        if (connected) RefreshProximityPanel();
         // Comp/Display/DateTime panelek csak akkor válnak láthatóvá, ha a
         // megfelelő LOAD_* válasz megérkezett (lásd OnSettingsDataReceived) -
         // lecsatlakozáskor viszont mindenképp el kell tüntetni őket.
@@ -1400,6 +1404,7 @@ public partial class Settings : ContentPage
         CompDetailsPanel.IsVisible = false; CompExpandIcon.Text = "▼";
         MqttDetailsPanel.IsVisible = false; MqttExpandIcon.Text = "▼";
         AlertDetailsPanel.IsVisible = false; AlertExpandIcon.Text = "▼";
+        ProxDetailsPanel.IsVisible = false; ProxExpandIcon.Text = "▼";
         DisplayDetailsPanel.IsVisible = false; DisplayExpandIcon.Text = "▼";
         DateTimeDetailsPanel.IsVisible = false; DateTimeExpandIcon.Text = "▼";
         WifiDetailsPanel.IsVisible = false; WifiExpandIcon.Text = "▼";

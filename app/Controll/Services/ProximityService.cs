@@ -59,8 +59,11 @@ public static class ProximityService
     {
         while (!ct.IsCancellationRequested)
         {
-            var cfgs = BluetoothManager.GetSavedDevices().Where(d => d.ProxEnabled).ToList();
-            if (cfgs.Count == 0) break;
+            if (!AnyEnabled) break;
+            // Több mentett eszköz esetén mindig az UTOLJÁRA használt eszközt figyeli
+            string? last = BluetoothManager.LastUsedId;
+            var cfgs = BluetoothManager.GetSavedDevices().Where(d => d.ProxEnabled && d.Id == last).ToList();
+            if (cfgs.Count == 0) { try { await Task.Delay(10000, ct); } catch { break; } continue; }
             try
             {
                 if (!await BleReadyAsync()) { await Task.Delay(15000, ct); continue; }

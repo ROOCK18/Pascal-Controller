@@ -44,6 +44,9 @@ A szövegek ékezet nélküliek (az LVGL beépített betűi csak ASCII-t tartalm
 
 ## Csatlakozás (app)
 
+Csatlakozva az "Átcsatlakozás" gomb bontja a kapcsolatot, és rögtön az eszközkeresőt mutatja, így másik eszközre lehet váltani.
+
+
 - Az app megjegyzi a csatlakoztatott eszközt (BLE azonosító alapján), és szétkapcsolódás után, illetve indításkor magától újracsatlakozik, amint az eszköz hatótávban van.
 - **Több mentett eszköznél nincs néma csatlakozás**: indításkor az app a hatótávban látható mentett eszközök közül megkérdezi, melyikre csatlakozzon.
 - Az eszközök hely-nevet kapnak (pl. „Terrárium”): a listában a ✎ gombbal vagy hosszú nyomással (Android), csatlakozva pedig a panelre koppintva szerkeszthető; ugyanitt „Elfelejtés”.
@@ -62,7 +65,7 @@ verziószám (pl. `4.9.0`).
 
 ## Közeledés érzékelés és értesítések (v5.2.0)
 
-**Közeledés érzékelés** (Beállítások → Közeledés érzékelés, mentett eszközönként): ha az eszköz a megadott távolságon (méter)
+**Közeledés érzékelés** (Beállítások → Közeledés érzékelés; csak csatlakozva látszik, a csatlakoztatott eszközre vonatkozik, és több mentett eszköz esetén az app mindig az utoljára használt eszközt figyeli): ha az eszköz a megadott távolságon (méter)
 belülre kerül, az app magától csatlakozik hozzá, és végrehajtja a kiválasztott műveletet: relé impulzus (pl. kapunyitás),
 relé BE/KI vagy RGB BE/KI. Az impulzus ideje megadható, 0 esetén a relé "Kapuzás" beállított ideje érvényes. A műveletet egy
 közeledés egyszer hajtja végre; újra csak akkor, ha az eszköz előtte legalább fél percre eltűnt, vagy 1,5-szeres távolságon
