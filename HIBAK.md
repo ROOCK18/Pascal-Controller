@@ -32,7 +32,7 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 | N4 | M | NimBLE-nél a sok egymás utáni notify (pl. `GET_ALL`) elveszhet, ha a belső puffer betelik. | ✅ javítva (újrapróbálás, `Comm.h`) |
 | N5 | A | A fok-jel (`°`) glifája az LVGL beépített Montserrat betűiben **nincs ellenőrizve**; ha hiányzik, négyzet jelenik meg. Hardveren / szimulátorban megnézendő. | nyitott |
 | N6 | A | A kijelző kinézete **nincs képként ellenőrizve** (a PC-s szimulátor fordítási hibán megállt) – átfedések lehetségesek. | nyitott |
-| N7 | A | Ékezetes betűk: a szövegek a forrásban már ékezetesek, de az LVGL beépített betűi csak ASCII-t tartalmaznak. Addig a kijelző ékezet nélkül mutatja őket (`ui_fold`). A saját betűtípus generálásához (`firmware/tools/gen_fonts.sh`, Node/npx kell) + a `-DHU_FONTS=1` build flag kell. | **nyitott: a generálást nem tudtam lefuttatni (az npx letöltés nem volt engedélyezve)** |
+| N7 ✅ | A | Ékezetes betűk: a saját betűtípusok (`firmware/src/fonts`, generálás: `tools/gen_fonts.sh`) beépítve, `-DHU_FONTS=1`. A `°`, `Ω`, `β` glifák megjelenése hardveren ellenőrizendő. | javítva |
 
 ## App
 

@@ -30,7 +30,7 @@ A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
   Az eszköz menüjében: *Beállítások → Szenzor beállítások*; az appban: *Hőmérő beállítások*; BLE: `SET_SENS` / `GET_SENS` / `GET_SENSRAW`.
   A mérés kalibrált mV-olvasás 16-os átlagolással; szakadt/rövidzárt szenzornál az érték „--”, a relé-termosztát KI-re áll.
   **PT1000-hez felhúzónak 1,0–1,2 kΩ ajánlott** (3,3 V-ra kötve): ~3,9 ADC-lépés/°C, a 10 kΩ-mal csak ~1,4.
-- Ékezetes betűk: `firmware/tools/gen_fonts.sh` + `-DHU_FONTS=1` (lásd HIBAK.md N7); addig ékezet nélkül jelennek meg.
+- Ékezetes betűk: saját Montserrat-alapú betűtípusok (`firmware/src/fonts`, újragenerálás: `bash tools/gen_fonts.sh`, a `-DHU_FONTS=1` build flaggel).
 - Méret: firmware.bin ~1,74 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
   Az új partíciós tábla csak USB-s teljes flash-eléssel (`firmware.factory.bin`) kerül fel.
 
