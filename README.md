@@ -75,8 +75,8 @@ indításakor kell egyszer megnyitni.
 **Újraélesedés** (mikor indíthatja újra a műveleteket): *teljes kapcsolatszakadás után* (az eszköz legalább 15 mp-ig nem látszik),
 *ha X méteren kívül vagyok*, vagy *X mp múlva, ha X méteren kívül vagyok*.
 
-**Közeledés-műveletek** (az eszközön tárolva, ahol a vezérlés is van): ventilátor 1-2 és relé 1-2 az **Automatikák** oldalon
-(Vezérlés → Automatikák beállítása → Közeledés), az RGB az **RGB** oldalon. Ventilátor: fordulatszám % + időtartam (a végén
+**Közeledés-műveletek** (az eszközön tárolva, ahol a vezérlés is van): ventilátor 1-2 és relé 1-2 az **Automatikák** oldalon,
+a saját szekciójukon belül egy "Közeledés" kapcsolóval (bekapcsolva tovább nyílik a szekció a beállításokkal), az RGB az **RGB** oldalon. Ventilátor: fordulatszám % + időtartam (a végén
 visszaáll az előző értékre, 0 mp = marad); relé: impulzus (0 mp = a Kapuzás ideje); RGB: bekapcsol az időtartamra (0 mp = marad).
 Közeledéskor az app `PROX_TRIGGER` parancsot küld, az eszköz pedig csak azokat a csatornákat kapcsolja, ahol ez be van kapcsolva
 ÉS az automatika is be van kapcsolva (a ventilátor/relé Automata állapotú); az RGB-nek nincs Automata/Kézi módja, ott a kapcsoló

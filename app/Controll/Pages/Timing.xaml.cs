@@ -86,18 +86,26 @@ public partial class Timing : ContentView
         BluetoothManager.OnDataReceived += OnProxDataReceived;
     }
 
-    // ══════════════ KÖZELEDÉS (az eszközön tárolva; az eszköz csak Automata állapotú csatornát kapcsol) ══════════════
+    // ══════════════ KÖZELEDÉS (csatornánként, a csatorna szekcióján belül; az eszközön tárolva) ══════════════
+    // Az eszköz csak az Automata állapotú csatornát kapcsolja közeledéskor.
     private static readonly string[] ProxKeys = { "F1", "F2", "R1", "R2" };
 
-    private (Microsoft.Maui.Controls.Switch sw, Entry? val, Entry dur) ProxControls(string key) => key switch
+    private (Microsoft.Maui.Controls.Switch sw, VerticalStackLayout panel, Border save, Entry? val, Entry dur) ProxControls(string key) => key switch
     {
-        "F1" => (ProxF1Switch, ProxF1ValueEntry, ProxF1DurEntry),
-        "F2" => (ProxF2Switch, ProxF2ValueEntry, ProxF2DurEntry),
-        "R1" => (ProxR1Switch, null, ProxR1DurEntry),
-        _ => (ProxR2Switch, null, ProxR2DurEntry)
+        "F1" => (ProxF1Switch, ProxF1Panel, ProxF1Save, ProxF1ValueEntry, ProxF1DurEntry),
+        "F2" => (ProxF2Switch, ProxF2Panel, ProxF2Save, ProxF2ValueEntry, ProxF2DurEntry),
+        "R1" => (ProxR1Switch, ProxR1Panel, ProxR1Save, null, ProxR1DurEntry),
+        _ => (ProxR2Switch, ProxR2Panel, ProxR2Save, null, ProxR2DurEntry)
     };
 
-    private void OnProxHeaderTapped(object s, EventArgs e) => ToggleSection(ProxDetailsPanel, ProxExpandIcon);
+    // A kapcsoló bekapcsolásakor tovább nyílik a szekció a közeledés beállításaival
+    private void OnProxSwitchToggled(object? sender, ToggledEventArgs e)
+    {
+        if (sender is not VisualElement b || !ProxKeys.Contains(b.AutomationId)) return;
+        var (_, panel, save, _, _) = ProxControls(b.AutomationId);
+        panel.IsVisible = e.Value;
+        save.IsVisible = true;   // a kikapcsolás mentéséhez is kell a gomb
+    }
 
     // A Timing megnyitásakor hívja a MainPage (a GET_ALL után)
     public async void RequestProx()
@@ -114,40 +122,35 @@ public partial class Timing : ContentView
         if (p.Length < 4 || !ProxKeys.Contains(p[0])) return;
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            var (sw, val, dur) = ProxControls(p[0]);
-            sw.IsToggled = p[1] == "1";
+            var (sw, panel, save, val, dur) = ProxControls(p[0]);
             if (val != null) val.Text = p[2];
             dur.Text = p[3];
+            sw.IsToggled = p[1] == "1";
+            panel.IsVisible = sw.IsToggled;
+            save.IsVisible = sw.IsToggled;   // betöltéskor csak bekapcsolt állapotban látszik a mentés
         });
     }
 
-    private async void OnSaveProxClicked(object sender, EventArgs e)
+    private async void OnSaveProxClicked(object? sender, TappedEventArgs e)
     {
         if (!BluetoothManager.IsConnected) return;
+        string key = e.Parameter as string ?? "";
+        if (!ProxKeys.Contains(key)) return;
         var page = Shell.Current.CurrentPage;
-        var cmds = new List<string>();
-        foreach (var key in ProxKeys)
+        var (sw, _, _, val, dur) = ProxControls(key);
+        int value = 100;
+        if (val != null && (!int.TryParse((val.Text ?? "").Trim(), out value) || value < 0 || value > 100))
         {
-            var (sw, val, dur) = ProxControls(key);
-            int value = 100;
-            if (val != null && (!int.TryParse((val.Text ?? "").Trim(), out value) || value < 0 || value > 100))
-            {
-                await page.DisplayAlertAsync("Hibás érték", "A fordulatszám 0 és 100 közötti szám legyen.", "OK");
-                return;
-            }
-            if (!int.TryParse((dur.Text ?? "").Trim(), out int seconds) || seconds < 0 || seconds > 65535)
-            {
-                await page.DisplayAlertAsync("Hibás érték", "Az időtartam 0 és 65535 másodperc közötti szám legyen.", "OK");
-                return;
-            }
-            cmds.Add($"SET_PROX:{key}:{(sw.IsToggled ? 1 : 0)}:{value}:{seconds}");
+            await page.DisplayAlertAsync("Hibás érték", "A fordulatszám 0 és 100 közötti szám legyen.", "OK");
+            return;
         }
-        foreach (var c in cmds)
+        if (!int.TryParse((dur.Text ?? "").Trim(), out int seconds) || seconds < 0 || seconds > 65535)
         {
-            await BluetoothManager.WriteAsync(c);
-            await Task.Delay(150);
+            await page.DisplayAlertAsync("Hibás érték", "Az időtartam 0 és 65535 másodperc közötti szám legyen.", "OK");
+            return;
         }
-        await page.DisplayAlertAsync("Siker", "Közeledés beállítások elmentve.", "OK");
+        await BluetoothManager.WriteAsync($"SET_PROX:{key}:{(sw.IsToggled ? 1 : 0)}:{value}:{seconds}");
+        await page.DisplayAlertAsync("Siker", "Közeledés beállítás elmentve.", "OK");
     }
 
     // ══════════════ VISSZA GOMB ══════════════
