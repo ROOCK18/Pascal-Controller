@@ -57,3 +57,16 @@ Megnyitás: `app/Controll.sln` Visual Studio 2022+ programban (.NET MAUI workloa
 (`GitHubOwner` / `GitHubRepo`). Az app tokent nem használ, ezért a megadott repónak
 **publikusnak** kell lennie, és minden release-hez egy `.bin` asset kell. A tag legyen a
 verziószám (pl. `4.9.0`).
+
+## Okosotthon: MQTT + Home Assistant
+
+1. Állítsd be az eszköz WiFi-jét (menü vagy app).
+2. Az appban: *Beállítások → Okosotthon (MQTT / Home Assistant)*: bróker címe (pl. a Home Assistant gép IP-je, port 1883), felhasználó/jelszó, az eszköz neve (pl. „Terrárium”), bekapcsolás, mentés.
+3. Home Assistantban az eszköz **magától megjelenik** (MQTT discovery; az MQTT integráció és egy bróker, pl. Mosquitto kell hozzá).
+
+Entitások: hőmérő(k) / páratartalom / kapcsoló-állapot (a szenzor-módtól függően), Relé 1–2 (kapcsoló), Ventilátor 1–2 (fan, százalékkal), RGB (fény), és csatornánként egy „automata” kapcsoló.
+A Google Home, Alexa és Apple Home a Home Assistanton keresztül éri el ezeket (Home Assistant Cloud vagy Matter hídként).
+
+- Egy csatornára érkező kézi parancs (Home Assistant / Google Home) a csatornát **kézi módba** kapcsolja, különben a termosztát azonnal visszaírná. Az „automata” kapcsolóval állítható vissza.
+- Témák: `pascal/<id>/…` (az `id` az eszköz MAC-címének utolsó 3 bájtjából jön, így több eszköz nem ütközik).
+- A jelszó titkosítatlanul tárolódik az eszköz flash-ében, és a kapcsolat sima MQTT (TLS nélkül) – csak megbízható helyi hálózaton használd. A jelszó BLE-n sosem megy vissza az appnak.

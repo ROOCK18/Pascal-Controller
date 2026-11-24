@@ -30,6 +30,7 @@ void saveAllSettings() {
   prefs.putFloat("compNTC2", tempCompNTC2);
   prefs.putBytes("sensCfg1", &sensCfg[0], sizeof(SensorCfg));
   prefs.putBytes("sensCfg2", &sensCfg[1], sizeof(SensorCfg));
+  prefs.putBytes("mqttCfg", &mqttCfg, sizeof(MqttCfg));
   prefs.putUChar("brightness", displayBrightness);
   prefs.putUChar("sleepIdx", sleepTimeoutIdx);
 
@@ -103,6 +104,9 @@ void loadAllSettings() {
   tempCompNTC2 = prefs.getFloat("compNTC2", 0.0);
   loadStructIfMatching("sensCfg1", sensCfg[0]);
   loadStructIfMatching("sensCfg2", sensCfg[1]);
+  loadStructIfMatching("mqttCfg", mqttCfg);
+  mqttCfg.host[sizeof(mqttCfg.host) - 1] = 0; mqttCfg.user[sizeof(mqttCfg.user) - 1] = 0;
+  mqttCfg.pass[sizeof(mqttCfg.pass) - 1] = 0; mqttCfg.name[sizeof(mqttCfg.name) - 1] = 0;
   if (currentMode > 4) currentMode = 0; // védelem sérült/hibás mentett érték ellen
   displayBrightness = prefs.getUChar("brightness", 100);
   sleepTimeoutIdx = prefs.getUChar("sleepIdx", 8);

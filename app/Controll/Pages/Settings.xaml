@@ -176,6 +176,53 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <!-- ══════════ OKOSOTTHON (MQTT / HOME ASSISTANT) - lenyitható ══════════ -->
+                <Border x:Name="MqttPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15" IsVisible="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Okosotthon (MQTT / Home Assistant)" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="{StaticResource MediumFontSize}" />
+                            <Label Grid.Column="1" x:Name="MqttExpandIcon" Text="&#9660;" TextColor="{StaticResource White}" FontSize="14" VerticalOptions="Center" />
+                            <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnMqttHeaderTapped"/></Grid.GestureRecognizers>
+                        </Grid>
+                        <VerticalStackLayout x:Name="MqttDetailsPanel" Spacing="10" IsVisible="False">
+                            <Label Text="Az eszköz a WiFi-n át csatlakozik az MQTT-brókerhez (pl. a Home Assistant Mosquitto-jához), és magát automatikusan bejelenti a Home Assistantnak. A Google Home, Alexa vagy Apple Home a Home Assistanton keresztül éri el. Előbb a WiFi-t kell beállítani." TextColor="#AEAEB2" FontSize="12" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="MQTT bekapcsolva" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" x:Name="MqttEnabledSwitch" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,110" ColumnSpacing="10">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <Label Text="Bróker címe (IP vagy név)" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="MqttHostEntry" Keyboard="Url" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Placeholder="pl. 192.168.1.10" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                    <Label Text="Port" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="MqttPortEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="1883" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <Label Text="Felhasználó" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="MqttUserEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                    <Label Text="Jelszó" TextColor="#AEAEB2" FontSize="12" />
+                                    <Entry x:Name="MqttPassEntry" IsPassword="True" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Az eszköz neve a Home Assistantban" TextColor="#AEAEB2" FontSize="12" />
+                                <Entry x:Name="MqttNameEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Placeholder="pl. Terrárium" />
+                            </VerticalStackLayout>
+                            <Label x:Name="LblMqttStatus" Text="" TextColor="#AEAEB2" FontSize="12" />
+                            <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveMqttClicked"/></Border.GestureRecognizers>
+                                <Label Text="MQTT BEÁLLÍTÁSOK MENTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <!-- ══════════ KIJELZŐ - lenyitható ══════════ -->
                 <Border x:Name="DisplayPanel" BackgroundColor="{StaticResource DarkGray}" Stroke="{StaticResource LightGray}" StrokeShape="RoundRectangle 12" Padding="15" IsVisible="False">
                     <VerticalStackLayout Spacing="10">

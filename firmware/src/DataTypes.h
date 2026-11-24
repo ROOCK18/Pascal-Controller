@@ -47,6 +47,19 @@ struct SensorCfg {
   float vSupply = 3.3f;     // a felhúzó tápfeszültsége (V)
 };
 
+// MQTT / Home Assistant beállítások (NVS-ben tárolva, lásd Mqtt.h)
+struct MqttCfg {
+  bool enabled = false;
+  char host[64] = "";
+  uint16_t port = 1883;
+  char user[32] = "";
+  char pass[48] = "";
+  char name[32] = "Pascal-Controller";   // az eszköz neve a Home Assistantban
+};
+MqttCfg mqttCfg;
+volatile uint8_t mqttState = 0;          // 0 = kikapcsolva, 1 = nincs WiFi, 2 = csatlakozik, 3 = csatlakozva
+volatile bool mqttReconf = false;        // beállítás-változás: a task újracsatlakozik
+
 SensorCfg sensCfg[2];                       // [0] = NTC1 láb, [1] = NTC2 láb
 float sensLastMv[2] = { 0, 0 };             // utolsó mért feszültség (mV)
 float sensLastR[2] = { NAN, NAN };          // utolsó számolt ellenállás (Ohm)

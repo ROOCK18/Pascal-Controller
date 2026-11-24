@@ -235,6 +235,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_SENS:2");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_MQTT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -275,6 +277,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_SENS:2");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_MQTT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -314,6 +318,8 @@ public partial class Settings : ContentPage
                 ParseLoadComp(d.Substring(10));
             else if (d.StartsWith("LOAD_SENS:"))
                 ParseLoadSens(d.Substring(10));
+            else if (d.StartsWith("LOAD_MQTT:"))
+                ParseLoadMqtt(d.Substring(10));
             else if (d.StartsWith("LOAD_DISPLAY:"))
                 ParseLoadDisplay(d.Substring(13));
             else if (d.StartsWith("LOAD_DATEPOS:"))
@@ -429,6 +435,65 @@ public partial class Settings : ContentPage
         float n2 = ParseFloatInvariant(CompNtc2Entry.Text, 0f);
         await BluetoothManager.WriteAsync($"SET_COMP:{n1.ToString("F1", CultureInfo.InvariantCulture)}:{n2.ToString("F1", CultureInfo.InvariantCulture)}");
         await DisplayAlert("Siker", "Kompenzáció elmentve.", "OK");
+    }
+
+    // ════════════════════════════════════════
+    // OKOSOTTHON (MQTT / HOME ASSISTANT)
+    // ════════════════════════════════════════
+    // LOAD_MQTT:<enabled>|<host>|<port>|<user>|<passSet>|<name>|<state>
+    private void ParseLoadMqtt(string body)
+    {
+        var p = body.Split('|');
+        if (p.Length < 7) return;
+        MqttEnabledSwitch.IsToggled = p[0] == "1";
+        MqttHostEntry.Text = p[1];
+        MqttPortEntry.Text = p[2];
+        MqttUserEntry.Text = p[3];
+        MqttPassEntry.Text = "";
+        MqttPassEntry.Placeholder = p[4] == "1" ? "(beállítva – üresen hagyva változatlan marad)" : "";
+        MqttNameEntry.Text = p[5];
+        LblMqttStatus.Text = p[6] switch
+        {
+            "0" => "Állapot: kikapcsolva",
+            "1" => "Állapot: nincs WiFi-kapcsolat (állítsd be a WiFi-t)",
+            "2" => "Állapot: csatlakozás a bróker felé…",
+            "3" => "Állapot: csatlakozva a brókerhez ✓",
+            _ => ""
+        };
+        MqttPanel.IsVisible = true;
+    }
+
+    private async void OnSaveMqttClicked(object sender, EventArgs e)
+    {
+        if (!CheckBLE()) return;
+        string host = (MqttHostEntry.Text ?? "").Trim();
+        string user = (MqttUserEntry.Text ?? "").Trim();
+        string pass = MqttPassEntry.Text ?? "";
+        string name = (MqttNameEntry.Text ?? "").Trim();
+        if (!int.TryParse((MqttPortEntry.Text ?? "").Trim(), out int port) || port < 1 || port > 65535)
+        {
+            await DisplayAlert("Hibás érték", "A port 1 és 65535 közötti szám legyen.", "OK");
+            return;
+        }
+        if (MqttEnabledSwitch.IsToggled && host.Length == 0)
+        {
+            await DisplayAlert("Hiányzó adat", "Add meg a bróker címét.", "OK");
+            return;
+        }
+        if (host.Contains('|') || user.Contains('|') || pass.Contains('|') || name.Contains('|'))
+        {
+            await DisplayAlert("Hibás érték", "A „|” karakter nem használható.", "OK");
+            return;
+        }
+        if (host.Length > 63 || user.Length > 31 || pass.Length > 47 || name.Length > 31)
+        {
+            await DisplayAlert("Hibás érték", "Valamelyik szöveg túl hosszú (cím: 63, felhasználó: 31, jelszó: 47, név: 31 karakter).", "OK");
+            return;
+        }
+        await BluetoothManager.WriteAsync($"SET_MQTT:{(MqttEnabledSwitch.IsToggled ? 1 : 0)}|{host}|{port}|{user}|{pass}|{name}");
+        LblMqttStatus.Text = "Mentve, csatlakozás…";
+        await Task.Delay(4000);
+        await BluetoothManager.WriteAsync("GET_MQTT");
     }
 
     // ════════════════════════════════════════
@@ -1139,6 +1204,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_SENS:2");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_MQTT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -1167,6 +1234,7 @@ public partial class Settings : ContentPage
         {
             CompPanel.IsVisible = false;
             SensBlock1.IsVisible = false; SensBlock2.IsVisible = false; SaveSensButton.IsVisible = false;
+            MqttPanel.IsVisible = false;
             DisplayPanel.IsVisible = false;
             DateTimePanel.IsVisible = false;
             CollapseAllSections();
@@ -1178,6 +1246,7 @@ public partial class Settings : ContentPage
     private void CollapseAllSections()
     {
         CompDetailsPanel.IsVisible = false; CompExpandIcon.Text = "▼";
+        MqttDetailsPanel.IsVisible = false; MqttExpandIcon.Text = "▼";
         DisplayDetailsPanel.IsVisible = false; DisplayExpandIcon.Text = "▼";
         DateTimeDetailsPanel.IsVisible = false; DateTimeExpandIcon.Text = "▼";
         WifiDetailsPanel.IsVisible = false; WifiExpandIcon.Text = "▼";
@@ -1192,6 +1261,7 @@ public partial class Settings : ContentPage
         icon.Text = panel.IsVisible ? "▲" : "▼";
     }
     private void OnCompHeaderTapped(object s, EventArgs e) => ToggleSection(CompDetailsPanel, CompExpandIcon);
+    private void OnMqttHeaderTapped(object s, EventArgs e) => ToggleSection(MqttDetailsPanel, MqttExpandIcon);
     private void OnDisplayHeaderTapped(object s, EventArgs e) => ToggleSection(DisplayDetailsPanel, DisplayExpandIcon);
     private void OnDateTimeHeaderTapped(object s, EventArgs e) => ToggleSection(DateTimeDetailsPanel, DateTimeExpandIcon);
     private void OnWifiHeaderTapped(object s, EventArgs e) => ToggleSection(WifiDetailsPanel, WifiExpandIcon);
@@ -1269,6 +1339,8 @@ public partial class Settings : ContentPage
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_SENS:2");
             await Task.Delay(150);
+            await BluetoothManager.WriteAsync("GET_MQTT");
+            await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
             await Task.Delay(150);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
@@ -1312,7 +1384,7 @@ public partial class Settings : ContentPage
     {
         if (string.IsNullOrWhiteSpace(data)) return;
         var d = data.Trim();
-        if (d.StartsWith("STATE:") || d.StartsWith("LOAD_"))
+        if ((d.StartsWith("STATE:") || d.StartsWith("LOAD_")) && !d.StartsWith("LOAD_MQTT:"))
             _capturedSchemeLines?.Add(d);
     }
 
@@ -1371,6 +1443,8 @@ public partial class Settings : ContentPage
         await BluetoothManager.WriteAsync("GET_SENS:1");
         await Task.Delay(150);
         await BluetoothManager.WriteAsync("GET_SENS:2");
+        await Task.Delay(150);
+        await BluetoothManager.WriteAsync("GET_MQTT");
         await Task.Delay(250);
         await BluetoothManager.WriteAsync("GET_DISPLAY");
         await Task.Delay(250);

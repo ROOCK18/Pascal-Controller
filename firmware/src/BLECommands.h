@@ -53,6 +53,47 @@ void handleGetSensRaw() {
 }
 
 // ============================================================
+// MQTT / HOME ASSISTANT beállítások
+// Parancs: SET_MQTT:<enabled 0/1>|<host>|<port>|<user>|<pass>|<name>   (a "|" az elválasztó)
+//   üres jelszó = a mentett jelszó nem változik. Válasz: MQTT_OK
+// Parancs: GET_MQTT -> LOAD_MQTT:<enabled>|<host>|<port>|<user>|<passSet 0/1>|<name>|<state>
+//   state: 0 kikapcsolva, 1 nincs WiFi, 2 csatlakozik, 3 csatlakozva (a jelszó sosem megy vissza)
+// ============================================================
+void handleGetMqtt() {
+  notifyLine("LOAD_MQTT:" + String(mqttCfg.enabled ? 1 : 0) + "|" + String(mqttCfg.host) + "|" + String(mqttCfg.port) + "|" +
+             String(mqttCfg.user) + "|" + String(mqttCfg.pass[0] ? 1 : 0) + "|" + String(mqttCfg.name) + "|" + String((int)mqttState));
+}
+
+void handleSetMqtt(const String &body) {
+  String tok[6]; int n = 0, start = 0;
+  while (n < 6) {
+    int c = body.indexOf('|', start);
+    if (c < 0) { tok[n++] = body.substring(start); break; }
+    tok[n++] = body.substring(start, c);
+    start = c + 1;
+  }
+  if (n < 6) { notifyLine("ERROR:SET_MQTT hianyos parameter"); return; }
+  long port = tok[2].toInt();
+  if (port < 1 || port > 65535 || tok[1].length() >= sizeof(mqttCfg.host) || tok[3].length() >= sizeof(mqttCfg.user) ||
+      tok[4].length() >= sizeof(mqttCfg.pass) || tok[5].length() >= sizeof(mqttCfg.name)) {
+    notifyLine("ERROR:SET_MQTT ervenytelen ertek");
+    return;
+  }
+  MqttCfg c = mqttCfg;
+  c.enabled = tok[0].toInt() != 0;
+  strlcpy(c.host, tok[1].c_str(), sizeof(c.host));
+  c.port = (uint16_t)port;
+  strlcpy(c.user, tok[3].c_str(), sizeof(c.user));
+  if (tok[4].length() > 0) strlcpy(c.pass, tok[4].c_str(), sizeof(c.pass)); // üres = marad a régi
+  strlcpy(c.name, tok[5].length() > 0 ? tok[5].c_str() : "Pascal-Controller", sizeof(c.name));
+  mqttCfg = c;
+  mqttDiscoveredMode = -1;   // a (megváltozott nevű) entitások újra bejelentése
+  mqttReconf = true;
+  markDirty();
+  notifyLine("MQTT_OK");
+}
+
+// ============================================================
 // BLE CALLBACKS
 // ============================================================
 class MyServerCallbacks : public NimBLEServerCallbacks {
@@ -274,6 +315,12 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
     }
     else if (receivedString == "GET_SENSRAW") {
       handleGetSensRaw();
+    }
+    else if (receivedString.startsWith("SET_MQTT:")) {
+      handleSetMqtt(receivedString.substring(9));
+    }
+    else if (receivedString == "GET_MQTT") {
+      handleGetMqtt();
     }
     else if (receivedString == "GET_COMP") {
       handleGetComp();

@@ -56,6 +56,7 @@
 #include "Display.h"
 #include "OTA.h"
 #include "WifiOTA.h"
+#include "Mqtt.h"
 #include "BLECommands.h"
 
 // ============================================================
@@ -105,6 +106,7 @@ void setup() {
   lastUserActivity = millis();
   WiFi.onEvent(onWifiEvent); // valós idejű WiFi csatlakozás-visszajelzésekhez (jelszó-hiba stb.)
   setupBLE();
+  mqttStart(); // MQTT / Home Assistant (háttér-task; csak akkor csatlakozik, ha be van kapcsolva és van WiFi)
 
   Serial.printf("Pascal-Controller firmware v%s kesz.\n", FW_VERSION);
 }
