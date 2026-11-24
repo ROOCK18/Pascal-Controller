@@ -47,13 +47,6 @@
             </VerticalStackLayout>
         </VerticalStackLayout>
 
-        <Border BackgroundColor="#1F1F1F" StrokeShape="RoundRectangle 8" Padding="10" IsVisible="{Binding Source={x:Reference EnabledSwitch}, Path=IsToggled}">
-            <VerticalStackLayout Spacing="2">
-                <Label Text="Élő állapot (hibakereséshez)" TextColor="White" FontSize="12" FontAttributes="Bold" />
-                <Label x:Name="LblStatus" Text="" TextColor="Gray" FontSize="12" />
-            </VerticalStackLayout>
-        </Border>
-
         <Border x:Name="SaveButton" BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
             <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveTapped"/></Border.GestureRecognizers>
             <Label Text="KÖZELEDÉS MENTÉSE" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/>

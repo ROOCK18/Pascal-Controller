@@ -51,12 +51,6 @@ public partial class ProxChannelView : ContentView
         BluetoothManager.OnDataReceived -= OnData;
         BluetoothManager.OnDataReceived += OnData;
         LoadAppSide();
-
-        // élő állapot kijelzése (2 mp-enként, amíg a nézet látszik)
-        var timer = Dispatcher.CreateTimer();
-        timer.Interval = TimeSpan.FromSeconds(2);
-        timer.Tick += (s, e) => { if (IsVisible && EnabledSwitch.IsToggled) LblStatus.Text = ProximityService.Describe(ChannelKey); };
-        timer.Start();
     }
 
     // Az oldal megjelenésekor hívandó: az app-oldali beállítások újratöltése
