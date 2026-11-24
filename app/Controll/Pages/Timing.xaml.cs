@@ -1,3 +1,4 @@
+using Controll.Services;
 // Pages/Timing.xaml.cs
 using Microsoft.Maui.Controls;
 using System;
@@ -111,7 +112,7 @@ public partial class Timing : ContentView
     private void SetTab(Border activeTab, Border inactiveTab,
                         VerticalStackLayout showPanel, VerticalStackLayout hidePanel)
     {
-        var red  = (Color)Application.Current.Resources["PrimaryRed"];
+        var red  = UiHelper.ThemeColor("PrimaryRed");
         var gray = Color.FromArgb("#444444");
         activeTab.BackgroundColor   = red;
         inactiveTab.BackgroundColor = gray;
@@ -148,7 +149,7 @@ public partial class Timing : ContentView
 
     private void RefreshDayUI(Border[] borders, int mask)
     {
-        var red  = (Color)Application.Current.Resources["PrimaryRed"];
+        var red  = UiHelper.ThemeColor("PrimaryRed");
         var gray = Color.FromArgb("#444444");
         for (int i = 0; i < 7; i++)
             borders[i].BackgroundColor = (mask & (1 << i)) != 0 ? red : gray;
@@ -208,7 +209,7 @@ public partial class Timing : ContentView
         {
             Minimum = 0, Maximum = 100, Value = slot.Value,
             ThumbColor = Colors.White,
-            MinimumTrackColor = (Color)Application.Current.Resources["PrimaryRed"],
+            MinimumTrackColor = UiHelper.ThemeColor("PrimaryRed"),
             MaximumTrackColor = Color.FromArgb("#555555"),
             HorizontalOptions = LayoutOptions.Fill
         };
@@ -281,7 +282,7 @@ public partial class Timing : ContentView
         var stateBtn = new Border
         {
             BackgroundColor = slot.Value == 1
-                ? (Color)Application.Current.Resources["PrimaryRed"]
+                ? UiHelper.ThemeColor("PrimaryRed")
                 : Color.FromArgb("#444444"),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
             Padding = new Thickness(14, 8),
@@ -301,7 +302,7 @@ public partial class Timing : ContentView
             {
                 slot.Value = slot.Value == 1 ? 0 : 1;
                 stateLabel.Text = slot.Value == 1 ? "BE" : "KI";
-                var red  = (Color)Application.Current.Resources["PrimaryRed"];
+                var red  = UiHelper.ThemeColor("PrimaryRed");
                 stateBtn.BackgroundColor = slot.Value == 1 ? red : Color.FromArgb("#444444");
             })
         });
@@ -348,19 +349,21 @@ public partial class Timing : ContentView
     private void RebuildSlots(List<TimerSlot> slots, int _)
     {
         // Meghatározzuk melyik konténerhez tartozik
-        VerticalStackLayout container = null;
-        Border addBtn = null;
+        VerticalStackLayout? container = null;
+        Border? addBtn = null;
         if (slots == _fan1Slots)   { container = Fan1SlotsContainer;   addBtn = Fan1AddSlotBtn; }
         if (slots == _fan2Slots)   { container = Fan2SlotsContainer;   addBtn = Fan2AddSlotBtn; }
+        if (container == null || addBtn == null) return;   // ismeretlen szerkesztett lista: nincs mit újrarajzolni
         RedrawFanSlots(slots, container, addBtn);
     }
 
     private void RebuildRelaySlots(List<TimerSlot> slots, int _)
     {
-        VerticalStackLayout container = null;
-        Border addBtn = null;
+        VerticalStackLayout? container = null;
+        Border? addBtn = null;
         if (slots == _relay1Slots) { container = Relay1SlotsContainer; addBtn = Relay1AddSlotBtn; }
         if (slots == _relay2Slots) { container = Relay2SlotsContainer; addBtn = Relay2AddSlotBtn; }
+        if (container == null || addBtn == null) return;
         RedrawRelaySlots(slots, container, addBtn);
     }
 

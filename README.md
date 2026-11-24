@@ -110,6 +110,6 @@ cd app\Controll; dotnet build Controll.csproj -f net10.0-android -c Release
 Az iOS és MacCatalyst célt Windowson nem lehet fordítani (Mac kell hozzá), azt itt nem ellenőriztem.
 
 Megjegyzések:
-- Az app a nullázhatósági elemzést kikapcsolja (`<Nullable>disable</Nullable>`): a régebbi kód nem erre készült, a jelzéseket nem 75 helyen átírással, hanem ezzel szüntettem meg. Új kódnál érdemes visszakapcsolni és fokozatosan annotálni.
+- Az app **bekapcsolt nullázhatósági elemzéssel** (`<Nullable>enable</Nullable>`) fordul, minden jelzés javítva: ahol a null szándékos (pl. nincs kapcsolat), a típus nullázható, egyébként null-ellenőrzés vagy kivétel van.
 - Az Android minimum 8.0 (API 26), mert a MediaElement ezt kéri.
 - A firmware-ben a harmadik fél könyvtárak verziója rögzített (`platformio.ini`), a platform a pioarduino `55.03.311`.

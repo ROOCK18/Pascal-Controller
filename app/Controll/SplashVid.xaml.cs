@@ -14,6 +14,7 @@ public partial class SplashVid : ContentPage
     private void SplashVideo_MediaEnded(object sender, EventArgs e)
     {
         // Amint a videó lejátszódott, nyissa meg az AppShell-t
-        Application.Current.Windows[0].Page = new AppShell();
+        var app = Application.Current;
+        if (app != null && app.Windows.Count > 0) app.Windows[0].Page = new AppShell();
     }
 }

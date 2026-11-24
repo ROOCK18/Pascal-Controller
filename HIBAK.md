@@ -69,7 +69,7 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 
 
 ## Fordítási figyelmeztetések (0 / 0 követelmény)
-- **App:** 145 figyelmeztetésből 0 maradt. Az elavult MAUI-hívások korszerűsítve (`DisplayAlertAsync`, `DisplayActionSheetAsync`, ablak-alapú oldal-elérés `Windows[0].Page`, `CreateWindow`, `IPlatformApplication`), a platformfüggő hívások verzió-ellenőrzéssel (`IsAndroidVersionAtLeast(29)`, Android min. 26), a kötéseknél `x:DataType` (Release-ben az XC0022). A nullázhatósági jelzéseket a `<Nullable>disable</Nullable>` szüntette meg (nem annotáltam át az 75 helyet).
+- **App:** 145 figyelmeztetésből 0 maradt. Az elavult MAUI-hívások korszerűsítve (`DisplayAlertAsync`, `DisplayActionSheetAsync`, ablak-alapú oldal-elérés `Windows[0].Page`, `CreateWindow`, `IPlatformApplication`), a platformfüggő hívások verzió-ellenőrzéssel (`IsAndroidVersionAtLeast(29)`, Android min. 26), a kötéseknél `x:DataType` (Release-ben az XC0022). A 75 nullázhatósági jelzés **mind kijavítva**, a `<Nullable>enable</Nullable>` bekapcsolva maradt (nullázható típusok, null-ellenőrzések, `UiHelper`/`ThemeColor` segédek, az adapter egyszeri inicializálása).
 - **Firmware:** `-Wall -Wextra -Werror` mellett tiszta fordítás, a harmadik fél könyvtárak sem adnak figyelmeztetést.
 - A build ezt érvényesíti is (`-Werror`, `TreatWarningsAsErrors`).
 

@@ -8,7 +8,7 @@ public class DeviceRow
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string Location { get; set; } = "";
-    public IDevice Device { get; set; }   // null: most nincs hatótávban
+    public IDevice? Device { get; set; }   // null: most nincs hatótávban
 
     public string Title => string.IsNullOrWhiteSpace(Location) ? (string.IsNullOrWhiteSpace(Name) ? "Ismeretlen eszköz" : Name) : Location;
     public string Subtitle

@@ -10,7 +10,7 @@ public partial class RGB : ContentView
     private bool _isUpdating = false;
     private long _lastSendTimestamp = 0;
     private const int MinSendIntervalMs = 45; // 45ms korlát a folyamatos küldéshez
-    private CancellationTokenSource _sendCts;
+    private CancellationTokenSource? _sendCts;
 
     public static readonly BindableProperty MixedColorProperty =
         BindableProperty.Create(nameof(MixedColor), typeof(Color), typeof(RGB), Colors.White);
@@ -44,7 +44,7 @@ public partial class RGB : ContentView
         HsvWheelView.EndInteraction += OnWheelInteraction;
     }
 
-    private void OnWheelSizeChanged(object sender, EventArgs e)
+    private void OnWheelSizeChanged(object? sender, EventArgs e)
     {
         if (HsvWheelView.Width <= 0 || HsvWheelView.Height <= 0) return;
         _centerX = HsvWheelView.Width / 2.0;
@@ -53,7 +53,7 @@ public partial class RGB : ContentView
         UpdateSelectorDotPosition();
     }
 
-    private void OnWheelInteraction(object sender, TouchEventArgs e)
+    private void OnWheelInteraction(object? sender, TouchEventArgs e)
     {
         if (e.Touches.Any())
         {
@@ -214,7 +214,7 @@ public partial class RGB : ContentView
 
     private void UpdateToggleVisuals()
     {
-        ToggleBorder.BackgroundColor = _colorEnabled ? (Color)Application.Current.Resources["PrimaryRed"] : (Color)Application.Current.Resources["LightGray"];
+        ToggleBorder.BackgroundColor = _colorEnabled ? UiHelper.ThemeColor("PrimaryRed") : UiHelper.ThemeColor("LightGray");
         ToggleLabel.Text = _colorEnabled ? "ON" : "OFF";
     }
 

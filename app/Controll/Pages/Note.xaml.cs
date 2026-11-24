@@ -11,7 +11,7 @@ public partial class Note : ContentView
 {
     private ObservableCollection<AppLogEntry> _logEntries = new();
     private readonly string _filePath = Path.Combine(FileSystem.AppDataDirectory, "notes_log.json");
-    public static Note CurrentInstance { get; private set; }
+    public static Note? CurrentInstance { get; private set; }
 
     public Note()
     {
@@ -83,8 +83,8 @@ public partial class Note : ContentView
 
 public class AppLogEntry : INotifyPropertyChanged
 {
-    public event PropertyChangedEventHandler PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string name = null)
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     private string title = "";

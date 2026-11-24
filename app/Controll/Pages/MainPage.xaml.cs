@@ -17,7 +17,7 @@ public partial class MainPage : ContentPage
     private readonly List<string> _navigationHistory        = new();
 
     // Timing példányt megőrizzük hogy sensor update működjön
-    private Timing _timingPage;
+    private Timing? _timingPage;
 
     public MainPage()
     {

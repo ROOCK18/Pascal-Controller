@@ -308,8 +308,8 @@ namespace Controll.Pages
 
         private void UpdateAutoVisual(bool isAuto, Border border, Label label)
         {
-            var primaryRed = (Color)Application.Current.Resources["PrimaryRed"];
-            var lightGray = (Color)Application.Current.Resources["LightGray"];
+            var primaryRed = UiHelper.ThemeColor("PrimaryRed");
+            var lightGray = UiHelper.ThemeColor("LightGray");
             border.BackgroundColor = isAuto ? lightGray : primaryRed;
             label.Text = isAuto ? "Automata" : "Kézi";
 
@@ -342,8 +342,8 @@ namespace Controll.Pages
 
         private async Task UpdateVisualWithAnimation(bool isOn, Border border, Label label)
         {
-            var primaryRed = (Color)Application.Current.Resources["PrimaryRed"];
-            var lightGray = (Color)Application.Current.Resources["LightGray"];
+            var primaryRed = UiHelper.ThemeColor("PrimaryRed");
+            var lightGray = UiHelper.ThemeColor("LightGray");
 
             border.BackgroundColor = isOn ? primaryRed : lightGray;
             label.Text = isOn ? "ON" : "OFF";
@@ -355,16 +355,16 @@ namespace Controll.Pages
 
         private void UpdatePwm1Selection(Border selected)
         {
-            var pRed = (Color)Application.Current.Resources["PrimaryRed"];
-            var lGray = (Color)Application.Current.Resources["LightGray"];
+            var pRed = UiHelper.ThemeColor("PrimaryRed");
+            var lGray = UiHelper.ThemeColor("LightGray");
             Fan1PWM30Border.BackgroundColor = lGray; Fan1PWM20kBorder.BackgroundColor = lGray; Fan1PWMEBorder.BackgroundColor = lGray;
             if (selected != null) selected.BackgroundColor = pRed;
         }
 
         private void UpdatePwm2Selection(Border selected)
         {
-            var pRed = (Color)Application.Current.Resources["PrimaryRed"];
-            var lGray = (Color)Application.Current.Resources["LightGray"];
+            var pRed = UiHelper.ThemeColor("PrimaryRed");
+            var lGray = UiHelper.ThemeColor("LightGray");
             Fan2PWM30Border.BackgroundColor = lGray; Fan2PWM20kBorder.BackgroundColor = lGray; Fan2PWMEBorder.BackgroundColor = lGray;
             if (selected != null) selected.BackgroundColor = pRed;
         }

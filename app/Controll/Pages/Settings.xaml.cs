@@ -22,9 +22,9 @@ public partial class Settings : ContentPage
     private bool _isUpdating = false;
     private int _otaMtu = 20;
     private readonly object _otaLock = new();
-    private TaskCompletionSource<bool> _readyTcs;
-    private TaskCompletionSource<bool> _restartTcs;
-    private CancellationTokenSource _otaCts;
+    private TaskCompletionSource<bool>? _readyTcs;
+    private TaskCompletionSource<bool>? _restartTcs;
+    private CancellationTokenSource? _otaCts;
 
     private string _currentFirmwareVersion = "";
     private List<FirmwareRelease> _releases = new();
@@ -65,7 +65,7 @@ public partial class Settings : ContentPage
         });
     }
 
-    private void Adapter_DeviceDiscovered(object sender,
+    private void Adapter_DeviceDiscovered(object? sender,
         Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
     {
         if (string.IsNullOrEmpty(e.Device.Name)) return;
@@ -102,7 +102,7 @@ public partial class Settings : ContentPage
         }
     }
 
-    private Border _selectedDeviceRow;
+    private Border? _selectedDeviceRow;
 
     // A lista: az összes mentett eszköz (hely-névvel) + a most látott, még nem mentettek.
     private void RefreshDeviceList()
@@ -180,18 +180,18 @@ public partial class Settings : ContentPage
         // eszközre koppintottál, amíg a csatlakozás folyamatban van.
         if (_selectedDeviceRow != null && _selectedDeviceRow != border)
         {
-            _selectedDeviceRow.BackgroundColor = (Color)Application.Current.Resources["DarkGray"];
-            _selectedDeviceRow.Stroke = (Color)Application.Current.Resources["LightGray"];
+            _selectedDeviceRow.BackgroundColor = UiHelper.ThemeColor("DarkGray");
+            _selectedDeviceRow.Stroke = UiHelper.ThemeColor("LightGray");
         }
         _selectedDeviceRow = border;
-        border.BackgroundColor = (Color)Application.Current.Resources["PrimaryRed"];
-        border.Stroke = (Color)Application.Current.Resources["PrimaryRed"];
+        border.BackgroundColor = UiHelper.ThemeColor("PrimaryRed");
+        border.Stroke = UiHelper.ThemeColor("PrimaryRed");
 
         BluetoothManager.StopAutoReconnect();
         try
         {
             ScanIndicator.IsRunning = true;
-            IDevice device = row.Device;
+            IDevice? device = row.Device;
             if (device != null)
                 await _adapter.ConnectToDeviceAsync(device);
             else
@@ -259,8 +259,8 @@ public partial class Settings : ContentPage
         catch (Exception ex)
         {
             Debug.WriteLine($"Csatlakozás: {ex.Message}");
-            border.BackgroundColor = (Color)Application.Current.Resources["DarkGray"];
-            border.Stroke = (Color)Application.Current.Resources["LightGray"];
+            border.BackgroundColor = UiHelper.ThemeColor("DarkGray");
+            border.Stroke = UiHelper.ThemeColor("LightGray");
             _selectedDeviceRow = null;
             BluetoothManager.StartAutoReconnect();   // a kézi próbálkozás elbukott: folytatódhat a háttér-újracsatlakozás
             await DisplayAlertAsync("Hiba", "Csatlakozás sikertelen!", "OK");
@@ -577,7 +577,7 @@ public partial class Settings : ContentPage
     }
 
     // Séma-visszatöltés: a LOAD_SENS sor utolsó mezője (kompenzáció) a SET_COMP-hoz tartozik, a SET_SENS-ből kimarad.
-    private static string LoadSensToSet(string body)
+    private static string? LoadSensToSet(string body)
     {
         var p = body.Split(':');
         if (p.Length < 7) return null;
@@ -679,9 +679,9 @@ public partial class Settings : ContentPage
     // visszajelzéssel (csatlakozik / rossz jelszó / sikertelen).
     // ════════════════════════════════════════
     private List<(string Ssid, int Rssi)> _scannedNetworks = new();
-    private TaskCompletionSource<bool> _wifiScanTcs;
-    private TaskCompletionSource<string> _wifiConnectTcs; // eredmény: "OK"/"WRONG_PASSWORD"/"FAILED:<ok>"
-    private TaskCompletionSource<bool> _wifiStatusRefreshTcs;
+    private TaskCompletionSource<bool>? _wifiScanTcs;
+    private TaskCompletionSource<string>? _wifiConnectTcs; // eredmény: "OK"/"WRONG_PASSWORD"/"FAILED:<ok>"
+    private TaskCompletionSource<bool>? _wifiStatusRefreshTcs;
     private string _pendingConnectSsid = "";
 
     private async void OnScanWifiClicked(object sender, EventArgs e)
@@ -1315,7 +1315,7 @@ public partial class Settings : ContentPage
     // betöltéskor ezeket alakítjuk vissza a megfelelő SET_* parancsokká.
     // ════════════════════════════════════════
     private const string SchemeFileExt = ".pcscheme";
-    private List<string> _capturedSchemeLines;
+    private List<string>? _capturedSchemeLines;
     private List<string> _schemeFilePaths = new(); // a SchemePicker elemeivel azonos sorrendben
 
     private string SchemesFolder()
@@ -1425,7 +1425,7 @@ public partial class Settings : ContentPage
         {
             var line = raw.Trim();
             if (line.Length == 0 || line.StartsWith("#")) continue;
-            string cmd = LoadLineToSetCommand(line);
+            string? cmd = LoadLineToSetCommand(line);
             if (cmd == null) continue;
             await BluetoothManager.WriteAsync(cmd);
             sent++;
@@ -1519,7 +1519,7 @@ public partial class Settings : ContentPage
 
     // Újratölti a SchemePicker listáját a mentett sémákkal (dátum szerint,
     // legújabb elöl). selectPath megadása esetén azt jelöli ki kiválasztva.
-    private void RefreshSchemePicker(string selectPath = null)
+    private void RefreshSchemePicker(string? selectPath = null)
     {
         _schemeFilePaths = GetSavedSchemeFiles();
         SchemePicker.ItemsSource = _schemeFilePaths.Select(SchemeDisplayName).ToList();
@@ -1557,7 +1557,7 @@ public partial class Settings : ContentPage
     // ventilátor/relé IDŐZÍTŐK (FTIMER/RTIMER) kivételt jelentenek, mert a
     // LOAD válasz vesszőzött-lapos, a SET parancs viszont "|"-vel elválasztott
     // slot-csoportokat vár - ezt a ReformatTimer alakítja vissza.
-    private static string LoadLineToSetCommand(string line)
+    private static string? LoadLineToSetCommand(string line)
     {
         if (line.StartsWith("STATE:")) return "SET_MODE:" + line.Substring(6);
         if (line.StartsWith("LOAD_COMP:")) return "SET_COMP:" + line.Substring(10);
@@ -1574,7 +1574,7 @@ public partial class Settings : ContentPage
 
     // LOAD formátum (lapos): <target>:<days>:<h1>:<m1>:<v1>:<h2>:<m2>:<v2>...
     // SET formátum (pipe-elválasztott hármasok): <target>:<days>:<h1>:<m1>:<v1>|<h2>:<m2>:<v2>|...
-    private static string ReformatTimer(string setPrefix, string body)
+    private static string? ReformatTimer(string setPrefix, string body)
     {
         var parts = body.Split(':');
         if (parts.Length < 2) return null;

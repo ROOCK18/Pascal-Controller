@@ -20,7 +20,7 @@ namespace Controll
     {
         private DateTime _lastBackPressTime = DateTime.MinValue;
 
-        protected override void OnCreate(Bundle savedInstanceState)
+        protected override void OnCreate(Bundle? savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
@@ -63,7 +63,7 @@ namespace Controll
                 else
                 {
                     _activity._lastBackPressTime = DateTime.Now;
-                    Toast.MakeText(_activity, "Nyomd meg újra a kilépéshez!", ToastLength.Short).Show();
+                    Toast.MakeText(_activity, "Nyomd meg újra a kilépéshez!", ToastLength.Short)?.Show();
                 }
             }
         }

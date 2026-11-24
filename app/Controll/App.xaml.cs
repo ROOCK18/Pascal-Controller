@@ -7,7 +7,7 @@ public partial class App : Application
         InitializeComponent();
     }
 
-    protected override Window CreateWindow(IActivationState activationState)
+    protected override Window CreateWindow(IActivationState? activationState)
         => new Window(new AppShell());
 
     // Induláskor és az előtérbe kerüléskor megpróbál újra csatlakozni a legutóbbi eszközhöz.

@@ -20,14 +20,17 @@ public class SavedDevice
 
 public static class BluetoothManager
 {
-    public static IAdapter        Adapter             { get; set; }
-    public static IDevice         ConnectedDevice     { get; set; }
-    public static ICharacteristic WriteCharacteristic { get; set; }
-    public static ICharacteristic ReadCharacteristic  { get; set; }
+    private static IAdapter? _adapter;
+    // A BLE adapter: az Initialize() állítja be egyszer, induláskor. Előtte használni hiba (kivételt dob).
+    public static IAdapter Adapter => _adapter ?? throw new InvalidOperationException("A BluetoothManager.Initialize() még nem futott le.");
+    // Ezek szándékosan nullázhatók: amíg nincs kapcsolat, nincs eszköz/karakterisztika.
+    public static IDevice?         ConnectedDevice     { get; set; }
+    public static ICharacteristic? WriteCharacteristic { get; set; }
+    public static ICharacteristic? ReadCharacteristic  { get; set; }
 
-    public static event Action<bool>   OnConnectionChanged;
-    public static event Action<string> OnDataReceived;
-    public static event Action<string> OnOtaRawReceived;
+    public static event Action<bool>?   OnConnectionChanged;
+    public static event Action<string>? OnDataReceived;
+    public static event Action<string>? OnOtaRawReceived;
     public static bool OtaMode { get; set; } = false;
 
     // ── BLE védelem (PIN, challenge-response) ──
@@ -35,10 +38,17 @@ public static class BluetoothManager
     // megy át BLE-n: az eszköz egy véletlen nonce-t küld, az app HMAC-SHA256(PIN, nonce)-szal válaszol.
     private static string PinKey(string id) => "blepin_" + id;
 
-    private static async Task<string> GetPinAsync(string id)
+    private static async Task<string?> GetPinAsync(string id)
     {
         try { return await SecureStorage.Default.GetAsync(PinKey(id)); }
-        catch { return Preferences.Get(PinKey(id), null); }
+        catch { return GetPrefOrNull(PinKey(id)); }
+    }
+
+    // Preferences.Get null alapértéket nem fogad el: az üres szöveget tekintjük "nincs értéknek".
+    private static string? GetPrefOrNull(string key)
+    {
+        var v = Preferences.Get(key, "");
+        return v.Length == 0 ? null : v;
     }
     private static async Task SetPinAsync(string id, string pin)
     {
@@ -53,9 +63,9 @@ public static class BluetoothManager
 
     // Parancs küldése, és az első olyan válaszsor megvárása, ami a megadott előtagok egyikével kezdődik.
     // null = időtúllépés (pl. régi firmware, ami nem ismeri az AUTH-ot).
-    private static async Task<string> RequestAsync(string command, string[] prefixes, int timeoutMs)
+    private static async Task<string?> RequestAsync(string command, string[] prefixes, int timeoutMs)
     {
-        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         void Handler(string line)
         {
             foreach (var p in prefixes)
@@ -90,21 +100,22 @@ public static class BluetoothManager
         return "FAIL";
     }
 
-    private static Task<string> PromptPinAsync(string message)
-        => MainThread.InvokeOnMainThreadAsync(() => UiHelper.CurrentPage.DisplayPromptAsync(
+    private static async Task<string?> PromptPinAsync(string message)
+        => await MainThread.InvokeOnMainThreadAsync(() => UiHelper.CurrentPage.DisplayPromptAsync(
             "Eszköz PIN", message, "OK", "Mégse", "6 jegyű PIN", 6, Keyboard.Numeric));
 
     // Csatlakozás után hívandó. true = hitelesítve (vagy az eszköz nem kér hitelesítést).
     // A mentett PIN-nel automatikusan, egyébként (vagy hibás PIN esetén) a felhasználótól kéri be.
     public static async Task<bool> AuthenticateAsync()
     {
-        if (ConnectedDevice == null) return false;
-        string id = ConnectedDevice.Id.ToString();
+        var connected = ConnectedDevice;
+        if (connected == null) return false;
+        string id = connected.Id.ToString();
 
         string message = "Add meg az eszköz kijelzőjén látható PIN-kódot (Beállítások → BLE védelem).";
         for (int attempt = 0; attempt < 4; attempt++)
         {
-            string pin = await GetPinAsync(id);
+            string? pin = await GetPinAsync(id);
             if (string.IsNullOrEmpty(pin))
             {
                 pin = await PromptPinAsync(message);
@@ -138,7 +149,7 @@ public static class BluetoothManager
     // amíg a felhasználó kézzel újra nem csatlakozik.
     private static bool _autoReconnectEnabled = !Preferences.Get("BTAutoOff", false);
     private static bool _reconnecting;
-    private static CancellationTokenSource _reconnectCts;
+    private static CancellationTokenSource? _reconnectCts;
     private static readonly object _reconnectLock = new();
 
     public static bool IsReconnecting => _reconnecting;
@@ -146,21 +157,27 @@ public static class BluetoothManager
     // (a Settings oldal ilyenkor frissíti a kijelzett adatokat).
     public static bool LastConnectWasAuto { get; private set; }
 
-    public static bool IsConnected =>
-        ConnectedDevice != null &&
-        Adapter?.ConnectedDevices.Any(d => d.Id == ConnectedDevice.Id) == true;
+    public static bool IsConnected
+    {
+        get
+        {
+            var dev = ConnectedDevice;
+            return dev != null && _adapter?.ConnectedDevices.Any(d => d.Id == dev.Id) == true;
+        }
+    }
 
     public static void Initialize(IAdapter adapter)
     {
-        if (Adapter != null) return;
-        Adapter = adapter;
-        Adapter.DeviceDisconnected   += (s, e) => CheckAndNotify(e.Device);
-        Adapter.DeviceConnectionLost += (s, e) => CheckAndNotify(e.Device);
+        if (_adapter != null) return;
+        _adapter = adapter;
+        adapter.DeviceDisconnected   += (s, e) => CheckAndNotify(e.Device);
+        adapter.DeviceConnectionLost += (s, e) => CheckAndNotify(e.Device);
     }
 
     private static void CheckAndNotify(IDevice device)
     {
-        if (ConnectedDevice != null && device.Id == ConnectedDevice.Id)
+        var current = ConnectedDevice;
+        if (current != null && device.Id == current.Id)
             HandleDisconnect();
     }
 
@@ -181,7 +198,7 @@ public static class BluetoothManager
     // az imént használt eszközzel szakad meg, ugyanahhoz újra csatlakozik.
     public static void StartAutoReconnect(bool allowPicker = false)
     {
-        if (Adapter == null || IsConnected || !_autoReconnectEnabled) return;
+        if (_adapter == null || IsConnected || !_autoReconnectEnabled) return;
         var saved = GetSavedDevices();
         if (saved.Count == 0) return;
         string targetId;
@@ -306,7 +323,8 @@ public static class BluetoothManager
 
     public static async Task WriteAsync(string message)
     {
-        if (WriteCharacteristic == null) return;
+        var characteristic = WriteCharacteristic;
+        if (characteristic == null) return;
         _cts.Cancel();
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
@@ -314,8 +332,8 @@ public static class BluetoothManager
         try
         {
             if (token.IsCancellationRequested) return;
-            WriteCharacteristic.WriteType = CharacteristicWriteType.WithResponse;
-            await WriteCharacteristic.WriteAsync(Encoding.UTF8.GetBytes(message));
+            characteristic.WriteType = CharacteristicWriteType.WithResponse;
+            await characteristic.WriteAsync(Encoding.UTF8.GetBytes(message));
             await Task.Delay(15, token);
         }
         catch (OperationCanceledException) { }
@@ -329,7 +347,8 @@ public static class BluetoothManager
     // cancellálunk - ez jelzi hogy a GATT stack el is dobta az írást.
     public static async Task<bool> OtaWriteAsync(byte[] data)
     {
-        if (WriteCharacteristic == null) return false;
+        var characteristic = WriteCharacteristic;
+        if (characteristic == null) return false;
         try
         {
             // KIZÁRÓLAG WithResponse: a WithoutResponse próbálkozást eltávolítottuk,
@@ -341,9 +360,9 @@ public static class BluetoothManager
             // előző csomagot -> csomagvesztés/torlódás/OTA hiba. WithResponse-nál
             // ez strukturálisan kizárt, mert a GATT válasz megérkezéséig nem térünk
             // vissza, tehát a következő csomag csak utána indulhat.
-            WriteCharacteristic.WriteType = CharacteristicWriteType.WithResponse;
+            characteristic.WriteType = CharacteristicWriteType.WithResponse;
             using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(2000));
-            await WriteCharacteristic.WriteAsync(data).WaitAsync(cts.Token);
+            await characteristic.WriteAsync(data).WaitAsync(cts.Token);
             return true;
         }
         catch (Exception ex)
@@ -359,12 +378,13 @@ public static class BluetoothManager
     // ── Notifications ──
     public static async Task SubscribeToNotifications()
     {
-        if (ReadCharacteristic == null) return;
+        var characteristic = ReadCharacteristic;
+        if (characteristic == null) return;
         try
         {
-            ReadCharacteristic.ValueUpdated -= OnValueUpdated;
-            ReadCharacteristic.ValueUpdated += OnValueUpdated;
-            await ReadCharacteristic.StartUpdatesAsync();
+            characteristic.ValueUpdated -= OnValueUpdated;
+            characteristic.ValueUpdated += OnValueUpdated;
+            await characteristic.StartUpdatesAsync();
         }
         catch (Exception ex) { Debug.WriteLine($"Subscribe: {ex.Message}"); }
     }
@@ -373,7 +393,7 @@ public static class BluetoothManager
     private static readonly object _bufLock = new();
 
     private static void OnValueUpdated(
-        object sender,
+        object? sender,
         Plugin.BLE.Abstractions.EventArgs.CharacteristicUpdatedEventArgs e)
     {
         var raw = e.Characteristic.Value;
@@ -433,8 +453,9 @@ public static class BluetoothManager
     public static async Task DisconnectDeviceAsync(bool forget = true)
     {
         if (forget) { _autoReconnectEnabled = false; Preferences.Set("BTAutoOff", true); CancelReconnect(); }
-        if (ConnectedDevice == null) { if (forget) SaveConnectedDevice(null); return; }
-        try   { await Adapter.DisconnectDeviceAsync(ConnectedDevice); }
+        var dev = ConnectedDevice;
+        if (dev == null) { if (forget) SaveConnectedDevice(null); return; }
+        try   { await Adapter.DisconnectDeviceAsync(dev); }
         catch { }
         finally
         {
@@ -444,7 +465,7 @@ public static class BluetoothManager
     }
 
     // ── Mentett eszközök (több eszköz + hely-név) ──
-    private static string _sessionLastId;
+    private static string? _sessionLastId;
 
     public static List<SavedDevice> GetSavedDevices()
     {
@@ -457,7 +478,7 @@ public static class BluetoothManager
             if (list.Count == 0)
             {
                 // régi, egyeszközös mentés átvétele
-                var oldId = Preferences.Get("BTDeviceId", null);
+                var oldId = GetPrefOrNull("BTDeviceId");
                 if (!string.IsNullOrEmpty(oldId))
                 {
                     list.Add(new SavedDevice { Id = oldId, Name = Preferences.Get("BTDeviceName", "") });
@@ -472,7 +493,7 @@ public static class BluetoothManager
     private static void SaveDeviceList(List<SavedDevice> list)
         => Preferences.Set("BTDevices", JsonSerializer.Serialize(list));
 
-    public static SavedDevice FindSaved(string id) => GetSavedDevices().FirstOrDefault(d => d.Id == id);
+    public static SavedDevice? FindSaved(string id) => GetSavedDevices().FirstOrDefault(d => d.Id == id);
 
     // Megjelenítendő név: "Hely (BLE-név)", vagy csak a BLE-név, ha nincs hely megadva.
     public static string DisplayNameFor(string id, string fallbackName)
@@ -482,7 +503,7 @@ public static class BluetoothManager
         return string.IsNullOrWhiteSpace(s?.Location) ? name : $"{s.Location} ({name})";
     }
 
-    public static void SetLocation(string id, string name, string location)
+    public static void SetLocation(string id, string? name, string? location)
     {
         var list = GetSavedDevices();
         var s = list.FirstOrDefault(d => d.Id == id);
@@ -497,11 +518,11 @@ public static class BluetoothManager
         list.RemoveAll(d => d.Id == id);
         SaveDeviceList(list);
         if (_sessionLastId == id) _sessionLastId = null;
-        if (Preferences.Get("BTDeviceId", null) == id) { Preferences.Remove("BTDeviceId"); Preferences.Remove("BTDeviceName"); }
+        if (GetPrefOrNull("BTDeviceId") == id) { Preferences.Remove("BTDeviceId"); Preferences.Remove("BTDeviceName"); }
     }
 
     // device == null: a "legutóbb csatlakozott" jelölés törlése (a mentett lista megmarad).
-    public static void SaveConnectedDevice(IDevice device)
+    public static void SaveConnectedDevice(IDevice? device)
     {
         if (device == null)
         {
@@ -522,8 +543,8 @@ public static class BluetoothManager
         _autoReconnectEnabled = true; // kézi csatlakozás után újra él az automatikus újracsatlakozás
     }
 
-    public static string GetSavedDeviceId() => Preferences.Get("BTDeviceId", null);
-    public static string GetSavedDeviceName()
+    public static string? GetSavedDeviceId() => GetPrefOrNull("BTDeviceId");
+    public static string? GetSavedDeviceName()
     {
         var id = GetSavedDeviceId();
         return id == null ? null : DisplayNameFor(id, Preferences.Get("BTDeviceName", ""));
@@ -533,7 +554,7 @@ public static class BluetoothManager
     private static bool _pickerBusy;
     public static async Task ShowDevicePickerAsync()
     {
-        if (_pickerBusy || Adapter == null || IsConnected) return;
+        if (_pickerBusy || _adapter == null || IsConnected) return;
         _pickerBusy = true;
         try
         {
@@ -542,7 +563,7 @@ public static class BluetoothManager
             if (perm != PermissionStatus.Granted || !Plugin.BLE.CrossBluetoothLE.Current.IsOn) return;
 
             var found = new List<IDevice>();
-            void OnFound(object s, Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
+            void OnFound(object? s, Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)
             {
                 if (!string.IsNullOrEmpty(e.Device.Name) && !found.Any(d => d.Id == e.Device.Id)) found.Add(e.Device);
             }
@@ -556,8 +577,9 @@ public static class BluetoothManager
             if (cand.Count == 0 || IsConnected) return;
 
             var labels = cand.Select(d => $"{DisplayNameFor(d.Id.ToString(), d.Name)}  ({d.Rssi} dBm)").ToList();
-            string choice = await MainThread.InvokeOnMainThreadAsync(() =>
+            string? choice = await MainThread.InvokeOnMainThreadAsync(() =>
                 UiHelper.CurrentPage.DisplayActionSheetAsync("Melyik eszközre csatlakozzak?", "Mégse", null, labels.ToArray()));
+            if (choice == null) return;
             int idx = labels.IndexOf(choice);
             if (idx < 0) return;
 
@@ -571,10 +593,11 @@ public static class BluetoothManager
 
     public static async Task<int> RequestMtuAsync(int requested = 517)
     {
-        if (ConnectedDevice == null) return 23;
+        var dev = ConnectedDevice;
+        if (dev == null) return 23;
         try
         {
-            var mtu = await ConnectedDevice.RequestMtuAsync(requested);
+            var mtu = await dev.RequestMtuAsync(requested);
             Debug.WriteLine($"MTU: {mtu}");
             await Task.Delay(400);
             return mtu;

@@ -8,8 +8,8 @@ namespace Controll.Services;
 public class BluetoothService : IBluetoothService
 {
     private readonly IAdapter _adapter;
-    private IDevice _device;
-    private ICharacteristic _txCharacteristic; // MAUI szempontból amin ÍRUNK (RX az ESP-n)
+    private IDevice? _device;
+    private ICharacteristic? _txCharacteristic; // MAUI szempontból amin ÍRUNK (RX az ESP-n)
 
     // Az ESP32 kódodból származó UUID-k
     private readonly Guid ServiceGuid = Guid.Parse("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");

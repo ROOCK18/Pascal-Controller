@@ -6,7 +6,7 @@ namespace Controll.Pages;
 
 public partial class Data : ContentView
 {
-    private System.Timers.Timer _queryTimer;
+    private System.Timers.Timer? _queryTimer;
     private int  _queryStep   = 0;
     private int  _currentMode = 0;   // 0=2hőm 1=1hőm 2=pára 3=1kap1hőm 4=2kap
 
@@ -39,7 +39,7 @@ public partial class Data : ContentView
     }
 
     // ── Timer: körkörösen kérdezünk ──
-    private void OnQueryTimerElapsed(object sender, ElapsedEventArgs e)
+    private void OnQueryTimerElapsed(object? sender, ElapsedEventArgs e)
     {
         if (!BluetoothManager.IsConnected) return;
         switch (_queryStep)
