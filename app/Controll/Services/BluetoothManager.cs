@@ -182,9 +182,7 @@ public static class BluetoothManager
         get
         {
             var dev = ConnectedDevice;
-            // Kikapcsolt Bluetooth mellett nincs kapcsolat (az Android listája ilyenkor elavult maradhat)
-            return dev != null && Plugin.BLE.CrossBluetoothLE.Current.IsOn
-                && _adapter?.ConnectedDevices.Any(d => d.Id == dev.Id) == true;
+            return dev != null && _adapter?.ConnectedDevices.Any(d => d.Id == dev.Id) == true;
         }
     }
 
@@ -194,11 +192,6 @@ public static class BluetoothManager
         _adapter = adapter;
         adapter.DeviceDisconnected   += (s, e) => CheckAndNotify(e.Device);
         adapter.DeviceConnectionLost += (s, e) => CheckAndNotify(e.Device);
-        // A telefon Bluetooth-ának kikapcsolásakor a kapcsolat megszakad (ne maradjon "csatlakozva" állapot)
-        Plugin.BLE.CrossBluetoothLE.Current.StateChanged += (s, e) =>
-        {
-            if (e.NewState != BluetoothState.On && ConnectedDevice != null) HandleDisconnect();
-        };
     }
 
     private static void CheckAndNotify(IDevice device)
@@ -269,7 +262,8 @@ public static class BluetoothManager
                 {
                     var perm = await MainThread.InvokeOnMainThreadAsync(
                         async () => await Permissions.CheckStatusAsync<Permissions.Bluetooth>());
-                    if (perm == PermissionStatus.Granted && Plugin.BLE.CrossBluetoothLE.Current.IsOn)
+                    // Az Android "Bluetooth-keresés" beállításával a BLE kikapcsolt Bluetooth mellett is működik, ezért az állapotot nem követeljük meg
+                    if (perm == PermissionStatus.Granted)
                     {
                         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
                         linked.CancelAfter(TimeSpan.FromSeconds(25));
@@ -621,7 +615,7 @@ public static class BluetoothManager
         {
             var perm = await MainThread.InvokeOnMainThreadAsync(
                 async () => await Permissions.CheckStatusAsync<Permissions.Bluetooth>());
-            if (perm != PermissionStatus.Granted || !Plugin.BLE.CrossBluetoothLE.Current.IsOn) return;
+            if (perm != PermissionStatus.Granted) return;
 
             var found = new List<IDevice>();
             void OnFound(object? s, Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs e)

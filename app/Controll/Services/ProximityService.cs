@@ -94,7 +94,7 @@ public static class ProximityService
     {
         var perm = await MainThread.InvokeOnMainThreadAsync(
             async () => await Permissions.CheckStatusAsync<Permissions.Bluetooth>());
-        return perm == PermissionStatus.Granted && Plugin.BLE.CrossBluetoothLE.Current.IsOn;
+        return perm == PermissionStatus.Granted;   // kikapcsolt Bluetooth mellett is megy a BLE (Android "Bluetooth-keresés")
     }
 
     private static double SmoothedMeters(string id, int rssi)
