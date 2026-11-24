@@ -80,17 +80,25 @@ String buildLoadTimer(const String &prefix, const String &target, TimerSet &ts) 
   return out;
 }
 
+// A napszűrés: a TimerSet.days egy 7 bites maszk, az app sorrendjében: 0. bit = Hétfő ... 6. bit = Vasárnap
+// (0 = egy napon sem fut, ahogy az app is mutatja). A dayOfWeekIdx() 0 = Vasárnap ... 6 = Szombat.
+int dayOfWeekIdx(uint16_t y, uint8_t m, uint8_t d);   // Display.h
+static bool timerRunsToday(const TimerSet &ts) {
+  int bit = (dayOfWeekIdx(yr, month, day) + 6) % 7;   // Vasárnap(0) -> 6, Hétfő(1) -> 0, ...
+  return (ts.days >> bit) & 1;
+}
+
 void applyTimers() {
   if (hr * 60 + min_t == lastAppliedMinute) return; // csak percenként egyszer
   lastAppliedMinute = hr * 60 + min_t;
 
-  for (int i = 0; i < ftimerF1.count; i++)
+  for (int i = 0; i < ftimerF1.count && timerRunsToday(ftimerF1); i++)
     if (ftimerF1.slots[i].h == hr && ftimerF1.slots[i].m == min_t) { pwmFan = constrain(ftimerF1.slots[i].v * 255 / 100, 0, 255); setPWM(3, pwmFan); }
-  for (int i = 0; i < ftimerF2.count; i++)
+  for (int i = 0; i < ftimerF2.count && timerRunsToday(ftimerF2); i++)
     if (ftimerF2.slots[i].h == hr && ftimerF2.slots[i].m == min_t) { pwmFan2 = constrain(ftimerF2.slots[i].v * 255 / 100, 0, 255); setPWM(4, pwmFan2); }
-  for (int i = 0; i < rtimerR1.count; i++)
+  for (int i = 0; i < rtimerR1.count && timerRunsToday(rtimerR1); i++)
     if (rtimerR1.slots[i].h == hr && rtimerR1.slots[i].m == min_t) digitalWrite(RELAY1_PIN, rtimerR1.slots[i].v ? HIGH : LOW);
-  for (int i = 0; i < rtimerR2.count; i++)
+  for (int i = 0; i < rtimerR2.count && timerRunsToday(rtimerR2); i++)
     if (rtimerR2.slots[i].h == hr && rtimerR2.slots[i].m == min_t) digitalWrite(RELAY2_PIN, rtimerR2.slots[i].v ? HIGH : LOW);
 }
 

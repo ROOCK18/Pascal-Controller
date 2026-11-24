@@ -20,9 +20,9 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 | F10 ✅ | A | `WifiOTA.h` `handleSetWifi`, `WIFI_NET:` | A `:` az elválasztó, ezért **kettőspontot tartalmazó SSID/jelszó** hibásan darabolódik. |
 | F11 ✅ | A | `Menu.h` WiFi lista | Legfeljebb 11 hálózat jelenik meg (a keresés 15-öt tárol, a lista 12 sorra méretezett). |
 | F12 ✅ | A | `BLECommands.h` `TIME:` | Fix pozíciókból olvas, **tartomány-ellenőrzés nélkül** (pl. `TIME:99:99:99` → érvénytelen óra). |
-| F13 | A | `Timers.h` | Az időzítők **napszűrése (`days`) tárolva van, de nincs használva**; az időzítő a relé lábat közvetlenül írja (`digitalWrite`), megkerülve a `setRelayAutomation()`-t (a Kapuzás/zárolás nem érvényesül). Nincs RTC: áramkimaradás után az óra az utolsó mentett értékről indul, amíg az app nem szinkronizál. |
+| F13 ✅ | A | `Timers.h` | Az időzítők **napszűrése (`days`) tárolva van, de nincs használva**; az időzítő a relé lábat közvetlenül írja (`digitalWrite`), megkerülve a `setRelayAutomation()`-t (a Kapuzás/zárolás nem érvényesül). Nincs RTC: áramkimaradás után az óra az utolsó mentett értékről indul, amíg az app nem szinkronizál. |
 | F14 | A | `Storage.h` | A mentett `mode` betöltéskor nincs ellenőrizve (lásd F4). |
-| F15 | A | `lgfx_setup.h` (felhasználói módosítás) | `setRotation(3)` + `offset_rotation = 2` együtt működik, de tisztább lenne `setRotation(1)` + `offset_rotation = 0`. A 180°-os elforgatás után a két gomb **iránya** (Fel/Le) a képernyőhöz képest megfordulhat – érdemes `BTN_LEFT`/`BTN_RIGHT` szerepét ellenőrizni. |
+| F15 ✅ | A | `lgfx_setup.h` (felhasználói módosítás) | `setRotation(3)` + `offset_rotation = 2` együtt működik, de tisztább lenne `setRotation(1)` + `offset_rotation = 0`. A 180°-os elforgatás után a két gomb **iránya** (Fel/Le) a képernyőhöz képest megfordulhat – érdemes `BTN_LEFT`/`BTN_RIGHT` szerepét ellenőrizni. |
 
 ### Az 5.0.0-s átállásnál bevezetett hibák (az én hibáim)
 | # | Sev. | Hiba | Állapot |
@@ -54,8 +54,9 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 
 ## Nyitott (szándékosan nem javítva)
 - **F5/F16** (BLE hitelesítés, MQTT TLS) és **F6** (tanúsítvány-ellenőrzés): a javításuk protokoll-/infrastruktúra-változás, hardveres próba nélkül az OTA-t vagy a csatlakozást törhetné el.
-- **F13** (időzítők napszűrése): a `days` mező jelentése/formátuma nincs dokumentálva, kitalálni nem szabad.
-- **F15** (kijelző forgatása/gombirány), **N5/N6** (jelek, kinézet): csak hardveren ellenőrizhető.
+- **F13** (időzítők napszűrése): megvalósítva (7 bites maszk, 0. bit = hétfő); az időzítő a relé lábat továbbra is közvetlenül írja.
+- **F15** (kijelző forgatása): lezárva, egyetlen orientáció van (a felhasználó beállította).
+- **N5/N6** (jelek, kinézet): csak hardveren ellenőrizhető.
 - **Hardver**: a DH_ON a GPIO36-on van, ami csak bemenet – át kell kötni GPIO21/22-re (lásd a beszélgetést).
 
 ## Fordítás / környezet
