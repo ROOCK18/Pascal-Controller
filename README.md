@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.0.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.1.2** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -13,12 +13,12 @@ firmware/                    PlatformIO projekt (platformio.ini, partitions.csv,
 app/                         .NET 10 MAUI alkalmazás (Controll.sln)
 ```
 
-A lefordított `.bin` fájlok nem ebben a repóban vannak, hanem a külön publikus
-[ROOCK18/Pascal-Controller-firmware](https://github.com/ROOCK18/Pascal-Controller-firmware)
-repó Releases-ében, hogy az app és az eszköz token nélkül le tudja tölteni őket.
+A lefordított `.bin` fájlok ennek a repónak a [Releases](https://github.com/ROOCK18/Pascal-Controller/releases)
+oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak kell lennie, hogy az app és az
+eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.0.0)
+## Firmware (v5.1.2)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
