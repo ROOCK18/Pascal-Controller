@@ -10,12 +10,6 @@ public partial class RgbAuto : ContentView
         InitializeComponent();
     }
 
-    private void OnProxHeaderTapped(object? sender, TappedEventArgs e)
-    {
-        ProxDetailsPanel.IsVisible = !ProxDetailsPanel.IsVisible;
-        ProxExpandIcon.Text = ProxDetailsPanel.IsVisible ? "▲" : "▼";
-    }
-
     // Megnyitáskor hívja a MainPage: betölti a beállításokat az appból és az eszközről
     public async void RequestProx()
     {

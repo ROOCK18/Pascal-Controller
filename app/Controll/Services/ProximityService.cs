@@ -16,10 +16,6 @@ public static class ProximityService
     public static double EstimateMeters(double rssi) => Math.Pow(10.0, (RssiAt1m - rssi) / (10.0 * PathLoss));
 
     public static readonly string[] Channels = { "F1", "F2", "R1", "R2", "RGB" };
-    private static string ChannelName(string key) => key switch
-    {
-        "F1" => "Ventilátor 1", "F2" => "Ventilátor 2", "R1" => "Relé 1", "R2" => "Relé 2", _ => "RGB"
-    };
 
     private static CancellationTokenSource? _cts;
     private static Task? _task;
@@ -186,31 +182,14 @@ public static class ProximityService
     // A csatornák, amelyek távolságán belül vagyunk, és élesek: a művelet indítása az eszközön (csatornánként)
     private static async Task FireEligibleAsync(SavedDevice cfg, double dist)
     {
-        var fired = new List<string>();
+        // Értesítést a közeledés nem küld: a telefon csak riasztáskor (szenzorhiba, túl alacsony/magas hőmérséklet) értesít.
         foreach (var (ch, c) in EnabledChannels(cfg))
         {
             if (dist > c.Meters || !IsArmed(cfg.Id, ch)) continue;
             _armed[Key(cfg.Id, ch)] = false;   // egy közeledés = egy végrehajtás
             _outsideSince.Remove(Key(cfg.Id, ch));
-            // Az eszköz "PROX_OK:<n>" válaszából látszik, hogy ténylegesen végrehajtott-e valamit (n = végrehajtott csatornák)
-            var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-            void OnReply(string line)
-            {
-                if (line.StartsWith("PROX_OK:") && int.TryParse(line.Substring(8).Trim(), out int n)) tcs.TrySetResult(n);
-            }
-            BluetoothManager.OnDataReceived += OnReply;
-            int? applied = null;
-            try
-            {
-                await BluetoothManager.WriteAsync($"PROX_TRIGGER:{ch}");
-                if (await Task.WhenAny(tcs.Task, Task.Delay(3000)) == tcs.Task) applied = tcs.Task.Result;
-            }
-            finally { BluetoothManager.OnDataReceived -= OnReply; }
-
-            if (applied is > 0) fired.Add(ChannelName(ch));   // csak a ténylegesen végrehajtott csatornákról értesít
+            await BluetoothManager.WriteAsync($"PROX_TRIGGER:{ch}");
+            await Task.Delay(150);
         }
-        if (fired.Count > 0)
-            NotificationService.Show("Közeledés érzékelve",
-                $"{BluetoothManager.DisplayNameFor(cfg.Id, cfg.Name)}: {string.Join(", ", fired)}", 3000);
     }
 }

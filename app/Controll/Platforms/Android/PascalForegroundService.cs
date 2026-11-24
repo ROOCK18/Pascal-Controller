@@ -11,7 +11,9 @@ namespace Controll
     [Service(Exported = false, ForegroundServiceType = ForegroundService.TypeConnectedDevice)]
     public class PascalForegroundService : Service
     {
-        private const string ChannelId = "pascal_background";
+        // Új csatorna-azonosító: egy már létrehozott csatorna fontosságát az Android nem engedi utólag csökkenteni
+        private const string ChannelId = "pascal_bg_min";
+        private const string OldChannelId = "pascal_background";
         private const int NotificationId = 1001;
 
         public override IBinder? OnBind(Intent? intent) => null;
@@ -19,13 +21,19 @@ namespace Controll
         public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
         {
             var nm = GetSystemService(NotificationService) as NotificationManager;
-            if (nm != null && nm.GetNotificationChannel(ChannelId) == null)
+            if (nm != null)
             {
-                var ch = new NotificationChannel(ChannelId, "Háttérfigyelés", NotificationImportance.Low)
+                if (nm.GetNotificationChannel(OldChannelId) != null) nm.DeleteNotificationChannel(OldChannelId);
+                if (nm.GetNotificationChannel(ChannelId) == null)
                 {
-                    Description = "A Pascal-Controller kapcsolat és a közeledés-érzékelés fut a háttérben"
-                };
-                nm.CreateNotificationChannel(ch);
+                    // Minimális fontosság: néma, nem jelenik meg az állapotsorban, csak az értesítési panel alján
+                    var ch = new NotificationChannel(ChannelId, "Háttérkapcsolat", NotificationImportance.Min)
+                    {
+                        Description = "Az Androidnak kötelező jelzés, hogy az app a háttérben is tartja a kapcsolatot"
+                    };
+                    ch.SetShowBadge(false);
+                    nm.CreateNotificationChannel(ch);
+                }
             }
 
             PendingIntent? pi = null;
@@ -35,9 +43,11 @@ namespace Controll
 
             var b = new NotificationCompat.Builder(this, ChannelId);
             b.SetContentTitle("Pascal-Controller");
-            b.SetContentText("Háttérfigyelés aktív (közeledés / riasztások)");
             b.SetSmallIcon(ApplicationInfo?.Icon ?? 0);
             b.SetOngoing(true);
+            b.SetPriority(NotificationCompat.PriorityMin);
+            b.SetVisibility(NotificationCompat.VisibilitySecret);   // zárolt képernyőn nem látszik
+            b.SetShowWhen(false);
             if (pi != null) b.SetContentIntent(pi);
             var n = b.Build();
 

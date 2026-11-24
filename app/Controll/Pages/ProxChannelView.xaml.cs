@@ -71,7 +71,6 @@ public partial class ProxChannelView : ContentView
         RearmMetersEntry.Text = c.RearmMeters.ToString("0.#", CultureInfo.InvariantCulture);
         RearmSecEntry.Text = c.RearmSec.ToString(CultureInfo.InvariantCulture);
         EnabledSwitch.IsToggled = c.Enabled;
-        DetailsPanel.IsVisible = c.Enabled;
         UpdateRearmVisibility();
     }
 
@@ -84,10 +83,11 @@ public partial class ProxChannelView : ContentView
 
     private void OnRearmChanged(object? sender, EventArgs e) => UpdateRearmVisibility();
 
-    // A kapcsoló bekapcsolásakor tovább nyílik a beállítás
-    private void OnToggled(object? sender, ToggledEventArgs e)
+    // A fejlécre koppintva a legördülő nyílik / záródik
+    private void OnHeaderTapped(object? sender, TappedEventArgs e)
     {
-        DetailsPanel.IsVisible = e.Value;
+        DetailsPanel.IsVisible = !DetailsPanel.IsVisible;
+        ExpandIcon.Text = DetailsPanel.IsVisible ? "▲" : "▼";
     }
 
     // LOAD_PROX:<csatorna>:<be>:<érték>:<időtartam>[:<művelet>] - az eszközön tárolt rész
@@ -103,7 +103,6 @@ public partial class ProxChannelView : ContentView
             if (p.Length >= 5 && ActionPicker.Items.Count > 0) ActionPicker.SelectedIndex = p[4] == "2" ? 1 : 0;
             bool en = p[1] == "1";
             EnabledSwitch.IsToggled = en;
-            DetailsPanel.IsVisible = en;
             // az app oldali "be van kapcsolva" jelzés az eszközét követi
             var id = DeviceId;
             if (id != null && BluetoothManager.FindSaved(id) != null)

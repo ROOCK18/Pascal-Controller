@@ -243,7 +243,7 @@
                                 <Entry x:Name="AlertHighEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="35" />
                             </VerticalStackLayout>
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0" Text="Háttérben is figyeljen (állandó értesítés a sávban)" TextColor="{StaticResource White}" VerticalOptions="Center" />
+                                <Label Grid.Column="0" Text="Háttérben is figyeljen" TextColor="{StaticResource White}" VerticalOptions="Center" />
                                 <Switch Grid.Column="1" x:Name="AlertBgSwitch" />
                             </Grid>
                             <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
@@ -481,7 +481,7 @@
                             <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnProxHeaderTapped"/></Grid.GestureRecognizers>
                         </Grid>
                         <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
-                            <Label Text="Amint az app észleli az eszközt (az utoljára használtat), azonnal csatlakozik hozzá, távolságtól függetlenül. A közeledés-műveleteket (távolság, mikor, mit, meddig, újraélesedés) a Vezérlés → Automatikák és az RGB automatikák oldalon kell beállítani. A háttérben futáshoz állandó értesítés látszik." TextColor="#AEAEB2" FontSize="12" />
+                            <Label Text="Amint az app észleli az eszközt (az utoljára használtat), azonnal csatlakozik hozzá, távolságtól függetlenül. A közeledés-műveleteket (távolság, mikor, mit, meddig, újraélesedés) a Vezérlés → Automatikák és az RGB automatikák oldalon kell beállítani." TextColor="#AEAEB2" FontSize="12" />
                             <Label x:Name="LblProxEmpty" Text="Előbb csatlakozz egy eszközhöz, hogy mentett eszköz legyen." TextColor="#AEAEB2" FontSize="12" />
                             <VerticalStackLayout x:Name="ProxFields" Spacing="10">
                                 <Picker x:Name="ProxDevicePicker" IsVisible="False" Title="Válassz eszközt" SelectedIndexChanged="OnProxDeviceChanged" />

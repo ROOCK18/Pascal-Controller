@@ -15,18 +15,8 @@
             </Border>
 
             <Border BackgroundColor="#2C2C2C" StrokeShape="RoundRectangle 12" Padding="14">
-                <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0" Text="Közeledés" FontSize="18" FontAttributes="Bold" TextColor="White"/>
-                        <Label Grid.Column="1" x:Name="ProxExpandIcon" Text="&#9660;" TextColor="White" FontSize="16" VerticalOptions="Center"/>
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnProxHeaderTapped"/>
-                        </Grid.GestureRecognizers>
-                    </Grid>
-                    <VerticalStackLayout x:Name="ProxDetailsPanel" Spacing="10" IsVisible="False">
-                        <pages:ProxChannelView x:Name="ProxRgbView" ChannelKey="RGB" Kind="Rgb" />
-                    </VerticalStackLayout>
-                </VerticalStackLayout>
+                <!-- a Közeledés legördülő (bekapcsolóval és az összes beállítással) magában a nézetben van -->
+                <pages:ProxChannelView x:Name="ProxRgbView" ChannelKey="RGB" Kind="Rgb" Margin="0,-10,0,0" />
             </Border>
 
         </VerticalStackLayout>

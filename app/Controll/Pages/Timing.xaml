@@ -24,8 +24,6 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Fan1DetailsPanel" Spacing="10" IsVisible="False">
-                    <pages:ProxChannelView x:Name="ProxF1View" ChannelKey="F1" Kind="Fan" />
-
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Fan1TimerTab" Grid.Column="0"
                                 BackgroundColor="{StaticResource PrimaryRed}"
@@ -227,6 +225,7 @@
                             <Label x:Name="Fan1LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
+                    <pages:ProxChannelView x:Name="ProxF1View" ChannelKey="F1" Kind="Fan" />
                 </VerticalStackLayout>
                     </VerticalStackLayout>
             </Border>
@@ -242,8 +241,6 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Fan2DetailsPanel" Spacing="10" IsVisible="False">
-                    <pages:ProxChannelView x:Name="ProxF2View" ChannelKey="F2" Kind="Fan" />
-
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Fan2TimerTab" Grid.Column="0"
                                 BackgroundColor="{StaticResource PrimaryRed}"
@@ -432,6 +429,7 @@
                             <Label x:Name="Fan2LogicStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
+                    <pages:ProxChannelView x:Name="ProxF2View" ChannelKey="F2" Kind="Fan" />
                 </VerticalStackLayout>
                     </VerticalStackLayout>
             </Border>
@@ -447,8 +445,6 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Relay1DetailsPanel" Spacing="10" IsVisible="False">
-                    <pages:ProxChannelView x:Name="ProxR1View" ChannelKey="R1" Kind="Relay" />
-
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Relay1TimerTab" Grid.Column="0"
                                 BackgroundColor="{StaticResource PrimaryRed}"
@@ -626,6 +622,7 @@
                         <Label x:Name="Relay1HoldStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
+                    <pages:ProxChannelView x:Name="ProxR1View" ChannelKey="R1" Kind="Relay" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
@@ -641,8 +638,6 @@
                         </Grid.GestureRecognizers>
                     </Grid>
                     <VerticalStackLayout x:Name="Relay2DetailsPanel" Spacing="10" IsVisible="False">
-                    <pages:ProxChannelView x:Name="ProxR2View" ChannelKey="R2" Kind="Relay" />
-
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Border x:Name="Relay2TimerTab" Grid.Column="0"
                                 BackgroundColor="{StaticResource PrimaryRed}"
@@ -820,6 +815,7 @@
                         <Label x:Name="Relay2HoldStatus" Text="" TextColor="Gray" FontSize="11" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
+                    <pages:ProxChannelView x:Name="ProxR2View" ChannelKey="R2" Kind="Relay" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
