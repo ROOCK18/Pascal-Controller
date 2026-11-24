@@ -31,6 +31,8 @@ void saveAllSettings() {
   prefs.putBytes("sensCfg1", &sensCfg[0], sizeof(SensorCfg));
   prefs.putBytes("sensCfg2", &sensCfg[1], sizeof(SensorCfg));
   prefs.putBytes("mqttCfg", &mqttCfg, sizeof(MqttCfg));
+  prefs.putBool("bleAuth", bleAuthRequired);
+  prefs.putString("blePin", String(blePin));
   prefs.putUChar("brightness", displayBrightness);
   prefs.putUChar("sleepIdx", sleepTimeoutIdx);
 
@@ -76,6 +78,11 @@ void saveAllSettings() {
   prefs.end();
 }
 
+// Új, véletlen 6 jegyű BLE PIN (hardveres véletlenszám-generátorból).
+void generateBlePin() {
+  snprintf(blePin, sizeof(blePin), "%06u", (unsigned)(esp_random() % 1000000UL));
+}
+
 // Segéd: csak akkor tölti be a bájtokat, ha a mentett méret PONTOSAN
 // egyezik a struktúra méretével (védelem firmware-frissítés utáni
 // struktúra-változás esetére - ellenkező esetben az alapérték marad).
@@ -105,6 +112,8 @@ void loadAllSettings() {
   loadStructIfMatching("sensCfg1", sensCfg[0]);
   loadStructIfMatching("sensCfg2", sensCfg[1]);
   loadStructIfMatching("mqttCfg", mqttCfg);
+  bleAuthRequired = prefs.getBool("bleAuth", true);
+  strlcpy(blePin, prefs.getString("blePin", "").c_str(), sizeof(blePin));
   mqttCfg.host[sizeof(mqttCfg.host) - 1] = 0; mqttCfg.user[sizeof(mqttCfg.user) - 1] = 0;
   mqttCfg.pass[sizeof(mqttCfg.pass) - 1] = 0; mqttCfg.name[sizeof(mqttCfg.name) - 1] = 0;
   if (currentMode > 4) currentMode = 0; // védelem sérült/hibás mentett érték ellen
@@ -153,6 +162,13 @@ void loadAllSettings() {
   loadStructIfMatching("rHoldR2", relayTimerR2);
 
   prefs.end();
+}
+
+// Ha még nincs PIN (első indulás / gyári reset után), generál egyet és azonnal el is menti.
+void ensureBlePin() {
+  bool ok = (strlen(blePin) == 6);
+  for (int i = 0; ok && i < 6; i++) ok = (blePin[i] >= '0' && blePin[i] <= '9');
+  if (!ok) { generateBlePin(); saveAllSettings(); }
 }
 
 // Gyári visszaállítás: törli a flash-ben mentett MINDEN beállítást, majd

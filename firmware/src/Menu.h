@@ -241,8 +241,8 @@ void drawMenu() {
       break;
 
     case MENU_SETTINGS_SUB: {
-      const char* items[8] = { "Mód", "Dátum/Idő", "Szenzor beállítások", "Kijelző", "WiFi", "MQTT", "Factory reset", "Vissza" };
-      drawMenuList("BEÁLLÍTÁSOK", items, 8, menuCursor);
+      const char* items[9] = { "Mód", "Dátum/Idő", "Szenzor beállítások", "Kijelző", "WiFi", "MQTT", "BLE védelem", "Factory reset", "Vissza" };
+      drawMenuList("BEÁLLÍTÁSOK", items, 9, menuCursor);
       break;
     }
 
@@ -329,6 +329,15 @@ void drawMenu() {
       rows[3] = { "Név", String(mqttCfg.name), UI_CYAN };
       rows[4] = { "Vissza", "", UI_WHITE };
       drawValueList("MQTT", rows, 5, menuCursor);
+      break;
+    }
+
+    case MENU_BLEPIN: {
+      rows[0] = { "PIN", String(blePin), UI_YELLOW };
+      rows[1] = { "Védelem", bleAuthRequired ? "BE" : "KI", bleAuthRequired ? UI_GREEN : UI_RED };
+      rows[2] = { "Új PIN generálása", "", UI_CYAN };
+      rows[3] = { "Vissza", "", UI_WHITE };
+      drawValueList("BLE VÉDELEM", rows, 4, menuCursor);
       break;
     }
 
@@ -672,8 +681,8 @@ void handleMenuInput(ButtonEvent ev) {
       break;
 
     case MENU_SETTINGS_SUB:
-      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 8;
-      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 8) % 8;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 9;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 9) % 9;
       else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 0; }
       else if (ev == BTN_SELECT) {
         switch (menuCursor) {
@@ -688,8 +697,9 @@ void handleMenuInput(ButtonEvent ev) {
             wifiMenuScanRequested = true;
             break;
           case 5: menuScreen = MENU_MQTT_LIST; menuCursor = 0; break;
-          case 6: menuScreen = MENU_FACTORY_CONFIRM; break;
-          case 7: menuScreen = MENU_MAIN; menuCursor = 0; break;
+          case 6: menuScreen = MENU_BLEPIN; menuCursor = 0; break;
+          case 7: menuScreen = MENU_FACTORY_CONFIRM; break;
+          case 8: menuScreen = MENU_MAIN; menuCursor = 0; break;
         }
       }
       break;
@@ -807,9 +817,20 @@ void handleMenuInput(ButtonEvent ev) {
       }
       break;
 
+    case MENU_BLEPIN:
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 6; }
+      else if (ev == BTN_SELECT) {
+        if (menuCursor == 1) { bleAuthRequired = !bleAuthRequired; markDirty(); }
+        else if (menuCursor == 2) { generateBlePin(); markDirty(); }   // a kapcsolódott app a következő kapcsolódáskor kéri az új PIN-t
+        else if (menuCursor == 3) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 6; }
+      }
+      break;
+
     case MENU_FACTORY_CONFIRM:
       if (ev == BTN_SELECT) { factoryReset(); /* nem tér vissza - ujraindul */ }
-      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 6; }
+      else if (ev == BTN_BACK) { menuScreen = MENU_SETTINGS_SUB; menuCursor = 7; }
       break;
 
     case MENU_TIME_LIST:

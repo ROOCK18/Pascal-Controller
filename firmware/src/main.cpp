@@ -72,7 +72,7 @@ void setup() {
   digitalWrite(FAN1_ON, LOW);    pinMode(FAN1_ON, OUTPUT);
   digitalWrite(FAN2_ON, LOW);    pinMode(FAN2_ON, OUTPUT);
   digitalWrite(RGB_ON, LOW);     pinMode(RGB_ON, OUTPUT);
-  digitalWrite(DH_ON_PIN, LOW);  pinMode(DH_ON_PIN, OUTPUT); // DHT11 táp: alapból KI (a kapu 1 MΩ-mal lehúzva)
+  pinMode(DHT_VCC_PIN, INPUT); pinMode(DHT_DATA_PIN, INPUT); // DHT11 lábak: nagyimpedanciás, amíg páratartalom módban nincs rájuk szükség
 
   Serial.begin(115200);
   randomSeed(analogRead(0));
@@ -102,6 +102,7 @@ void setup() {
 
   setupPWM();
   loadAllSettings(); // mentett beállítások visszatöltése (áramszünet utáni állapot-visszaállítás)
+  ensureBlePin();    // első induláskor véletlen BLE PIN
   if (wifiSsid.length() > 0) {
     // Ha van mentett WiFi hálózat, induláskor automatikusan próbáljon
     // csatlakozni hozzá (a loop() indítja el, ugyanúgy, mint SET_WIFI után).
@@ -189,14 +190,21 @@ void loop() {
   if (now - lastSensorRead >= 500) {
     lastSensorRead = now;
 
-    // DHT11 közvetlen 3,3 V-os tápja (DH_ON): csak páratartalom módban kapcsol be. Más módban
-    // KI kell legyen, különben a kapcsolt 3,3 V az NTC2 bemenetet (felhúzó csomópontot) hamisítaná.
+    // DHT11: páratartalom módban a GPIO21 adja a 3,3 V-ot (47 Ω-on át), a GPIO22 az adatvonal. Más módban
+    // mindkét láb nagyimpedanciás bemenet (különben az NTC analóg csomópontját zavarnák).
     static int dhLastMode = -1;
     static unsigned long dhOnSince = 0;
-    bool dhWant = (currentMode == 2);
-    digitalWrite(DH_ON_PIN, dhWant ? HIGH : LOW);
-    if (dhWant && dhLastMode != 2) dhOnSince = now;   // bekapcsolás időpontja (a DHT11-nek ~1,5 mp felfutás kell)
-    dhLastMode = currentMode;
+    if (currentMode != dhLastMode) {
+      if (currentMode == 2) {
+        pinMode(DHT_VCC_PIN, OUTPUT);
+        digitalWrite(DHT_VCC_PIN, HIGH);
+        dhOnSince = now;                       // a DHT11-nek ~1,5 mp felfutás kell
+      } else {
+        pinMode(DHT_VCC_PIN, INPUT);
+        pinMode(DHT_DATA_PIN, INPUT);
+      }
+      dhLastMode = currentMode;
+    }
 
     // Mód-függő szenzorolvasás: az NTC1/NTC2 lábak jelentése módonként más
     // (analóg hőmérő / digitális kapcsoló / DHT11) - csak azt olvassuk ki,

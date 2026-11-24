@@ -213,6 +213,11 @@ public partial class Settings : ContentPage
             }
 
             int mtu = await BluetoothManager.RequestMtuAsync(517);
+            if (!await BluetoothManager.AuthenticateAsync())
+            {
+                await BluetoothManager.DisconnectDeviceAsync();
+                throw new Exception("PIN hitelesítés sikertelen");
+            }
             // Minimum 128 byte chunk – 20 byte-os chunkoknál az ESP Update.write()
             // belső bufferjei hibáznak és a sok kis csomag GATT torlódást okoz
             // Max 128 byte: az Android BLE stack 512 byte-os chunkokat feldarabol

@@ -3,6 +3,8 @@
 // ============================================================
 #pragma once
 
+#include <mbedtls/md.h>
+
 // ============================================================
 // SZENZOR-PARAMÉTEREK (PT1000 / NTC)
 // Parancs: SET_SENS:<1|2>:<type 0-3>:<r0>:<t0>:<beta>:<rSeries>:<vSupply>
@@ -53,6 +55,65 @@ void handleGetSensRaw() {
 }
 
 // ============================================================
+// BLE VÉDELEM (PIN, challenge-response)
+//   AUTH_BEGIN            -> AUTH_NONCE:<32 hex>   (friss, egyszer használatos véletlen)
+//   AUTH:<64 hex>         -> AUTH_OK | AUTH_FAIL | AUTH_LOCKED:<mp>
+//        érték = HMAC-SHA256(kulcs = a PIN szövege, üzenet = a nonce hex-szövege), kisbetűs hex
+//   Ha a védelem ki van kapcsolva: AUTH_BEGIN -> AUTH_OFF.
+// Hitelesítés nélkül csak az AUTH_BEGIN, AUTH: és GET_VER megengedett; minden más
+// "ERROR:AUTH_REQUIRED"-et kap. 5 hibás próba után 60 mp-re zár.
+// A PIN-t az eszköz kijelzőjén lehet megnézni (Beállítások -> BLE védelem), a PIN sosem megy BLE-n.
+// ============================================================
+static void bleHmacHex(const char *key, const char *msg, char out[65]) {
+  uint8_t h[32];
+  const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  mbedtls_md_hmac(info, (const uint8_t *)key, strlen(key), (const uint8_t *)msg, strlen(msg), h);
+  for (int i = 0; i < 32; i++) snprintf(out + 2 * i, 3, "%02x", h[i]);
+  out[64] = 0;
+}
+
+// true = a parancsot itt feldolgoztuk / elutasítottuk (a hívó ne futtassa tovább)
+static bool bleAuthGate(const String &cmd) {
+  unsigned long now = millis();
+  if (cmd == "AUTH_BEGIN") {
+    if (!bleAuthRequired) { bleAuthed = true; notifyLine("AUTH_OFF"); return true; }
+    uint8_t r[16];
+    esp_fill_random(r, sizeof(r));
+    for (int i = 0; i < 16; i++) snprintf(bleNonce + 2 * i, 3, "%02x", r[i]);
+    notifyLine("AUTH_NONCE:" + String(bleNonce));
+    return true;
+  }
+  if (cmd.startsWith("AUTH:")) {
+    if (!bleAuthRequired) { bleAuthed = true; notifyLine("AUTH_OFF"); return true; }
+    if (bleLockUntil != 0 && (long)(bleLockUntil - now) > 0) {
+      notifyLine("AUTH_LOCKED:" + String((bleLockUntil - now) / 1000 + 1));
+      return true;
+    }
+    bleLockUntil = 0;
+    if (bleNonce[0] == 0) { notifyLine("AUTH_FAIL"); return true; }
+    char expect[65];
+    bleHmacHex(blePin, bleNonce, expect);
+    bleNonce[0] = 0;                              // a nonce egyszer használatos
+    String given = cmd.substring(5);
+    given.trim(); given.toLowerCase();
+    bool ok = (given.length() == 64);
+    uint8_t diff = 0;                             // időállandó összehasonlítás
+    for (int i = 0; i < 64 && ok; i++) diff |= (uint8_t)(given[i] ^ expect[i]);
+    ok = ok && diff == 0;
+    if (ok) { bleAuthed = true; bleAuthFails = 0; notifyLine("AUTH_OK"); }
+    else if (++bleAuthFails >= 5) { bleAuthFails = 0; bleLockUntil = now + 60000UL; notifyLine("AUTH_LOCKED:60"); }
+    else notifyLine("AUTH_FAIL");
+    return true;
+  }
+  if (bleAuthRequired && !bleAuthed) {
+    if (cmd == "GET_VER") notifyLine("VER:" + String(FW_VERSION));
+    else notifyLine("ERROR:AUTH_REQUIRED");
+    return true;
+  }
+  return false;
+}
+
+// ============================================================
 // MQTT / HOME ASSISTANT beállítások
 // Parancs: SET_MQTT:<enabled 0/1>|<host>|<port>|<user>|<pass>|<name>   (a "|" az elválasztó)
 //   üres jelszó = a mentett jelszó nem változik. Válasz: MQTT_OK
@@ -99,10 +160,12 @@ void handleSetMqtt(const String &body) {
 class MyServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* s, NimBLEConnInfo& connInfo) override {
     deviceConnected = true;
+    bleAuthed = false; bleNonce[0] = 0;   // minden új kapcsolat hitelesítést kér
     Serial.println("BLE eszkoz csatlakozott");
   }
   void onDisconnect(NimBLEServer* s, NimBLEConnInfo& connInfo, int reason) override {
     deviceConnected = false;
+    bleAuthed = false; bleNonce[0] = 0;
     if (otaInProgress) {
       Update.abort();
       otaInProgress = false;
@@ -139,6 +202,7 @@ static bool bleCmdPush(const String &s) {
 
 // Egyetlen BLE szöveges parancs végrehajtása (a fő szálon hívva).
 void handleBleCommand(String receivedString) {
+  if (bleAuthGate(receivedString)) return; // hitelesítés (PIN) - lásd fent
     if (receivedString.startsWith("UPDATE:")) {
       // "UPDATE:<total>:<chunkSize>" - a toInt() a ':'-nál megall,
       // igy csak a total meretet olvassuk ki.

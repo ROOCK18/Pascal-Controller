@@ -79,8 +79,16 @@ A Google Home, Alexa és Apple Home a Home Assistanton keresztül éri el ezeket
 | Relé 1 / Relé 2 | 33 / 32 | 19 / 18 |
 | Ventilátor 1/2 engedélyező | 27 / 26 | 22 / 21 |
 | RGB engedélyező | 25 | 20 |
-| **DH_ON** (DHT11 3,3 V-os táp) | **22** | **4** |
+| DHT11 tápja (47 Ω-on át az NTC1 csatlakozó 1-es lábára) | 21 | 3 |
+| DHT11 adatvonala (47 Ω-on át az NTC2 csatlakozó 1-es lábára) | 22 | 4 |
 
-- **DH_ON**: csak „Páratartalom” módban (2. mód) van bekapcsolva (Q14 → Q15 MOSFET), más módban kikapcsolva, hogy ne zavarja az NTC2 mérést. Bekapcsolás után a DHT11 ~1,5 mp felfutási időt kap.
-- **A GPIO34–39 csak bemenet** (kimenetként nem működik). A DHT11 adatvonalát a firmware az `NTC2_PIN`-en (GPIO38) várja (`DHT_DATA_PIN`), de a DHT11 indításához a vonalat le kell húzni – ezt bemeneti láb nem tudja. Ha a páratartalom-mérés nem működik, kösd az adatvonalat egy kimenetként is használható lábra (pl. GPIO21, a csatlakozó 3-as lába), és írd át a `Config.h`-ban a `DHT_DATA_PIN`-t.
+- **DHT11** (páratartalom mód): a tápot a GPIO21 adja, az adatvonal a GPIO22 (kimenetként is tud működni, így a DHT11 indítása is megy). A DHT11 az NTC1 (táp) és NTC2 (adat) csatlakozó 1-es lábára kerül, GND a 2-es lábra. Más módban mindkét láb nagyimpedanciás bemenet, hogy az NTC mérését ne zavarja. Bekapcsolás után ~1,5 mp felfutási idő van.
+- **Felhúzó ellenállás (R10/R11)**: PT1000-hez 1,0–1,2 kΩ ad a legjobb felbontást (~3,9 ADC-lépés/°C), 2,2 kΩ ~3,4, 4,7 kΩ ~2,4 lépés/°C. A 4,7 kΩ a DHT11 adatvonalának is ideális felhúzója (a 1,2 kΩ-nál 2,75 mA terheli a DHT11 kimenetét). Az érték a szenzor-beállításokban („Soros ellenállás”) állítható, hogy a mérés pontos maradjon.
 - Relé-kattanás ellen: ~10 kΩ lehúzó ellenállás a relé-meghajtók bemenetére (GPIO32/33), lásd HIBAK.md.
+
+## BLE védelem (PIN)
+
+- Az eszköz első induláskor (és gyári reset után) egy véletlen **6 jegyű PIN-t** generál. Megtekinthető a kijelzőn: *Beállítások → BLE védelem* (ott új PIN is generálható, és a védelem ki-be kapcsolható).
+- Az app az első csatlakozáskor kéri a PIN-t, eszközönként elmenti (SecureStorage), és utána magától igazol.
+- A PIN **sosem megy át BLE-n**: az eszköz véletlen nonce-t küld, az app `HMAC-SHA256(PIN, nonce)`-szal válaszol (`AUTH_BEGIN` → `AUTH_NONCE:` → `AUTH:` → `AUTH_OK`). Hitelesítés nélkül csak a `GET_VER` megy; minden más (OTA, gyári reset, WiFi stb.) `ERROR:AUTH_REQUIRED`-et kap. 5 hibás próba után 1 percre zár.
+- Ha elfelejtetted a PIN-t, az eszköz kijelzőjén megnézheted. Régi firmware-rel (ami nem ismeri az AUTH-ot) az app változatlanul működik.

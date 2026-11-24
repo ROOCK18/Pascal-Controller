@@ -152,6 +152,16 @@ struct OtaPacket {
 };
 
 std::queue<OtaPacket> otaQueue;
+
+// BLE védelem: az eszköz egy 6 jegyű PIN-t tart (a kijelzőn megtekinthető); a kapcsolat után az app
+// challenge-response (HMAC-SHA256) alapon igazolja, hogy ismeri. Hitelesítés nélkül a parancsok
+// (OTA, gyári reset, WiFi, stb.) NEM hajtódnak végre.
+bool bleAuthRequired = true;
+char blePin[8] = "";
+bool bleAuthed = false;
+char bleNonce[33] = "";
+uint8_t bleAuthFails = 0;
+unsigned long bleLockUntil = 0;
 volatile uint8_t otaProblem = 0; // 1 = túl nagy csomag, 2 = a sor betelt (a loop() hibával lezárja az OTA-t)
 portMUX_TYPE otaMux = portMUX_INITIALIZER_UNLOCKED;
 

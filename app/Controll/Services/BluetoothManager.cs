@@ -4,6 +4,7 @@ using Plugin.BLE.Abstractions;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 
 namespace Controll;
 
@@ -26,6 +27,105 @@ public static class BluetoothManager
     public static event Action<string> OnDataReceived;
     public static event Action<string> OnOtaRawReceived;
     public static bool OtaMode { get; set; } = false;
+
+    // ── BLE védelem (PIN, challenge-response) ──
+    // Az eszköz kijelzőjén látható 6 jegyű PIN-t az app eszközönként tárolja (SecureStorage). A PIN sosem
+    // megy át BLE-n: az eszköz egy véletlen nonce-t küld, az app HMAC-SHA256(PIN, nonce)-szal válaszol.
+    private static string PinKey(string id) => "blepin_" + id;
+
+    private static async Task<string> GetPinAsync(string id)
+    {
+        try { return await SecureStorage.Default.GetAsync(PinKey(id)); }
+        catch { return Preferences.Get(PinKey(id), null); }
+    }
+    private static async Task SetPinAsync(string id, string pin)
+    {
+        try { await SecureStorage.Default.SetAsync(PinKey(id), pin); }
+        catch { Preferences.Set(PinKey(id), pin); }
+    }
+    private static void ClearPin(string id)
+    {
+        try { SecureStorage.Default.Remove(PinKey(id)); } catch { }
+        Preferences.Remove(PinKey(id));
+    }
+
+    // Parancs küldése, és az első olyan válaszsor megvárása, ami a megadott előtagok egyikével kezdődik.
+    // null = időtúllépés (pl. régi firmware, ami nem ismeri az AUTH-ot).
+    private static async Task<string> RequestAsync(string command, string[] prefixes, int timeoutMs)
+    {
+        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler(string line)
+        {
+            foreach (var p in prefixes)
+                if (line.StartsWith(p)) { tcs.TrySetResult(line); return; }
+        }
+        OnDataReceived += Handler;
+        try
+        {
+            await WriteAsync(command);
+            using var cts = new CancellationTokenSource(timeoutMs);
+            using var reg = cts.Token.Register(() => tcs.TrySetResult(null));
+            return await tcs.Task;
+        }
+        finally { OnDataReceived -= Handler; }
+    }
+
+    // "OK" | "FAIL" | "LOCKED" | "NOAUTH" (a firmware nem kér hitelesítést / régi firmware)
+    private static async Task<string> TryAuthAsync(string pin)
+    {
+        var r = await RequestAsync("AUTH_BEGIN", new[] { "AUTH_NONCE:", "AUTH_OFF", "ERROR:AUTH" }, 3000);
+        if (r == null || r.StartsWith("AUTH_OFF")) return "NOAUTH";
+        if (!r.StartsWith("AUTH_NONCE:")) return "FAIL";
+
+        string nonce = r.Substring("AUTH_NONCE:".Length).Trim();
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(pin));
+        string mac = Convert.ToHexString(hmac.ComputeHash(Encoding.ASCII.GetBytes(nonce))).ToLowerInvariant();
+
+        var a = await RequestAsync("AUTH:" + mac, new[] { "AUTH_OK", "AUTH_FAIL", "AUTH_LOCKED" }, 3000);
+        if (a == null) return "FAIL";
+        if (a.StartsWith("AUTH_OK")) return "OK";
+        if (a.StartsWith("AUTH_LOCKED")) return "LOCKED";
+        return "FAIL";
+    }
+
+    private static Task<string> PromptPinAsync(string message)
+        => MainThread.InvokeOnMainThreadAsync(() => Application.Current.MainPage.DisplayPromptAsync(
+            "Eszköz PIN", message, "OK", "Mégse", "6 jegyű PIN", 6, Keyboard.Numeric));
+
+    // Csatlakozás után hívandó. true = hitelesítve (vagy az eszköz nem kér hitelesítést).
+    // A mentett PIN-nel automatikusan, egyébként (vagy hibás PIN esetén) a felhasználótól kéri be.
+    public static async Task<bool> AuthenticateAsync()
+    {
+        if (ConnectedDevice == null) return false;
+        string id = ConnectedDevice.Id.ToString();
+
+        string message = "Add meg az eszköz kijelzőjén látható PIN-kódot (Beállítások → BLE védelem).";
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            string pin = await GetPinAsync(id);
+            if (string.IsNullOrEmpty(pin))
+            {
+                pin = await PromptPinAsync(message);
+                if (string.IsNullOrWhiteSpace(pin)) return false;   // mégse
+                pin = pin.Trim();
+            }
+
+            switch (await TryAuthAsync(pin))
+            {
+                case "OK": await SetPinAsync(id, pin); return true;
+                case "NOAUTH": return true;
+                case "LOCKED":
+                    await MainThread.InvokeOnMainThreadAsync(() => Application.Current.MainPage.DisplayAlert(
+                        "Zárolva", "Túl sok hibás PIN. Próbáld újra egy perc múlva.", "OK"));
+                    return false;
+                default:
+                    ClearPin(id);
+                    message = "Hibás PIN. Add meg újra az eszköz kijelzőjén látható kódot.";
+                    break;
+            }
+        }
+        return false;
+    }
 
     // ── Automatikus újracsatlakozás ──
     // A mentett eszköz (BTDeviceId) megmarad, ha a kapcsolat váratlanul megszakad.
@@ -165,6 +265,11 @@ public static class BluetoothManager
             if (WriteCharacteristic == null) throw new InvalidOperationException("Nincs írható karakterisztika");
 
             await RequestMtuAsync(517);
+            if (!await AuthenticateAsync())
+            {
+                _autoReconnectEnabled = false;   // PIN nélkül ne próbálkozzon újra és újra
+                throw new InvalidOperationException("Hitelesítés sikertelen");
+            }
             SaveConnectedDevice(device);
             LastConnectWasAuto = auto;
             NotifyConnectionSuccess();
