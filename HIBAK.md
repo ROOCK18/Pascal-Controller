@@ -75,3 +75,9 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 
 ## Fordítás / környezet
 - A PlatformIO a `~/.platformio/penv`-et megosztja a VS Code bővítménnyel; 2026-11-24 09:05-kor a bővítmény újraépítette, és a parancssoros (`python -m platformio`) fordítás emiatt hibával áll le (`No pyvenv.cfg file`). A fenti javítások **fordítása emiatt nem lett újra ellenőrizve**; a VS Code-ban (`Build`) ellenőrizhető.
+
+## Firmware-ellenőrzés (utolsó kör)
+- Fordítás `-Wall -Wextra -Werror`: 0 figyelmeztetés, 0 hiba; `pio check`: nincs high/medium találat (a `WifiOTA.h` `httpCode` jelzése téves, a változó használatban van).
+- Számítási logika Python-tükörrel ellenőrizve: PT1000 (Callendar–Van Dusen, -50…250 °C, 2,2 kΩ felhúzó) hiba < 1e-9 °C, NTC β-modell, időzítő-napmaszk (4000 nap, 0 eltérés).
+- Megjegyzés: szenzorhibánál (NaN) a termosztátrelé KI-re áll; a ventilátorgörbe ilyenkor a görbe utolsó (legnagyobb) pontját használja – szándékosan biztonságos oldal.
+- Hardveren nem próbáltam (BLE+PIN, OTA, MQTT, DHT11, PT1000, új kijelző-kinézet, propeller-sebesség).
