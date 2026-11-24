@@ -65,9 +65,9 @@ float readNTCTemperature(int ntcPin) {
 
   const float adcTopMv = 3100.0f;                      // az ESP32 ADC (11 dB) felső széle
   if (mv < 15.0f) return NAN;                          // rövidzár
-  if (mv > adcTopMv || mv >= c.vSupply * 1000.0f - 15.0f) return NAN; // szakadás / telítés
+  if (mv > adcTopMv || mv >= SENSOR_VSUPPLY * 1000.0f - 15.0f) return NAN; // szakadás / telítés
   float v = mv / 1000.0f;
-  float r = c.rSeries * v / (c.vSupply - v);
+  float r = SENSOR_PULLUP_OHM * v / (SENSOR_VSUPPLY - v);
   sensLastR[idx] = r;
   return sensorTempFromR(c, r);
 }

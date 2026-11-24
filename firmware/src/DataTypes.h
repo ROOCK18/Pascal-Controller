@@ -35,16 +35,17 @@ struct ThermRelay {
 };
 
 // Szenzor-paraméterek (szenzoronként: NTC1 / NTC2 láb).
-//   type: 0 = PT1000 (Callendar-Van Dusen), 1 = NTC 10k, 2 = NTC 100k, 3 = Egyedi (NTC, beta-modell)
-// Mérés: a láb egy felhúzó (soros) ellenálláson át a vSupply feszültségre van kötve,
-// a szenzor a földre -> R_szenzor = rSeries * V / (vSupply - V).
+//   type: 0 = PT1000 (Callendar-Van Dusen), 1 = NTC 10k, 2 = Egyedi (NTC, béta-modell)
+// Mérés: a láb a NYÁK-on egy RÖGZÍTETT 2,2 kΩ-os felhúzón át a 3,3 V-ra van kötve (R10/R11), a szenzor a földre:
+//   R_szenzor = SENSOR_PULLUP_OHM * V / (SENSOR_VSUPPLY - V).   A felhúzó és a tápfeszültség hardver-adottság,
+//   a felhasználó nem állítja.
+#define SENSOR_PULLUP_OHM 2200.0f
+#define SENSOR_VSUPPLY    3.3f
 struct SensorCfg {
   uint8_t type = 0;
   float r0 = 1000.0f;       // névleges ellenállás a t0 hőfokon (Ohm)
   float t0 = 0.0f;          // alap hőfok (C), ahol r0 érvényes (PT1000: 0 C)
   float beta = 3977.0f;     // beta (csak NTC)
-  float rSeries = 1200.0f;  // felhúzó (soros) ellenállás (Ohm)
-  float vSupply = 3.3f;     // a felhúzó tápfeszültsége (V)
 };
 
 // MQTT / Home Assistant beállítások (NVS-ben tárolva, lásd Mqtt.h)
@@ -66,12 +67,11 @@ float sensLastR[2] = { NAN, NAN };          // utolsó számolt ellenállás (Oh
 int menuSensTarget = 0;                     // melyik szenzort szerkesztjük a menüben (0/1)
 int menuSensField = 0;                      // a szerkesztett mező (SensField)
 
-// Előbeállítások (a "Típus" választáskor ezek töltődnek be; az Egyedi nem ír felül semmit)
+// Előbeállítások (a "Típus" választáskor töltődnek be; az Egyedi nem ír felül semmit)
 void applySensorPreset(SensorCfg &c, uint8_t type) {
   c.type = type;
-  if (type == 0)      { c.r0 = 1000.0f;   c.t0 = 0.0f;  c.beta = 3977.0f; c.rSeries = 1200.0f;   c.vSupply = 3.3f; }
-  else if (type == 1) { c.r0 = 10000.0f;  c.t0 = 25.0f; c.beta = 3977.0f; c.rSeries = 10000.0f;  c.vSupply = 3.3f; }
-  else if (type == 2) { c.r0 = 100000.0f; c.t0 = 25.0f; c.beta = 3950.0f; c.rSeries = 100000.0f; c.vSupply = 3.3f; }
+  if (type == 0)      { c.r0 = 1000.0f;  c.t0 = 0.0f;  c.beta = 3977.0f; }
+  else if (type == 1) { c.r0 = 10000.0f; c.t0 = 25.0f; c.beta = 3977.0f; }
 }
 
 // Idő alapú relékapcsolás ("impulzus" logika): ha enabled, akkor amikor az

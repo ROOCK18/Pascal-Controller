@@ -25,11 +25,12 @@ A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 - Partíciók (`partitions.csv`, 16 MB): két 6 MB-os OTA slot + ~3,9 MB SPIFFS.
 - BLE: NimBLE (a Bluedroid helyett, ~490 KB flash megtakarítás), UUID-k és protokoll változatlan.
 - Kijelző: LovyanGFX (ST7789 meghajtó) + LVGL 9.2, a menü logikája (`Menu.h`) változatlan, a megjelenítés az `ui.h`-ban és a `Display.h`-ban van.
-- Szenzorok: alapértelmezés **PT1000** (Callendar–Van Dusen), mellette NTC 10k, NTC 100k és Egyedi (β-modell).
-  Szenzoronként állítható: névleges ellenállás, alap hőfok (NTC), béta (NTC), soros (felhúzó) ellenállás, tápfeszültség és kompenzáció.
+- Szenzorok: alapértelmezés **PT1000** (Callendar–Van Dusen), mellette NTC 10k és Egyedi (β-modell).
+  Szenzoronként állítható: névleges ellenállás, alap hőfok (NTC), béta (NTC) és kompenzáció.
+  A **felhúzó ellenállás (R10/R11 = 2,2 kΩ) és a 3,3 V a NYÁK-on rögzített**, ezért a firmware-ben fix (`SENSOR_PULLUP_OHM`, `SENSOR_VSUPPLY`).
   Az eszköz menüjében: *Beállítások → Szenzor beállítások*; az appban: *Hőmérő beállítások*; BLE: `SET_SENS` / `GET_SENS` / `GET_SENSRAW`.
   A mérés kalibrált mV-olvasás 16-os átlagolással; szakadt/rövidzárt szenzornál az érték „--”, a relé-termosztát KI-re áll.
-  **PT1000-hez felhúzónak 1,0–1,2 kΩ ajánlott** (3,3 V-ra kötve): ~3,9 ADC-lépés/°C, a 10 kΩ-mal csak ~1,4.
+  A 2,2 kΩ-os felhúzóval a PT1000 ~3,4 ADC-lépés/°C felbontást ad; 100 kΩ-os NTC-vel és PT100-zal **nem** mérhető (a jel telítésbe, ill. túl kicsire esik).
 - Ékezetes betűk: saját Montserrat-alapú betűtípusok (`firmware/src/fonts`, újragenerálás: `bash tools/gen_fonts.sh`, a `-DHU_FONTS=1` build flaggel).
 - Méret: firmware.bin ~1,74 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
   Az új partíciós tábla csak USB-s teljes flash-eléssel (`firmware.factory.bin`) kerül fel.
@@ -83,7 +84,7 @@ A Google Home, Alexa és Apple Home a Home Assistanton keresztül éri el ezeket
 | DHT11 adatvonala (47 Ω-on át az NTC2 csatlakozó 1-es lábára) | 22 | 4 |
 
 - **DHT11** (páratartalom mód): a tápot a GPIO21 adja, az adatvonal a GPIO22 (kimenetként is tud működni, így a DHT11 indítása is megy). A DHT11 az NTC1 (táp) és NTC2 (adat) csatlakozó 1-es lábára kerül, GND a 2-es lábra. Más módban mindkét láb nagyimpedanciás bemenet, hogy az NTC mérését ne zavarja. Bekapcsolás után ~1,5 mp felfutási idő van.
-- **Felhúzó ellenállás (R10/R11)**: PT1000-hez 1,0–1,2 kΩ ad a legjobb felbontást (~3,9 ADC-lépés/°C), 2,2 kΩ ~3,4, 4,7 kΩ ~2,4 lépés/°C. A 4,7 kΩ a DHT11 adatvonalának is ideális felhúzója (a 1,2 kΩ-nál 2,75 mA terheli a DHT11 kimenetét). Az érték a szenzor-beállításokban („Soros ellenállás”) állítható, hogy a mérés pontos maradjon.
+- **Felhúzó ellenállás (R10/R11)**: 2,2 kΩ, fix. A DHT11 adatvonalának is jó felhúzója (kb. 1,5 mA).
 - Relé-kattanás ellen: ~10 kΩ lehúzó ellenállás a relé-meghajtók bemenetére (GPIO32/33), lásd HIBAK.md.
 
 ## BLE védelem (PIN)

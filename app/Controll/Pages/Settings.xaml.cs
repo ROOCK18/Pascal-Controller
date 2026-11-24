@@ -504,8 +504,9 @@ public partial class Settings : ContentPage
     // ════════════════════════════════════════
     // SZENZOR-BEÁLLÍTÁSOK (PT1000 / NTC)
     // ════════════════════════════════════════
-    // Típusok: 0 = PT1000, 1 = NTC 10k, 2 = NTC 100k, 3 = Egyedi (a firmware azonos sorrendje)
-    private static readonly string[] SensTypeNames = { "PT1000", "NTC 10k", "NTC 100k", "Egyedi" };
+    // Típusok: 0 = PT1000, 1 = NTC 10k, 2 = Egyedi (a firmware azonos sorrendje). A felhúzó ellenállás
+    // (2,2 kΩ) és a tápfeszültség (3,3 V) a NYÁK-on rögzített, ezért nem állítható.
+    private static readonly string[] SensTypeNames = { "PT1000", "NTC 10k", "Egyedi" };
     private bool _sensLoading = false;
 
     private void InitSensPickers()
@@ -515,11 +516,10 @@ public partial class Settings : ContentPage
     }
 
     // Az előbeállítások megegyeznek a firmware applySensorPreset() értékeivel.
-    private static (float r0, float t0, float beta, float rs, float vs)? SensPreset(int type) => type switch
+    private static (float r0, float t0, float beta)? SensPreset(int type) => type switch
     {
-        0 => (1000f, 0f, 3977f, 1200f, 3.3f),
-        1 => (10000f, 25f, 3977f, 10000f, 3.3f),
-        2 => (100000f, 25f, 3950f, 100000f, 3.3f),
+        0 => (1000f, 0f, 3977f),
+        1 => (10000f, 25f, 3977f),
         _ => null
     };
 
@@ -545,8 +545,6 @@ public partial class Settings : ContentPage
         (n == 1 ? SensR0Entry1 : SensR0Entry2).Text = F(p.Value.r0, "F0");
         (n == 1 ? SensT0Entry1 : SensT0Entry2).Text = F(p.Value.t0, "F0");
         (n == 1 ? SensBetaEntry1 : SensBetaEntry2).Text = F(p.Value.beta, "F0");
-        (n == 1 ? SensRsEntry1 : SensRsEntry2).Text = F(p.Value.rs, "F0");
-        (n == 1 ? SensVsEntry1 : SensVsEntry2).Text = F(p.Value.vs, "F1");
     }
 
     // LOAD_SENS:<n>:<type>:<r0>:<t0>:<beta>:<rs>:<vs>:<komp>
@@ -559,12 +557,10 @@ public partial class Settings : ContentPage
         _sensLoading = true;
         try
         {
-            (n == 1 ? SensType1Picker : SensType2Picker).SelectedIndex = Math.Clamp(type, 0, 3);
+            (n == 1 ? SensType1Picker : SensType2Picker).SelectedIndex = Math.Clamp(type, 0, 2);
             (n == 1 ? SensR0Entry1 : SensR0Entry2).Text = p[2];
             (n == 1 ? SensT0Entry1 : SensT0Entry2).Text = p[3];
             (n == 1 ? SensBetaEntry1 : SensBetaEntry2).Text = p[4];
-            (n == 1 ? SensRsEntry1 : SensRsEntry2).Text = p[5];
-            (n == 1 ? SensVsEntry1 : SensVsEntry2).Text = p[6];
         }
         finally { _sensLoading = false; }
         ApplySensVisibility(n);
@@ -592,18 +588,16 @@ public partial class Settings : ContentPage
             float r0 = ParseFloatInvariant((n == 1 ? SensR0Entry1 : SensR0Entry2).Text, 1000f);
             float t0 = ParseFloatInvariant((n == 1 ? SensT0Entry1 : SensT0Entry2).Text, 0f);
             float beta = ParseFloatInvariant((n == 1 ? SensBetaEntry1 : SensBetaEntry2).Text, 3977f);
-            float rs = ParseFloatInvariant((n == 1 ? SensRsEntry1 : SensRsEntry2).Text, 1200f);
-            float vs = ParseFloatInvariant((n == 1 ? SensVsEntry1 : SensVsEntry2).Text, 3.3f);
 
             // Ugyanazok a határok, mint a firmware SET_SENS ellenőrzése
-            if (r0 < 1 || r0 > 1000000 || t0 < -50 || t0 > 150 || beta < 500 || beta > 10000 ||
-                rs < 10 || rs > 1000000 || vs < 1.0f || vs > 6.0f)
+            if (r0 < 1 || r0 > 1000000 || t0 < -50 || t0 > 150 || beta < 500 || beta > 10000)
             {
                 await DisplayAlert("Hibás érték", $"{n}. szenzor: valamelyik érték a megengedett tartományon kívül van.\n" +
-                    "Ellenállás: 1–1 000 000 Ω, alap hőfok: −50…150 °C, béta: 500–10000, tápfeszültség: 1–6 V.", "OK");
+                    "Ellenállás: 1–1 000 000 Ω, alap hőfok: −50…150 °C, béta: 500–10000.", "OK");
                 return;
             }
-            await BluetoothManager.WriteAsync($"SET_SENS:{n}:{type}:{F(r0, "F1")}:{F(t0, "F1")}:{F(beta, "F0")}:{F(rs, "F1")}:{F(vs, "F2")}");
+            // A 6-7. mező (felhúzó, tápfeszültség) hardveresen fix; a régebbi firmware-ek kedvéért változatlanul elküldjük.
+            await BluetoothManager.WriteAsync($"SET_SENS:{n}:{type}:{F(r0, "F1")}:{F(t0, "F1")}:{F(beta, "F0")}:2200.0:3.30");
             await Task.Delay(200);
         }
         await DisplayAlert("Siker", "Szenzor-beállítások elmentve.", "OK");

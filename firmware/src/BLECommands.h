@@ -7,9 +7,9 @@
 
 // ============================================================
 // SZENZOR-PARAMÉTEREK (PT1000 / NTC)
-// Parancs: SET_SENS:<1|2>:<type 0-3>:<r0>:<t0>:<beta>:<rSeries>:<vSupply>
-//   type: 0=PT1000, 1=NTC 10k, 2=NTC 100k, 3=Egyedi. Választ: SENS_OK
-// Parancs: GET_SENS:<1|2>  ->  LOAD_SENS:<n>:<type>:<r0>:<t0>:<beta>:<rSeries>:<vSupply>:<komp>
+// Parancs: SET_SENS:<1|2>:<type 0-2>:<r0>:<t0>:<beta>[:<ignorált>:<ignorált>]
+//   type: 0=PT1000, 1=NTC 10k, 2=Egyedi. (A felhúzó 2,2 kΩ és a 3,3 V fix; a régi 6-7. mező elfogadott, de figyelmen kívül marad.) Választ: SENS_OK
+// Parancs: GET_SENS:<1|2>  ->  LOAD_SENS:<n>:<type>:<r0>:<t0>:<beta>:2200.0:3.30:<komp>  (a 6-7. mező a fix hardver-érték, kompatibilitás miatt)
 // Parancs: GET_SENSRAW     ->  SENSRAW:<mV1>:<R1>:<mV2>:<R2>  (R="-" ha nincs érvényes mérés)
 // ============================================================
 void handleGetSens(const String &which) {
@@ -18,7 +18,7 @@ void handleGetSens(const String &which) {
   const SensorCfg &c = sensCfg[n - 1];
   float comp = (n == 1) ? tempCompNTC1 : tempCompNTC2;
   notifyLine("LOAD_SENS:" + String(n) + ":" + String(c.type) + ":" + String(c.r0, 1) + ":" + String(c.t0, 1) + ":" +
-             String(c.beta, 0) + ":" + String(c.rSeries, 1) + ":" + String(c.vSupply, 2) + ":" + String(comp, 1));
+             String(c.beta, 0) + ":" + String(SENSOR_PULLUP_OHM, 1) + ":" + String(SENSOR_VSUPPLY, 2) + ":" + String(comp, 1));
 }
 
 void handleSetSens(const String &body) {
@@ -29,19 +29,17 @@ void handleSetSens(const String &body) {
     tok[n++] = body.substring(start, c);
     start = c + 1;
   }
-  if (n < 7) { notifyLine("ERROR:SET_SENS hianyos parameter"); return; }
+  if (n < 5) { notifyLine("ERROR:SET_SENS hianyos parameter"); return; }
   int idx = tok[0].toInt();
   int type = tok[1].toInt();
   float r0 = tok[2].toFloat(), t0 = tok[3].toFloat(), beta = tok[4].toFloat();
-  float rs = tok[5].toFloat(), vs = tok[6].toFloat();
-  if (idx < 1 || idx > 2 || type < 0 || type > 3 ||
-      !(r0 >= 1 && r0 <= 1000000) || !(t0 >= -50 && t0 <= 150) || !(beta >= 500 && beta <= 10000) ||
-      !(rs >= 10 && rs <= 1000000) || !(vs >= 1.0f && vs <= 6.0f)) {
+  if (idx < 1 || idx > 2 || type < 0 || type > 2 ||
+      !(r0 >= 1 && r0 <= 1000000) || !(t0 >= -50 && t0 <= 150) || !(beta >= 500 && beta <= 10000)) {
     notifyLine("ERROR:SET_SENS ervenytelen ertek");
     return;
   }
   SensorCfg &c = sensCfg[idx - 1];
-  c.type = (uint8_t)type; c.r0 = r0; c.t0 = t0; c.beta = beta; c.rSeries = rs; c.vSupply = vs;
+  c.type = (uint8_t)type; c.r0 = r0; c.t0 = t0; c.beta = beta;
   markDirty();
   notifyLine("SENS_OK");
 }

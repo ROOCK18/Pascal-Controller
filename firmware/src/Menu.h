@@ -130,8 +130,8 @@ String logicValLabel(int v, bool isFan) {
 // ============================================================
 // SZENZOR BEÁLLÍTÁSOK (menü)
 // ============================================================
-enum SensField : uint8_t { SF_TYPE, SF_R0, SF_T0, SF_BETA, SF_RS, SF_VS, SF_COMP, SF_LIVE, SF_BACK };
-const char* SENS_TYPE_NAMES[4] = { "PT1000", "NTC 10k", "NTC 100k", "Egyedi" };
+enum SensField : uint8_t { SF_TYPE, SF_R0, SF_T0, SF_BETA, SF_COMP, SF_LIVE, SF_BACK };
+const char* SENS_TYPE_NAMES[3] = { "PT1000", "NTC 10k", "Egyedi" };
 
 float &sensComp(int s) { return s == 0 ? tempCompNTC1 : tempCompNTC2; }
 
@@ -140,7 +140,7 @@ int sensBuildFields(int s, SensField out[]) {
   int n = 0;
   out[n++] = SF_TYPE; out[n++] = SF_R0;
   if (sensCfg[s].type != 0) { out[n++] = SF_T0; out[n++] = SF_BETA; }
-  out[n++] = SF_RS; out[n++] = SF_VS; out[n++] = SF_COMP; out[n++] = SF_LIVE; out[n++] = SF_BACK;
+  out[n++] = SF_COMP; out[n++] = SF_LIVE; out[n++] = SF_BACK;
   return n;
 }
 
@@ -150,8 +150,6 @@ const char* sensFieldLabel(SensField f) {
     case SF_R0:   return "Névleges ellenállás";
     case SF_T0:   return "Alap hőfok";
     case SF_BETA: return "Béta (β)";
-    case SF_RS:   return "Soros ellenállás";
-    case SF_VS:   return "Tápfeszültség";
     case SF_COMP: return "Kompenzáció";
     case SF_LIVE: return "Mért érték";
     default:      return "Vissza";
@@ -161,12 +159,10 @@ const char* sensFieldLabel(SensField f) {
 String sensFieldValue(int s, SensField f) {
   const SensorCfg &c = sensCfg[s];
   switch (f) {
-    case SF_TYPE: return SENS_TYPE_NAMES[c.type < 4 ? c.type : 3];
+    case SF_TYPE: return SENS_TYPE_NAMES[c.type < 3 ? c.type : 2];
     case SF_R0:   return String(c.r0, 0) + " Ω";
     case SF_T0:   return String(c.t0, 0) + " °C";
     case SF_BETA: return String(c.beta, 0);
-    case SF_RS:   return String(c.rSeries, 0) + " Ω";
-    case SF_VS:   return String(c.vSupply, 1) + " V";
     case SF_COMP: return String(sensComp(s), 1) + " °C";
     case SF_LIVE: { float t = (s == 0) ? ntc1Temperature : ntc2Temperature; return isnan(t) ? String("HIBA") : (String(t, 1) + " °C"); }
     default:      return "";
@@ -187,14 +183,12 @@ void sensEditStep(int s, SensField f, int dir) {
     case SF_R0:   c.r0 = constrain(c.r0 + dir * mul, 1.0f, 1000000.0f); break;
     case SF_T0:   c.t0 = constrain(c.t0 + dir * (mul > 10.0f ? 10.0f : mul), -50.0f, 150.0f); break;
     case SF_BETA: c.beta = constrain(c.beta + dir * mul, 500.0f, 10000.0f); break;
-    case SF_RS:   c.rSeries = constrain(c.rSeries + dir * mul, 10.0f, 1000000.0f); break;
-    case SF_VS:   c.vSupply = constrain(roundf((c.vSupply + dir * (mul > 1.0f ? 0.5f : 0.1f)) * 10.0f) / 10.0f, 1.0f, 6.0f); break;
     case SF_COMP: { float &v = sensComp(s); v = constrain(roundf((v + dir * (mul > 1.0f ? 0.5f : 0.1f)) * 10.0f) / 10.0f, -20.0f, 20.0f); break; }
     default: break;
   }
   // A modell-paraméterek kézi módosítása után a típus "Egyedi" lesz
   // (a PT1000 típus modellje fix, ott az R0/soros/táp módosítása nem változtat típust).
-  if ((f == SF_R0 || f == SF_T0 || f == SF_BETA) && (c.type == 1 || c.type == 2)) c.type = 3;
+  if ((f == SF_R0 || f == SF_T0 || f == SF_BETA) && c.type == 1) c.type = 2;
 }
 
 void enterMenu() {
@@ -277,10 +271,10 @@ void drawMenu() {
       // hőmérőként vannak bekötve - a DHT11-nek és a kapcsolóknak nincs szenzor-beállítása.
       int n = 0;
       if (currentMode == 0) {
-        rows[n] = { "1. szenzor", SENS_TYPE_NAMES[sensCfg[0].type < 4 ? sensCfg[0].type : 3], UI_CYAN }; n++;
-        rows[n] = { "2. szenzor", SENS_TYPE_NAMES[sensCfg[1].type < 4 ? sensCfg[1].type : 3], UI_CYAN }; n++;
+        rows[n] = { "1. szenzor", SENS_TYPE_NAMES[sensCfg[0].type < 3 ? sensCfg[0].type : 2], UI_CYAN }; n++;
+        rows[n] = { "2. szenzor", SENS_TYPE_NAMES[sensCfg[1].type < 3 ? sensCfg[1].type : 2], UI_CYAN }; n++;
       } else if (currentMode == 1 || currentMode == 3) {
-        rows[n] = { "1. szenzor", SENS_TYPE_NAMES[sensCfg[0].type < 4 ? sensCfg[0].type : 3], UI_CYAN }; n++;
+        rows[n] = { "1. szenzor", SENS_TYPE_NAMES[sensCfg[0].type < 3 ? sensCfg[0].type : 2], UI_CYAN }; n++;
       }
       if (n == 0) { rows[n] = { "Nincs hőmérő ebben a módban", "", UI_WHITE }; n++; }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
@@ -313,7 +307,7 @@ void drawMenu() {
 
     case MENU_SENS_TYPE_SEL: {
       int n = 0;
-      for (int i = 0; i < 4; i++) { rows[n].label = SENS_TYPE_NAMES[i]; rows[n].value = (i == sensCfg[menuSensTarget].type) ? "AKTÍV" : ""; rows[n].valColor = UI_GREEN; n++; }
+      for (int i = 0; i < 3; i++) { rows[n].label = SENS_TYPE_NAMES[i]; rows[n].value = (i == sensCfg[menuSensTarget].type) ? "AKTÍV" : ""; rows[n].valColor = UI_GREEN; n++; }
       rows[n] = { "Vissza", "", UI_WHITE }; n++;
       drawValueList("SZENZOR TÍPUSA", rows, n, menuCursor);
       break;
@@ -771,7 +765,7 @@ void handleMenuInput(ButtonEvent ev) {
       else if (ev == BTN_BACK) { menuScreen = MENU_COMP_LIST; menuCursor = menuSensTarget; }
       else if (ev == BTN_SELECT) {
         SensField sel = f[menuCursor];
-        if (sel == SF_TYPE) { menuScreen = MENU_SENS_TYPE_SEL; menuCursor = sensCfg[menuSensTarget].type < 4 ? sensCfg[menuSensTarget].type : 3; }
+        if (sel == SF_TYPE) { menuScreen = MENU_SENS_TYPE_SEL; menuCursor = sensCfg[menuSensTarget].type < 3 ? sensCfg[menuSensTarget].type : 2; }
         else if (sel == SF_BACK) { menuScreen = MENU_COMP_LIST; menuCursor = menuSensTarget; }
         else if (sel != SF_LIVE) { menuSensField = sel; menuScreen = MENU_SENS_EDIT; }
       }
@@ -793,12 +787,12 @@ void handleMenuInput(ButtonEvent ev) {
     }
 
     case MENU_SENS_TYPE_SEL: {
-      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 5;
-      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 5) % 5;
+      if (ev == BTN_DOWN) menuCursor = (menuCursor + 1) % 4;
+      else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 4) % 4;
       else if (ev == BTN_BACK) { menuScreen = MENU_SENS_LIST; menuCursor = 0; }
       else if (ev == BTN_SELECT) {
-        if (menuCursor < 4) {
-          if (menuCursor != 3) applySensorPreset(sensCfg[menuSensTarget], (uint8_t)menuCursor); // az "Egyedi" nem ír felül semmit
+        if (menuCursor < 3) {
+          if (menuCursor != 2) applySensorPreset(sensCfg[menuSensTarget], (uint8_t)menuCursor); // az "Egyedi" nem ír felül semmit
           sensCfg[menuSensTarget].type = (uint8_t)menuCursor;
           markDirty();
         }
