@@ -31,7 +31,8 @@ A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
   Az eszköz menüjében: *Beállítások → Szenzor beállítások*; az appban: *Hőmérő beállítások*; BLE: `SET_SENS` / `GET_SENS` / `GET_SENSRAW`.
   A mérés kalibrált mV-olvasás 16-os átlagolással; szakadt/rövidzárt szenzornál az érték „--”, a relé-termosztát KI-re áll.
   A 2,2 kΩ-os felhúzóval a PT1000 ~3,4 ADC-lépés/°C felbontást ad; 100 kΩ-os NTC-vel és PT100-zal **nem** mérhető (a jel telítésbe, ill. túl kicsire esik).
-- Ékezetes betűk: saját Montserrat-alapú betűtípusok (`firmware/src/fonts`, újragenerálás: `bash tools/gen_fonts.sh`, a `-DHU_FONTS=1` build flaggel).
+- Kinézet: az app színeivel és kártyás felépítésével megegyező (sötét kártyák, piros akcentus); az idle képernyőn V1/V2 ventilátor-kártya, amelynek 5 lapátos propellere forog, ha a sebesség > 0%.
+- Ékezetes betűk: az app Open Sans Semibold betűjéből generált betűtípusok (`firmware/src/fonts`, újragenerálás: `bash tools/gen_fonts.sh`, a `-DHU_FONTS=1` build flaggel).
 - Méret: firmware.bin ~1,76 MB, vagyis a régi 1,9 MB-os partícióba is belefér (OTA-val frissíthető 4.9.0-ról).
   Az új partíciós tábla csak USB-s teljes flash-eléssel (`firmware.factory.bin`) kerül fel.
 

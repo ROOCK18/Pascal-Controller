@@ -1,12 +1,10 @@
 // ============================================================
 // Display.h - Az idle (fő) képernyő, LVGL-lel
 //
-// Elrendezés (240x135):
+// Elrendezés (240x135), az app Data oldalának kártyás kinézete szerint:
 //   Fent:    dátum/idő (bal, közép) | WiFi, BT jel és mód-kód (jobb)
-//   Bal sáv: R1/R2 relé állapot
-//   Középen: kártya, benne mód-függően 1-2 "csempe"
-//            (hőmérséklet / páratartalom / kapcsoló állapot)
-//   Lent:    Ventilátor1 és 2 ív-mérő + százalék | RGB színminta
+//   Középen: 1-2 szenzor kártya (hőmérséklet / páratartalom / kapcsoló állapot)
+//   Lent:    V1, V2 (pörgő 5 lapátos propeller + %), R1, R2 (ON/OFF), RGB
 //
 // Az objektumok egyszer épülnek fel (ui_idle_build), a displayInfo() csak
 // azt frissíti, ami ténylegesen változott - az LVGL csak a változó
@@ -78,159 +76,177 @@ String buildPositionText(uint8_t pos) {
 }
 
 // ---------------- Objektumok ----------------
+// Az app (Data oldal) kártyás kinézete: sötét kártyák 1px kerettel, halvány felirat,
+// piros érték; aktív relé/ventilátor/kapcsoló = piros kártya, inaktív = #3A3A3C.
 static lv_obj_t *idLeft, *idCenter, *idRight, *idWifi, *idBt, *idMode;
-static lv_obj_t *idRelCap[2], *idRelPill[2], *idRelTxt[2];
-static lv_obj_t *idCard, *idDiv;
-static lv_obj_t *idTile[2], *idTileTitle[2], *idTileVal[2], *idTileBar[2];
-static lv_obj_t *idFanArc[2], *idFanName[2], *idFanVal[2];
-static lv_obj_t *idRgbDot, *idRgbName, *idRgbSub;
+static lv_obj_t *idTile[2], *idTileTitle[2], *idTileVal[2];
+static lv_obj_t *idFanCard[2], *idFanName[2], *idFanSpin[2], *idFanVal[2];
+static lv_obj_t *idRelCard[2], *idRelName[2], *idRelTxt[2];
+static lv_obj_t *idRgbCard, *idRgbName, *idRgbDot, *idRgbTxt;
+static int  fanAngle[2] = { 0, 0 };
+static bool fanSpin[2]  = { false, false };
+
+#define IDLE_BOT_Y   73
+#define IDLE_BOT_H   58
+#define IDLE_BOT_W   44
+
+static lv_obj_t *idle_card(lv_obj_t *parent, int x, int y, int w, int h, uint32_t fill) {
+  lv_obj_t *c = ui_box(parent, x, y, w, h);
+  ui_fill(c, fill, 12);
+  lv_obj_set_style_border_width(c, 1, 0);
+  lv_obj_set_style_border_color(c, pal(PAL_LINE), 0);
+  return c;
+}
 
 static void idle_make_tile(int k) {
-  idTile[k] = ui_box(idCard, 0, 0, 98, 57);
+  idTile[k] = idle_card(scrIdle, 4 + k * 118, 21, 114, 48, PAL_CARD);
   idTileTitle[k] = ui_label(idTile[k], FONT_S, PAL_MUTED, "");
-  lv_obj_set_pos(idTileTitle[k], 8, 5);
-  idTileVal[k] = ui_label(idTile[k], FONT_L, PAL_TEXT, "");
-  idTileBar[k] = lv_bar_create(idTile[k]);
-  lv_obj_set_size(idTileBar[k], 82, 4);
-  lv_obj_set_pos(idTileBar[k], 8, 47);
-  lv_bar_set_range(idTileBar[k], 0, 100);
-  lv_obj_set_style_bg_color(idTileBar[k], pal(PAL_LINE), LV_PART_MAIN);
-  lv_obj_set_style_bg_color(idTileBar[k], pal(PAL_OK), LV_PART_INDICATOR);
-  lv_obj_set_style_radius(idTileBar[k], 2, LV_PART_MAIN);
-  lv_obj_set_style_radius(idTileBar[k], 2, LV_PART_INDICATOR);
+  lv_obj_set_pos(idTileTitle[k], 8, 1);
+  idTileVal[k] = ui_label(idTile[k], FONT_L, PAL_ACCENT, "");
+  lv_obj_set_pos(idTileVal[k], 8, 15);
+}
+
+// Az 5 lapátos propeller kirajzolása; a szöget a fan_timer_cb() lépteti
+static void fan_draw_cb(lv_event_t *e) {
+  lv_obj_t *o = lv_event_get_target_obj(e);
+  lv_layer_t *layer = lv_event_get_layer(e);
+  int k = (int)(intptr_t)lv_obj_get_user_data(o);
+  lv_area_t a;
+  lv_obj_get_coords(o, &a);
+  float cx = (a.x1 + a.x2) / 2.0f, cy = (a.y1 + a.y2) / 2.0f;
+  const float R = 12.0f, DEG = 3.14159265f / 180.0f;
+
+  lv_draw_triangle_dsc_t t;
+  lv_draw_triangle_dsc_init(&t);
+  t.bg_color = pal(PAL_TEXT);
+  t.bg_opa = LV_OPA_COVER;
+  for (int b = 0; b < 5; b++) {
+    float a0 = (fanAngle[k] + b * 72) * DEG;
+    float a1 = a0 + 34.0f * DEG;   // elcsavart lapát: a két külső pont nem szimmetrikus
+    t.p[0].x = cx;                 t.p[0].y = cy;
+    t.p[1].x = cx + R * cosf(a0);  t.p[1].y = cy + R * sinf(a0);
+    t.p[2].x = cx + R * cosf(a1);  t.p[2].y = cy + R * sinf(a1);
+    lv_draw_triangle(layer, &t);
+  }
+  lv_draw_rect_dsc_t r;
+  lv_draw_rect_dsc_init(&r);
+  r.bg_color = pal(fanSpin[k] ? PAL_ACCENT : PAL_LINE);
+  r.radius = LV_RADIUS_CIRCLE;
+  lv_area_t hub = { (int32_t)cx - 3, (int32_t)cy - 3, (int32_t)cx + 3, (int32_t)cy + 3 };
+  lv_draw_rect(layer, &r, &hub);
+}
+
+// Forgatás: csak a 0%-nál nagyobb sebességű ventilátor propellere pörög (állandó sebességgel)
+static void fan_timer_cb(lv_timer_t *tm) {
+  for (int k = 0; k < 2; k++) {
+    if (!fanSpin[k]) continue;
+    fanAngle[k] = (fanAngle[k] + 15) % 360;
+    lv_obj_invalidate(idFanSpin[k]);
+  }
 }
 
 static void idle_make_fan(int k, int x) {
-  idFanArc[k] = lv_arc_create(scrIdle);
-  lv_obj_set_size(idFanArc[k], 36, 36);
-  lv_obj_set_pos(idFanArc[k], x, 88);
-  lv_arc_set_rotation(idFanArc[k], 135);
-  lv_arc_set_bg_angles(idFanArc[k], 0, 270);
-  lv_arc_set_range(idFanArc[k], 0, 100);
-  lv_arc_set_value(idFanArc[k], 0);
-  lv_obj_remove_style(idFanArc[k], nullptr, LV_PART_KNOB);
-  lv_obj_remove_flag(idFanArc[k], LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_arc_width(idFanArc[k], 5, LV_PART_MAIN);
-  lv_obj_set_style_arc_width(idFanArc[k], 5, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_color(idFanArc[k], pal(PAL_LINE), LV_PART_MAIN);
-  lv_obj_set_style_arc_color(idFanArc[k], pal(PAL_OK), LV_PART_INDICATOR);
-  idFanName[k] = ui_label(scrIdle, FONT_S, PAL_MUTED, k == 0 ? "VENT 1" : "VENT 2");
-  lv_obj_set_pos(idFanName[k], x + 42, 89);
-  idFanVal[k] = ui_label(scrIdle, FONT_M, PAL_TEXT, "0%");
-  lv_obj_set_pos(idFanVal[k], x + 42, 106);
+  idFanCard[k] = idle_card(scrIdle, x, IDLE_BOT_Y, IDLE_BOT_W, IDLE_BOT_H, PAL_LINE);
+  idFanName[k] = ui_label(idFanCard[k], FONT_S, PAL_MUTED, k == 0 ? "V1" : "V2");
+  lv_obj_align(idFanName[k], LV_ALIGN_TOP_MID, 0, 0);
+  idFanSpin[k] = ui_box(idFanCard[k], 0, 0, 26, 26);
+  lv_obj_align(idFanSpin[k], LV_ALIGN_TOP_MID, 0, 15);
+  lv_obj_set_user_data(idFanSpin[k], (void *)(intptr_t)k);
+  lv_obj_add_event_cb(idFanSpin[k], fan_draw_cb, LV_EVENT_DRAW_MAIN, nullptr);
+  idFanVal[k] = ui_label(idFanCard[k], FONT_S, PAL_TEXT, "0%");
+  lv_obj_align(idFanVal[k], LV_ALIGN_BOTTOM_MID, 0, -1);
+}
+
+static void idle_make_relay(int k, int x) {
+  idRelCard[k] = idle_card(scrIdle, x, IDLE_BOT_Y, IDLE_BOT_W, IDLE_BOT_H, PAL_LINE);
+  idRelName[k] = ui_label(idRelCard[k], FONT_S, PAL_MUTED, k == 0 ? "R1" : "R2");
+  lv_obj_align(idRelName[k], LV_ALIGN_TOP_MID, 0, 0);
+  idRelTxt[k] = ui_label(idRelCard[k], FONT_M, PAL_TEXT, "OFF");
+  lv_obj_align(idRelTxt[k], LV_ALIGN_CENTER, 0, 6);
 }
 
 void ui_idle_build() {
   scrIdle = ui_screen();
 
   // Felső sáv
-  idLeft = ui_label(scrIdle, FONT_S, PAL_ACCENT, "");
-  lv_obj_set_pos(idLeft, 4, 3);
+  idLeft = ui_label(scrIdle, FONT_S, PAL_MUTED, "");
+  lv_obj_set_pos(idLeft, 6, 1);
   idCenter = ui_label(scrIdle, FONT_S, PAL_TEXT, "");
-  lv_obj_align(idCenter, LV_ALIGN_TOP_MID, 0, 3);
+  lv_obj_align(idCenter, LV_ALIGN_TOP_MID, 0, 1);
   idRight = ui_box(scrIdle, 0, 0, 10, 18);
   lv_obj_set_size(idRight, LV_SIZE_CONTENT, 18);
   lv_obj_set_flex_flow(idRight, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(idRight, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_column(idRight, 6, 0);
-  lv_obj_align(idRight, LV_ALIGN_TOP_RIGHT, -4, 0);
+  lv_obj_align(idRight, LV_ALIGN_TOP_RIGHT, -6, 0);
   idWifi = ui_label(idRight, FONT_S, PAL_TEXT, LV_SYMBOL_WIFI);
   idBt = ui_label(idRight, FONT_S, PAL_BLUE, LV_SYMBOL_BLUETOOTH);
   idMode = ui_label(idRight, FONT_S, PAL_ACCENT, "");
   lv_obj_add_flag(idWifi, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(idBt, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_t *line = ui_box(scrIdle, 0, 18, 240, 1);
-  ui_fill(line, PAL_LINE, 0);
 
-  // Relé sáv
-  for (int i = 0; i < 2; i++) {
-    int y0 = 24 + i * 28;
-    idRelCap[i] = ui_label(scrIdle, FONT_S, PAL_MUTED, i == 0 ? "R1" : "R2");
-    lv_obj_set_pos(idRelCap[i], 6, y0);
-    idRelPill[i] = ui_box(scrIdle, 3, y0 + 13, 27, 14);
-    ui_fill(idRelPill[i], PAL_BAD, 7);
-    idRelTxt[i] = ui_label(idRelPill[i], FONT_S, PAL_BG, "KI");
-    lv_obj_center(idRelTxt[i]);
-  }
-
-  // Középső kártya
-  idCard = ui_box(scrIdle, 34, 22, 204, 57);
-  ui_fill(idCard, PAL_CARD, 10);
+  // Szenzor kártyák
   idle_make_tile(0);
   idle_make_tile(1);
-  lv_obj_set_x(idTile[1], 102);
-  idDiv = ui_box(idCard, 101, 10, 1, 37);
-  ui_fill(idDiv, PAL_LINE, 0);
 
-  // Alsó sor
+  // Alsó sor: V1, V2, R1, R2, RGB
   idle_make_fan(0, 4);
-  idle_make_fan(1, 84);
-  idRgbDot = ui_box(scrIdle, 164, 90, 30, 30);
+  idle_make_fan(1, 51);
+  idle_make_relay(0, 98);
+  idle_make_relay(1, 145);
+  idRgbCard = idle_card(scrIdle, 192, IDLE_BOT_Y, IDLE_BOT_W, IDLE_BOT_H, PAL_LINE);
+  idRgbName = ui_label(idRgbCard, FONT_S, PAL_MUTED, "RGB");
+  lv_obj_align(idRgbName, LV_ALIGN_TOP_MID, 0, 0);
+  idRgbDot = ui_box(idRgbCard, 0, 0, 22, 22);
   ui_fill(idRgbDot, PAL_BG, LV_RADIUS_CIRCLE);
-  lv_obj_set_style_border_width(idRgbDot, 2, 0);
-  lv_obj_set_style_border_color(idRgbDot, pal(PAL_LINE), 0);
-  idRgbName = ui_label(scrIdle, FONT_S, PAL_MUTED, "RGB");
-  lv_obj_set_pos(idRgbName, 202, 89);
-  idRgbSub = ui_label(scrIdle, FONT_M, PAL_TEXT, "KI");
-  lv_obj_set_pos(idRgbSub, 202, 106);
+  lv_obj_set_style_border_width(idRgbDot, 1, 0);
+  lv_obj_set_style_border_color(idRgbDot, pal(PAL_TEXT), 0);
+  lv_obj_align(idRgbDot, LV_ALIGN_TOP_MID, 0, 17);
+  idRgbTxt = ui_label(idRgbCard, FONT_S, PAL_TEXT, "OFF");
+  lv_obj_align(idRgbTxt, LV_ALIGN_BOTTOM_MID, 0, -1);
+
+  lv_timer_create(fan_timer_cb, 60, nullptr);
 }
 
 // ---------------- Frissítés ----------------
-// Egy csempe beállítása; a "key" a legutóbb kirajzolt tartalom azonosítója,
-// hogy csak változáskor írjunk az LVGL-be.
-static void tile_set(int k, const char *title, const char *val, uint32_t valCol, int barPct, uint32_t barCol, bool showBar) {
+// Egy kártya beállítása; az érték színe és a kártya háttere a tartalomtól függ.
+static void tile_set(int k, const char *title, const char *val, uint32_t valCol, uint32_t bgCol) {
   ui_set_text(idTileTitle[k], title);
   ui_set_text(idTileVal[k], val);
   lv_obj_set_style_text_color(idTileVal[k], pal(valCol), 0);
-  if (showBar) {
-    lv_obj_remove_flag(idTileBar[k], LV_OBJ_FLAG_HIDDEN);
-    lv_bar_set_value(idTileBar[k], barPct, LV_ANIM_ON);
-    lv_obj_set_style_bg_color(idTileBar[k], pal(barCol), LV_PART_INDICATOR);
-  } else {
-    lv_obj_add_flag(idTileBar[k], LV_OBJ_FLAG_HIDDEN);
-  }
+  lv_obj_set_style_bg_color(idTile[k], pal(bgCol), 0);
+  lv_obj_set_style_text_color(idTileTitle[k], pal(bgCol == PAL_CARD ? PAL_MUTED : PAL_TEXT), 0);
 }
 
 static void tile_temp(int k, const char *title, float t) {
   char b[16];
-  if (isnan(t)) snprintf(b, sizeof(b), "--");
-  else snprintf(b, sizeof(b), "%.1f" "\xC2\xB0" "C", t);
-  float c = isnan(t) ? 0 : constrain(t, -10.0f, 50.0f);
-  tile_set(k, title, b, PAL_TEXT, (int)((c + 10.0f) * 100.0f / 60.0f), tempToPal(t), true);
+  if (isnan(t)) snprintf(b, sizeof(b), "-- " "\xC2\xB0" "C");
+  else snprintf(b, sizeof(b), "%.1f " "\xC2\xB0" "C", t);
+  tile_set(k, title, b, PAL_ACCENT, PAL_CARD);
 }
 
 static void tile_hum(int k, float h) {
   char b[16];
   if (isnan(h)) snprintf(b, sizeof(b), "--%%");
   else snprintf(b, sizeof(b), "%.0f%%", h);
-  tile_set(k, "Páratartalom", b, PAL_ACCENT, isnan(h) ? 0 : (int)constrain(h, 0.0f, 100.0f), PAL_ACCENT, true);
+  tile_set(k, "Páratartalom", b, PAL_ACCENT, PAL_CARD);
 }
 
+// Kapcsoló mód: mint az appban - zárt = piros kártya, nyitott = szürke kártya, fehér felirat
 static void tile_switch(int k, const char *name, bool closed) {
-  tile_set(k, name, closed ? "Zárt" : "Nyit", closed ? PAL_OK : PAL_BAD, 0, PAL_OK, false);
+  tile_set(k, name, closed ? "ZÁRT" : "NYITOTT", PAL_TEXT, closed ? PAL_ACCENT : PAL_LINE);
 }
 
-// A csempék elrendezése módonként: 1 hőmérő módban egy széles csempe nagy
-// számmal, egyébként két keskeny csempe.
+// A kártyák elrendezése módonként: 1 hőmérő módban egy széles kártya,
+// egyébként két egyforma.
 static void idle_layout(int mode) {
-  bool single = (mode == 1);
-  if (single) {
-    lv_obj_set_width(idTile[0], 200);
-    lv_obj_set_width(idTileBar[0], 184);
-    lv_obj_set_style_text_font(idTileVal[0], FONT_XL, 0);
-    lv_obj_set_pos(idTileVal[0], 8, 14);
+  if (mode == 1) {
+    lv_obj_set_width(idTile[0], 232);
     lv_obj_add_flag(idTile[1], LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(idDiv, LV_OBJ_FLAG_HIDDEN);
   } else {
-    lv_obj_set_width(idTile[0], 98);
-    lv_obj_set_width(idTileBar[0], 82);
-    lv_obj_set_style_text_font(idTileVal[0], FONT_L, 0);
-    lv_obj_set_pos(idTileVal[0], 8, 19);
+    lv_obj_set_width(idTile[0], 114);
     lv_obj_remove_flag(idTile[1], LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(idDiv, LV_OBJ_FLAG_HIDDEN);
   }
-  lv_obj_set_style_text_font(idTileVal[1], FONT_L, 0);
-  lv_obj_set_pos(idTileVal[1], 8, 19);
 }
 
 void displayInfo() {
@@ -281,56 +297,58 @@ void displayInfo() {
   }
   if (currentMode != lastMode) { lastMode = currentMode; ui_set_text(idMode, MODE_SHORT[currentMode]); }
 
-  // Relék
-  for (int i = 0; i < 2; i++) {
-    int on = digitalRead(i == 0 ? RELAY1_PIN : RELAY2_PIN) ? 1 : 0;
-    if (on != lastR[i]) {
-      lastR[i] = on;
-      lv_obj_set_style_bg_color(idRelPill[i], pal(on ? PAL_OK : PAL_BAD), 0);
-      ui_set_text(idRelTxt[i], on ? "BE" : "KI");
-      lv_obj_center(idRelTxt[i]);
-    }
-  }
-
-  // Középső kártya: mód-függő tartalom
+  // Szenzor kártyák: mód-függő tartalom
   switch (currentMode) {
     case 0:
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérő 1", ntc1Temperature); }
-      if (tempChanged(ntc2Temperature, lastT2)) { lastT2 = ntc2Temperature; tile_temp(1, "Hőmérő 2", ntc2Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérséklet 1", ntc1Temperature); }
+      if (tempChanged(ntc2Temperature, lastT2)) { lastT2 = ntc2Temperature; tile_temp(1, "Hőmérséklet 2", ntc2Temperature); }
       break;
     case 1:
       if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérséklet", ntc1Temperature); }
       break;
     case 2: {
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérő", ntc1Temperature); }
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérséklet", ntc1Temperature); }
       bool humChanged = (isnan(humidity) != isnan(lastHum)) || (!isnan(humidity) && fabs(humidity - lastHum) >= 0.5);
       if (humChanged) { lastHum = humidity; tile_hum(1, humidity); }
       break;
     }
     case 3: {
-      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérő", ntc1Temperature); }
       int sw = isSwitchClosed(NTC2_PIN) ? 1 : 0;
+      if (tempChanged(ntc1Temperature, lastT1)) { lastT1 = ntc1Temperature; tile_temp(0, "Hőmérséklet", ntc1Temperature); }
       if (sw != lastSw2) { lastSw2 = sw; tile_switch(1, "Kapcsoló", sw); }
       break;
     }
     case 4: {
       int s1 = isSwitchClosed(NTC1_PIN) ? 1 : 0, s2 = isSwitchClosed(NTC2_PIN) ? 1 : 0;
-      if (s1 != lastSw1) { lastSw1 = s1; tile_switch(0, "K1", s1); }
-      if (s2 != lastSw2) { lastSw2 = s2; tile_switch(1, "K2", s2); }
+      if (s1 != lastSw1) { lastSw1 = s1; tile_switch(0, "Kapcsoló 1", s1); }
+      if (s2 != lastSw2) { lastSw2 = s2; tile_switch(1, "Kapcsoló 2", s2); }
       break;
     }
   }
 
-  // Alsó sor: ventilátorok
+  // Ventilátorok (V1, V2): aktív = piros kártya, a propeller pörög
   int fanPct[2] = { (int)round(pwmFan / 2.55), (int)round(pwmFan2 / 2.55) };
   for (int i = 0; i < 2; i++) {
     if (fanPct[i] != lastFan[i]) {
       lastFan[i] = fanPct[i];
-      lv_arc_set_value(idFanArc[i], constrain(fanPct[i], 0, 100));
-      lv_obj_set_style_arc_color(idFanArc[i], pal(fanPct[i] > 0 ? PAL_OK : PAL_LINE), LV_PART_INDICATOR);
+      fanSpin[i] = fanPct[i] > 0;
+      lv_obj_set_style_bg_color(idFanCard[i], pal(fanSpin[i] ? PAL_ACCENT : PAL_LINE), 0);
+      lv_obj_set_style_text_color(idFanName[i], pal(fanSpin[i] ? PAL_TEXT : PAL_MUTED), 0);
+      lv_obj_invalidate(idFanSpin[i]);
       char b[8]; snprintf(b, sizeof(b), "%d%%", fanPct[i]);
       ui_set_text(idFanVal[i], b);
-      lv_obj_set_style_text_color(idFanVal[i], pal(fanPct[i] > 0 ? PAL_TEXT : PAL_MUTED), 0);
+    }
+  }
+
+  // Relék: ON piros, OFF szürke
+  for (int i = 0; i < 2; i++) {
+    int on = digitalRead(i == 0 ? RELAY1_PIN : RELAY2_PIN) ? 1 : 0;
+    if (on != lastR[i]) {
+      lastR[i] = on;
+      lv_obj_set_style_bg_color(idRelCard[i], pal(on ? PAL_ACCENT : PAL_LINE), 0);
+      lv_obj_set_style_text_color(idRelName[i], pal(on ? PAL_TEXT : PAL_MUTED), 0);
+      ui_set_text(idRelTxt[i], on ? "ON" : "OFF");
+      lv_obj_align(idRelTxt[i], LV_ALIGN_CENTER, 0, 6);
     }
   }
 
@@ -339,9 +357,10 @@ void displayInfo() {
   uint32_t rgbKey = rgbOn ? (((uint32_t)pwmR << 16) | ((uint32_t)pwmG << 8) | pwmB | 0x1000000) : 0;
   if (rgbKey != lastRgb) {
     lastRgb = rgbKey;
+    lv_obj_set_style_bg_color(idRgbCard, pal(rgbOn ? PAL_ACCENT : PAL_LINE), 0);
+    lv_obj_set_style_text_color(idRgbName, pal(rgbOn ? PAL_TEXT : PAL_MUTED), 0);
     lv_obj_set_style_bg_color(idRgbDot, rgbOn ? lv_color_make(pwmR, pwmG, pwmB) : pal(PAL_BG), 0);
-    ui_set_text(idRgbSub, rgbOn ? "BE" : "KI");
-    lv_obj_set_style_text_color(idRgbSub, pal(rgbOn ? PAL_TEXT : PAL_MUTED), 0);
+    ui_set_text(idRgbTxt, rgbOn ? "ON" : "OFF");
   }
   ui_unlock();
 }

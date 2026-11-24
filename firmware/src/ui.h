@@ -19,17 +19,18 @@
 #include "lgfx_setup.h"
 
 // ---------------- Paletta ----------------
-#define PAL_BG     0x0B0F14
-#define PAL_CARD   0x161C24
-#define PAL_LINE   0x2A3441
-#define PAL_TEXT   0xE6EDF3
-#define PAL_MUTED  0x8B98A5
-#define PAL_ACCENT 0x22D3EE
-#define PAL_OK     0x34D399
-#define PAL_BAD    0xF87171
-#define PAL_WARN   0xFB923C
-#define PAL_YELLOW 0xFACC15
-#define PAL_BLUE   0x60A5FA
+// Az app (Controll) színei: oldal #2C2C2E, kártya #1C1C1E, keret #3A3A3C, akcentus #FF453A, felirat #AEAEB2
+#define PAL_BG     0x2C2C2E
+#define PAL_CARD   0x1C1C1E
+#define PAL_LINE   0x3A3A3C
+#define PAL_TEXT   0xFFFFFF
+#define PAL_MUTED  0xAEAEB2
+#define PAL_ACCENT 0xFF453A
+#define PAL_OK     0x30D158
+#define PAL_BAD    0xFF453A
+#define PAL_WARN   0xFF9F0A
+#define PAL_YELLOW 0xFFD60A
+#define PAL_BLUE   0x0A84FF
 
 // ---------------- Betűtípusok ----------------
 // HU_FONTS=1 esetén a saját, magyar ékezetes betűtípusok (src/fonts/lv_font_hu_*.c,
@@ -222,17 +223,20 @@ static void ui_build_menu() {
 
   lv_obj_t *hdr = ui_box(scrMenu, 0, 0, 240, 22);
   ui_fill(hdr, PAL_CARD, 0);
+  lv_obj_set_style_border_width(hdr, 1, 0);
+  lv_obj_set_style_border_side(hdr, LV_BORDER_SIDE_BOTTOM, 0);
+  lv_obj_set_style_border_color(hdr, pal(PAL_LINE), 0);
   lv_obj_t *accent = ui_box(hdr, 0, 0, 3, 22);
   ui_fill(accent, PAL_ACCENT, 0);
-  mTitle = ui_label(hdr, FONT_M, PAL_ACCENT, "");
+  mTitle = ui_label(hdr, FONT_M, PAL_TEXT, "");
   lv_obj_align(mTitle, LV_ALIGN_LEFT_MID, 10, 0);
   mCount = ui_label(hdr, FONT_S, PAL_MUTED, "");
   lv_obj_align(mCount, LV_ALIGN_RIGHT_MID, -8, 0);
 
   // ---- Lista ----
   pageList = ui_box(scrMenu, 0, 22, 240, 113);
-  hlBar = ui_box(pageList, 3, 1, 234, LIST_ROW_H - 2);
-  ui_fill(hlBar, PAL_ACCENT, 6);
+  hlBar = ui_box(pageList, 4, 1, 232, LIST_ROW_H - 2);
+  ui_fill(hlBar, PAL_ACCENT, 10);
   for (int i = 0; i < LIST_ROWS; i++) {
     rowCont[i] = ui_box(pageList, 0, i * LIST_ROW_H, 240, LIST_ROW_H);
     lv_obj_set_flex_flow(rowCont[i], LV_FLEX_FLOW_ROW);
@@ -262,20 +266,20 @@ static void ui_build_menu() {
   lv_label_set_long_mode(eSub, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_align(eSub, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(eSub, LV_ALIGN_TOP_MID, 0, 72);
-  eHint = ui_label(pageEdit, FONT_S, PAL_ACCENT, "Fel/Le: érték     Dupla: OK");
+  eHint = ui_label(pageEdit, FONT_S, PAL_MUTED, "Fel/Le: érték     Dupla: OK");
   lv_obj_align(eHint, LV_ALIGN_BOTTOM_MID, 0, -3);
 
   // ---- Frekvencia ----
   pageFreq = ui_box(scrMenu, 0, 22, 240, 113);
   for (int i = 0; i < 5; i++) {
     fBox[i] = ui_box(pageFreq, 20 + i * 40, 12, 36, 48);
-    ui_fill(fBox[i], PAL_CARD, 8);
+    ui_fill(fBox[i], PAL_CARD, 12);
     lv_obj_set_style_border_width(fBox[i], 2, 0);
     lv_obj_set_style_border_color(fBox[i], pal(PAL_LINE), 0);
     fDig[i] = ui_label(fBox[i], FONT_XL, PAL_TEXT, "0");
     lv_obj_center(fDig[i]);
   }
-  fHint = ui_label(pageFreq, FONT_S, PAL_ACCENT, "Fel/Le: érték 0-9\nHosszú Fel: következő számjegy");
+  fHint = ui_label(pageFreq, FONT_S, PAL_MUTED, "Fel/Le: érték 0-9\nHosszú Fel: következő számjegy");
   lv_obj_set_style_text_align(fHint, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(fHint, LV_ALIGN_BOTTOM_MID, 0, -4);
 
@@ -299,18 +303,20 @@ static void ui_build_menu() {
   lv_label_set_long_mode(pwSsid, LV_LABEL_LONG_DOT);
   lv_obj_align(pwSsid, LV_ALIGN_TOP_LEFT, 6, 2);
   pwCard = ui_box(pagePw, 6, 17, 228, 30);
-  ui_fill(pwCard, PAL_CARD, 8);
+  ui_fill(pwCard, PAL_CARD, 12);
+  lv_obj_set_style_border_width(pwCard, 1, 0);
+  lv_obj_set_style_border_color(pwCard, pal(PAL_LINE), 0);
   pwText = ui_label(pwCard, FONT_L, PAL_TEXT, "");
   lv_obj_set_width(pwText, 214);
   lv_label_set_long_mode(pwText, LV_LABEL_LONG_CLIP);
   lv_obj_set_style_text_align(pwText, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_align(pwText, LV_ALIGN_RIGHT_MID, -7, 0);
   pwChip = ui_box(pagePw, 0, 52, 64, 34);
-  ui_fill(pwChip, PAL_OK, 8);
+  ui_fill(pwChip, PAL_ACCENT, 12);
   lv_obj_align(pwChip, LV_ALIGN_TOP_MID, 0, 52);
-  pwChipTxt = ui_label(pwChip, FONT_L, PAL_BG, "a");
+  pwChipTxt = ui_label(pwChip, FONT_L, PAL_TEXT, "a");
   lv_obj_center(pwChipTxt);
-  pwHint = ui_label(pagePw, FONT_S, PAL_ACCENT, "Fel/Le: karakter     Mindkét gomb: beír\nHosszan mindkét gomb: csatlakozás");
+  pwHint = ui_label(pagePw, FONT_S, PAL_MUTED, "Fel/Le: karakter     Mindkét gomb: beír\nHosszan mindkét gomb: csatlakozás");
   lv_obj_set_style_text_align(pwHint, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(pwHint, LV_ALIGN_BOTTOM_MID, 0, -2);
 
@@ -330,7 +336,7 @@ static void ui_build_menu() {
   lv_obj_align(connMsg, LV_ALIGN_TOP_MID, 0, 56);
   connSub = ui_label(pageConn, FONT_M, PAL_MUTED, "");
   lv_obj_align(connSub, LV_ALIGN_TOP_MID, 0, 82);
-  connHint = ui_label(pageConn, FONT_S, PAL_ACCENT, "Bármelyik gomb: vissza");
+  connHint = ui_label(pageConn, FONT_S, PAL_MUTED, "Bármelyik gomb: vissza");
   lv_obj_align(connHint, LV_ALIGN_BOTTOM_MID, 0, -2);
 
   ui_pages[0] = pageList; ui_pages[1] = pageEdit; ui_pages[2] = pageFreq;
@@ -352,7 +358,7 @@ static void ui_build_ota() {
   lv_obj_align(otaBar, LV_ALIGN_BOTTOM_MID, 0, -30);
   lv_bar_set_range(otaBar, 0, 100);
   lv_obj_set_style_bg_color(otaBar, pal(PAL_LINE), LV_PART_MAIN);
-  lv_obj_set_style_bg_color(otaBar, pal(PAL_OK), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(otaBar, pal(PAL_ACCENT), LV_PART_INDICATOR);
   lv_obj_set_style_radius(otaBar, 7, LV_PART_MAIN);
   lv_obj_set_style_radius(otaBar, 7, LV_PART_INDICATOR);
   otaPct = ui_label(scrOta, FONT_ML, PAL_TEXT, "");
@@ -417,8 +423,8 @@ void ui_list(const String &title, ValueRow rows[], int count, int cursor) {
       lv_obj_remove_flag(rowCont[i], LV_OBJ_FLAG_HIDDEN);
       ui_set_text(rowLbl[i], rows[idx].label.c_str());
       ui_set_text(rowVal[i], rows[idx].value.c_str());
-      lv_obj_set_style_text_color(rowLbl[i], pal(sel ? PAL_BG : PAL_TEXT), 0);
-      lv_obj_set_style_text_color(rowVal[i], sel ? pal(PAL_BG) : ui_color565(rows[idx].valColor), 0);
+      lv_obj_set_style_text_color(rowLbl[i], pal(PAL_TEXT), 0);
+      lv_obj_set_style_text_color(rowVal[i], sel ? pal(PAL_TEXT) : ui_color565(rows[idx].valColor), 0);
     } else {
       lv_obj_add_flag(rowCont[i], LV_OBJ_FLAG_HIDDEN);
     }
@@ -462,8 +468,8 @@ void ui_freq(const uint8_t *digits, int sel) {
     char b[2] = { (char)('0' + digits[i]), 0 };
     ui_set_text(fDig[i], b);
     bool s = (i == sel);
-    lv_obj_set_style_border_color(fBox[i], pal(s ? PAL_OK : PAL_LINE), 0);
-    lv_obj_set_style_text_color(fDig[i], pal(s ? PAL_OK : PAL_TEXT), 0);
+    lv_obj_set_style_border_color(fBox[i], pal(s ? PAL_ACCENT : PAL_LINE), 0);
+    lv_obj_set_style_text_color(fDig[i], pal(s ? PAL_ACCENT : PAL_TEXT), 0);
   }
   ui_unlock();
 }

@@ -31,7 +31,7 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 | N2 | A | A **gyári visszaállítás** képernyője nem rajzolódott ki (a `delay()+restart` előtt a loop nem jut `ui_tick()`-hez). | ✅ javítva (`ui_refresh_now()`) |
 | N3 | A | Hosszú **WiFi-jelszónál a vége nem látszott** (a szöveg jobbról volt levágva). | ✅ javítva (a vég látszik) |
 | N4 | M | NimBLE-nél a sok egymás utáni notify (pl. `GET_ALL`) elveszhet, ha a belső puffer betelik. | ✅ javítva (újrapróbálás, `Comm.h`) |
-| N5 | A | A fok-jel (`°`) glifája az LVGL beépített Montserrat betűiben **nincs ellenőrizve**; ha hiányzik, négyzet jelenik meg. Hardveren / szimulátorban megnézendő. | nyitott |
+| N5 | A | A fok-jel (`°`) glifája a kijelző (Open Sans) betűiben **nincs ellenőrizve**; ha hiányzik, négyzet jelenik meg. Hardveren / szimulátorban megnézendő. | nyitott |
 | N6 | A | A kijelző kinézete **nincs képként ellenőrizve** (a PC-s szimulátor fordítási hibán megállt) – átfedések lehetségesek. | nyitott |
 | N7 ✅ | A | Ékezetes betűk: a saját betűtípusok (`firmware/src/fonts`, generálás: `tools/gen_fonts.sh`) beépítve, `-DHU_FONTS=1`. A `°`, `Ω`, `β` glifák megjelenése hardveren ellenőrizendő. | javítva |
 
