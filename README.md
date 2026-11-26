@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.5.1** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.5.2** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,7 +18,7 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.5.1)
+## Firmware (v5.5.2)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
@@ -85,15 +85,16 @@ csak Automata állapotban működnek, Kézi állapotban egyik sem ír az RGB-re.
 (mindegyik lenyitva azonnal mutat mindent, legfelül a *bekapcsolva* kapcsolóval):
 - **Időzítő:** napok (H-V), max. 5 slot: *időpont, BE/KI, szín, fényerő %, átmeneti idő* (BE: felfutás, KI: lefutás). A legutóbbi elmúlt mai esemény érvényes a következőig.
 - **Hőmérséklet-görbe:** forrás (1. vagy 2. hőmérő), max. 5 pont: *hőmérséklet, szín, fényerő %*; a pontok között folyamatos átmenet.
-- **Napszak-görbe:** napok, max. 10 pont: *napszak (óó:pp), szín, fényerő %*; a pontok között folyamatos átmenet, éjfélen át körbeér; indítás nincs, magától fut.
+- **Napszak-görbe:** napok, max. 10 pont: *időpont, max. fényerő %* (szín nincs); a pontok között folyamatos átmenet, éjfélen át körbeér; a legördülőben grafikon mutatja a görbét. Ha be van kapcsolva és fut, **minden automatika (közeledés, időzítő, hőmérséklet-görbe) fényerejét ez adja** (a színt az automatika); a KI műveletek kikapcsolnak. Ha nincs más aktív automatika, a görbe maga világít a legutóbbi automatika-színnel (alapból fehér). 0 % a görbében = sötét szakasz, az automatika sem világít.
 - **Közeledés:** X méteren belülre érve a beállított *színnel* és *fényerővel* elkezd világítani a *felfutási idővel*. *Világítási mód:* csak felkapcsol
   (utána a többi automatika dönt) / amíg ott vagyok világít (a távozást az Újraélesedés X métere adja; ha a kapcsolat 15 mp-ig megszakad, az eszköz távozottnak veszi) /
   X mp-ig világít; a kikapcsolás a *lefutási idővel* történik.
-  *Fényerő a napszak-görbéhez igazodik* kapcsoló: bekapcsolva a közeledés legfeljebb akkora fényerővel kapcsol fel, mint a Napszak-görbe pillanatnyi
-  fényereje (pl. este hazaérve nem 100 %, hanem a görbe szerinti kisebb érték); ha a görbe nem fut, a beállított fényerő érvényes. 0 % a görbében = a közeledés sem kapcsol fel.
+  A közeledés (és minden közeledés-legördülő) csak bekapcsolva mutatja a beállításait. A fényerőt a Napszak-görbe adja, ha fut (lásd fent).
+  Időpontot az Időzítőben és a Napszak-görbében görgethető óra-választóval adsz meg (nem kell gépelni).
 
-Elsőbbség: **közeledés → időzítő → napszak-görbe → hőmérséklet-görbe**. Az eszköz az átmeneteket lineárisan, az átmenet-motoron át adja ki.
-BLE: `SET_AUTO:RGB:<0/1>`, `SET_RGBTIMER`, `SET_RGBTHERM`, `SET_RGBDAY`, `SET_RGBPROX` (az 5.5.1-től opcionális 8. mező: napszak-görbéhez igazodás), `GET_RGBAUTO` (válasz: `LOAD_RGBAUTO/TIMER/THERM/DAY/PROX`), `PROX_LEAVE:RGB`.
+**Automata és Kézi kizárja egymást:** Kézi állapotban semmilyen automatika nem működik; Automata állapotban a kézi RGB-vezérlés (app, eszköz menü, MQTT) nem működik, az RGB oldalon a színkerék, a fényerő és a BE/KI szürke.
+Elsőbbség: **közeledés → időzítő → hőmérséklet-görbe → napszak-görbe** (a fényerőt a napszak-görbe felülírja, ha fut). Az eszköz az átmeneteket lineárisan, az átmenet-motoron át adja ki.
+BLE: `SET_AUTO:RGB:<0/1>`, `SET_RGBTIMER`, `SET_RGBTHERM`, `SET_RGBDAY` (`óó:pp:fényerő`; a régi, színes alak is elfogadott), `SET_RGBPROX`, `GET_RGBAUTO` (válasz: `LOAD_RGBAUTO/TIMER/THERM/DAY/PROX`), `PROX_LEAVE:RGB`.
 Az eddigi RGB-közeledés (BE/KI az időtartamra) megszűnt: helyét a fenti Közeledés vette át, és csak Automata állapotban működik.
 
 **Figyelmeztetések csatornánként (v5.4.0):** Vezérlés → Automatikák beállítása → a Ventilátor 1-2 és Relé 1-2 kártyák alján, a Közeledés alatt egy "Figyelmeztetés" legördülő (bekapcsolóval): *szenzorhiba*, *túl alacsony hőmérséklet* (alsó határ), *túl magas hőmérséklet* (felső határ). A csatorna szenzora a termosztátjáé (1. vagy 2. hőmérő). Az eszköz `CALERT:<csatorna>:<állapot>:<érték>` sort küld (`SET_CALERT` / `GET_CALERT`), az app ebből a csatorna nevével ír értesítést. Az RGB-nek nincs szenzora, ott nincs figyelmeztetés. A Beállítások → Értesítések panel (a két hőmérőre közös riasztás) változatlan.

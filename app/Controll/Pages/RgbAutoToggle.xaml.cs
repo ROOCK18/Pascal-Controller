@@ -20,6 +20,9 @@ public partial class RgbAutoToggle : ContentView
     // Az RGB automatikák az egész oldalon csak Automata állapotban működnek
     public static bool IsAuto => _auto;
 
+    // Az a kézi vezérlő-blokk, amit Automata állapotban le kell tiltani (az RGB oldalon). Az eszköz is eldobja a kézi parancsokat.
+    public View? ManualControls { get; set; }
+
     private void Init()
     {
         if (_init) return;
@@ -52,6 +55,12 @@ public partial class RgbAutoToggle : ContentView
     {
         AutoBorder.BackgroundColor = _auto ? UiHelper.ThemeColor("LightGray") : UiHelper.ThemeColor("PrimaryRed");
         AutoLabel.Text = _auto ? "Automata" : "Kézi";
+        if (ManualControls != null)
+        {
+            ManualControls.IsEnabled = !_auto;
+            ManualControls.InputTransparent = _auto;
+            ManualControls.Opacity = _auto ? 0.4 : 1.0;
+        }
     }
 
     private async void OnTapped(object? sender, TappedEventArgs e)

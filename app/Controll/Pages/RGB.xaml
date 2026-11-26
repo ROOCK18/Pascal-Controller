@@ -6,6 +6,9 @@
 
     <VerticalStackLayout Spacing="10" Padding="12">
 
+        <!-- Kézi vezérlés (szín, fényerő, BE/KI): Automata állapotban le van tiltva (szürke) -->
+        <VerticalStackLayout x:Name="ManualBox" Spacing="10">
+
         <!-- Választott szín + egyedi ON/OFF buborék kapcsoló -->
         <Border HeightRequest="80"
                 Stroke="Transparent"
@@ -148,8 +151,10 @@
             </Border>
         </Grid>
 
+        </VerticalStackLayout>
+
         <!-- RGB Automata / Kézi: Automata állapotban az RGB automatikák (időzítő, görbék, közeledés) vezérelnek -->
-        <pages:RgbAutoToggle HorizontalOptions="Center" />
+        <pages:RgbAutoToggle HorizontalOptions="Center" ManualControls="{x:Reference ManualBox}" />
 
         <!-- RGB automatikák (külön oldal: időzítő, görbék, közeledés) -->
         <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">

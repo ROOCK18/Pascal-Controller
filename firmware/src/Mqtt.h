@@ -201,9 +201,11 @@ static void mqttOnMessage(char *topic, byte *payload, unsigned int len) {
     setPWM(n == 1 ? 3 : 4, (int)round(pct * 2.55));
   }
   else if (s == "rgb/set") {
+    if (rgbAuto) return;   // Automata üzemmódban nincs kézi RGB-vezérlés
     digitalWrite(RGB_ON, on ? HIGH : LOW);
   }
   else if (s == "rgb/rgb/set") {
+    if (rgbAuto) return;   // Automata üzemmódban nincs kézi RGB-vezérlés
     int r = 0, g = 0, b = 0;
     if (sscanf(p.c_str(), "%d,%d,%d", &r, &g, &b) == 3) {
       pwmR = constrain(r, 0, 255); pwmG = constrain(g, 0, 255); pwmB = constrain(b, 0, 255);

@@ -37,6 +37,8 @@
                 <HorizontalStackLayout x:Name="DaysRow" Spacing="4" />
             </VerticalStackLayout>
 
+            <GraphicsView x:Name="DayGraph" HeightRequest="150" IsVisible="False" />
+
             <VerticalStackLayout x:Name="RowsContainer" Spacing="8" />
 
             <Border x:Name="AddBtn" BackgroundColor="#444444" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">

@@ -220,6 +220,7 @@ void handleBleCommand(String receivedString) {
     }
 
     if (receivedString.startsWith("#") && receivedString.length() == 7) {
+      if (rgbAuto) return;   // Automata üzemmódban nincs kézi RGB-vezérlés
       pwmR = (int)strtol(receivedString.substring(1, 3).c_str(), NULL, 16);
       pwmG = (int)strtol(receivedString.substring(3, 5).c_str(), NULL, 16);
       pwmB = (int)strtol(receivedString.substring(5, 7).c_str(), NULL, 16);
@@ -253,8 +254,8 @@ void handleBleCommand(String receivedString) {
       setPWM(4, pwmFan2);
       markDirty();
     }
-    else if (receivedString == "RGB_1") { digitalWrite(RGB_ON, HIGH); markDirty(); }
-    else if (receivedString == "RGB_0") { digitalWrite(RGB_ON, LOW); markDirty(); }
+    else if (receivedString == "RGB_1") { if (rgbAuto) return; digitalWrite(RGB_ON, HIGH); markDirty(); }
+    else if (receivedString == "RGB_0") { if (rgbAuto) return; digitalWrite(RGB_ON, LOW); markDirty(); }
     else if (receivedString == "F1_1")  { digitalWrite(FAN1_ON, HIGH); markDirty(); }
     else if (receivedString == "F1_0")  { digitalWrite(FAN1_ON, LOW); markDirty(); }
     else if (receivedString == "F2_1")  { digitalWrite(FAN2_ON, HIGH); markDirty(); }

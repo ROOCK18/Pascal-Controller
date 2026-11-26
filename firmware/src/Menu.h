@@ -888,6 +888,7 @@ void handleMenuInput(ButtonEvent ev) {
       else if (ev == BTN_UP) menuCursor = (menuCursor - 1 + 5) % 5;
       else if (ev == BTN_BACK) { menuScreen = MENU_MAIN; menuCursor = 1; }
       else if (ev == BTN_SELECT) {
+        if (rgbAuto && menuCursor < 4) break;   // Automata üzemmódban nincs kézi RGB-vezérlés
         switch (menuCursor) {
           case 0: digitalWrite(RGB_ON, digitalRead(RGB_ON) ? LOW : HIGH); markDirty(); break;
           case 1: menuEditField = 0; menuScreen = MENU_RGB_EDIT; break;
@@ -900,7 +901,7 @@ void handleMenuInput(ButtonEvent ev) {
 
     case MENU_RGB_EDIT: {
       int delta = (ev == BTN_UP) ? 1 : (ev == BTN_DOWN ? -1 : 0);
-      if (delta != 0) {
+      if (delta != 0 && !rgbAuto) {
         if (menuEditField == 0) pwmR = constrain(pwmR + delta, 0, 255);
         else if (menuEditField == 1) pwmG = constrain(pwmG + delta, 0, 255);
         else pwmB = constrain(pwmB + delta, 0, 255);

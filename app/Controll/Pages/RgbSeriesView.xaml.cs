@@ -5,7 +5,7 @@ namespace Controll.Pages;
 
 // Az RGB automatikák listás legördülője. Kind:
 //   Timer - időzítő: napokra, órára események (be/ki, szín, fényerő, átmenet)       SET_RGBTIMER / LOAD_RGBTIMER
-//   Day   - napszak-görbe: napszak szerinti pontok, köztük folyamatos átmenet       SET_RGBDAY   / LOAD_RGBDAY
+//   Day   - napszak-görbe: napszak szerinti max. fényerő (szín nincs), köztük folyamatos átmenet  SET_RGBDAY / LOAD_RGBDAY
 //   Therm - hőmérséklet-görbe: hőmérséklet szerinti pontok, köztük folyamatos átmenet SET_RGBTHERM / LOAD_RGBTHERM
 // A beállítás az eszközön tárolódik; az RGB Automata/Kézi kapcsolóval együtt töltődik be (GET_RGBAUTO).
 public partial class RgbSeriesView : ContentView
@@ -15,9 +15,10 @@ public partial class RgbSeriesView : ContentView
     private sealed class Row
     {
         public Border Frame = null!;
-        public Entry A = null!;           // időpont (HH:MM) vagy hőmérséklet
+        public Entry? A;                  // csak hőmérséklet-görbe: hőmérséklet
+        public TimePicker? Time;          // időzítő / napszak-görbe: görgethető időválasztó
         public Picker? Action;            // csak időzítő: BE / KI
-        public ColorField Color = null!;
+        public ColorField? Color;         // napszak-görbénél nincs szín
         public Entry Pct = null!;
         public Entry? Ramp;               // csak időzítő: átmenet (mp)
     }
@@ -26,6 +27,7 @@ public partial class RgbSeriesView : ContentView
     private readonly List<Border> _dayButtons = new();
     private int _days = 0x7F;
     private bool _init;
+    private readonly DayCurveDrawable _dayDraw = new();
 
     private int MaxRows => Kind == "Timer" ? 5 : Kind == "Day" ? 10 : 5;
 
@@ -44,14 +46,16 @@ public partial class RgbSeriesView : ContentView
         {
             case "Day":
                 TitleLabel.Text = "Napszak-görbe";
-                IntroLabel.Text = "A nap adott időpontjára megadod a színt és a fényerőt; a pontok között folyamatosan változik a fény (éjfélen át körbeér). Nincs indítás: magától fut, amíg be van kapcsolva és az RGB Automata állapotban van (max. 10 pont).";
+                IntroLabel.Text = "Max. fényerő a nap folyamán (max. 10 pont). Ha be van kapcsolva, minden automatika fényerejét ez adja; a színt az automatika.";
+                DayGraph.IsVisible = true;
+                DayGraph.Drawable = _dayDraw;
                 AddLabel.Text = "+ Pont hozzáadása";
                 SaveLabel.Text = "NAPSZAK-GÖRBE MENTÉSE";
                 DaysBox.IsVisible = true;
                 break;
             case "Therm":
                 TitleLabel.Text = "Hőmérséklet-görbe";
-                IntroLabel.Text = "Hőmérséklet szerint változik a szín és a fényerő; a pontok között folyamatos az átmenet (max. 5 pont).";
+                IntroLabel.Text = "Hőmérséklet szerint változik a szín és a fényerő (max. 5 pont).";
                 AddLabel.Text = "+ Pont hozzáadása";
                 SaveLabel.Text = "HŐMÉRSÉKLET-GÖRBE MENTÉSE";
                 SensorBox.IsVisible = true;
@@ -59,7 +63,7 @@ public partial class RgbSeriesView : ContentView
                 break;
             default:
                 TitleLabel.Text = "Időzítő";
-                IntroLabel.Text = "Napokra és órára eseményeket állítasz: be/ki, szín, fényerő és átmeneti idő (felfutás / lefutás). A legutóbbi elmúlt esemény érvényes a következőig (max. 5).";
+                IntroLabel.Text = "Napokra és órára események: be/ki, szín, fényerő, átmeneti idő (max. 5).";
                 AddLabel.Text = "+ Slot hozzáadása";
                 SaveLabel.Text = "IDŐZÍTŐ MENTÉSE";
                 DaysBox.IsVisible = true;
@@ -126,14 +130,25 @@ public partial class RgbSeriesView : ContentView
         var del = new Label { Text = "✕ Törlés", TextColor = Color.FromArgb("#FF6B6B"), FontSize = 13, VerticalOptions = LayoutOptions.Center };
         del.GestureRecognizers.Add(new TapGestureRecognizer
         {
-            Command = new Command(() => { _rows.Remove(row); RowsContainer.Remove(row.Frame); RenumberRows(); })
+            Command = new Command(() => { _rows.Remove(row); RowsContainer.Remove(row.Frame); RenumberRows(); RefreshGraph(); })
         });
         head.Add(del, 1, 0);
         stack.Add(head);
 
-        stack.Add(Small(Kind == "Therm" ? "Hőmérséklet (°C)" : "Időpont (ÓÓ:PP)"));
-        row.A = NewEntry(a, Kind == "Therm" ? Keyboard.Default : Keyboard.Default, Kind == "Therm" ? "pl. 25" : "pl. 18:30");
-        stack.Add(row.A);
+        if (Kind == "Therm")
+        {
+            stack.Add(Small("Hőmérséklet (°C)"));
+            row.A = NewEntry(a, Keyboard.Default, "pl. 25");
+            stack.Add(row.A);
+        }
+        else
+        {
+            stack.Add(Small("Időpont"));
+            TimeSpan.TryParse(a, CultureInfo.InvariantCulture, out var ts);
+            row.Time = new TimePicker { Time = ts, Format = "HH:mm", TextColor = Colors.White, BackgroundColor = Color.FromArgb("#3A3A3A") };
+            row.Time.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(TimePicker.Time)) RefreshGraph(); };
+            stack.Add(row.Time);
+        }
 
         if (Kind == "Timer")
         {
@@ -145,12 +160,16 @@ public partial class RgbSeriesView : ContentView
             stack.Add(row.Action);
         }
 
-        stack.Add(Small("Szín"));
-        row.Color = new ColorField { Hex = hex };
-        stack.Add(row.Color);
+        if (Kind != "Day")
+        {
+            stack.Add(Small("Szín"));
+            row.Color = new ColorField { Hex = hex };
+            stack.Add(row.Color);
+        }
 
-        stack.Add(Small("Fényerő (%)"));
+        stack.Add(Small(Kind == "Day" ? "Max. fényerő (%)" : "Fényerő (%)"));
         row.Pct = NewEntry(pct.ToString(CultureInfo.InvariantCulture), Keyboard.Numeric);
+        row.Pct.TextChanged += (s, e) => RefreshGraph();
         stack.Add(row.Pct);
 
         if (Kind == "Timer")
@@ -168,7 +187,23 @@ public partial class RgbSeriesView : ContentView
         };
         _rows.Add(row);
         RowsContainer.Add(row.Frame);
+        RefreshGraph();
         return row;
+    }
+
+    // A napszak-görbe grafikonja a sorokból frissül (élőben)
+    private void RefreshGraph()
+    {
+        if (Kind != "Day") return;
+        _dayDraw.Points.Clear();
+        foreach (var r in _rows)
+        {
+            if (r.Time == null || !int.TryParse((r.Pct.Text ?? "").Trim(), out int pct)) continue;
+            var ts = r.Time.Time ?? TimeSpan.Zero;
+            _dayDraw.Points.Add(((int)ts.TotalMinutes, Math.Clamp(pct, 0, 100)));
+        }
+        _dayDraw.NowMinute = DateTime.Now.Hour * 60 + DateTime.Now.Minute;
+        DayGraph.Invalidate();
     }
 
     private void RenumberRows() { /* a sorok sorszámozása nincs kiírva; a törlés után nincs teendő */ }
@@ -177,6 +212,7 @@ public partial class RgbSeriesView : ContentView
     {
         _rows.Clear();
         RowsContainer.Clear();
+        RefreshGraph();
     }
 
     private async void OnAddTapped(object? sender, TappedEventArgs e)
@@ -187,7 +223,7 @@ public partial class RgbSeriesView : ContentView
             return;
         }
         if (Kind == "Therm") AddRow("25", 1, "FFFFFF", 100, 0);
-        else if (Kind == "Day") AddRow("18:00", 1, "FFB46B", 100, 0);
+        else if (Kind == "Day") AddRow("18:00", 1, "FFFFFF", 100, 0);
         else AddRow("18:00", 1, "FFFFFF", 100, 5);
     }
 
@@ -221,21 +257,14 @@ public partial class RgbSeriesView : ContentView
             var t = parts[i].Split(':');
             if (Kind == "Timer" && t.Length >= 6)
                 AddRow(Hm(t[0], t[1]), t[2] == "1" ? 1 : 0, t[3], int.Parse(t[4], CultureInfo.InvariantCulture), int.Parse(t[5], CultureInfo.InvariantCulture));
-            else if (Kind == "Day" && t.Length >= 4)
-                AddRow(Hm(t[0], t[1]), 1, t[2], int.Parse(t[3], CultureInfo.InvariantCulture), 0);
+            else if (Kind == "Day" && t.Length >= 3)
+                AddRow(Hm(t[0], t[1]), 1, "FFFFFF", int.Parse(t[t.Length - 1], CultureInfo.InvariantCulture), 0);
             else if (Kind == "Therm" && t.Length >= 3)
                 AddRow(t[0], 1, t[1], int.Parse(t[2], CultureInfo.InvariantCulture), 0);
         }
     }
 
     // ── Mentés ──
-    private static bool TryTime(string s, out int h, out int m)
-    {
-        h = m = 0;
-        var p = (s ?? "").Trim().Split(':');
-        return p.Length == 2 && int.TryParse(p[0], out h) && int.TryParse(p[1], out m) && h is >= 0 and <= 23 && m is >= 0 and <= 59;
-    }
-
     private async void OnSaveTapped(object? sender, TappedEventArgs e)
     {
         var page = Shell.Current.CurrentPage;
@@ -260,10 +289,10 @@ public partial class RgbSeriesView : ContentView
                 await page.DisplayAlertAsync("Hibás érték", $"{n}. sor: a fényerő 0 és 100 közötti szám legyen.", "OK");
                 return;
             }
-            string hex = r.Color.Hex;
+            string hex = r.Color?.Hex ?? "FFFFFF";
             if (Kind == "Therm")
             {
-                if (!double.TryParse((r.A.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double temp) || temp < -50 || temp > 150)
+                if (!double.TryParse((r.A!.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double temp) || temp < -50 || temp > 150)
                 {
                     await page.DisplayAlertAsync("Hibás érték", $"{n}. sor: a hőmérséklet -50 és 150 °C közötti szám legyen.", "OK");
                     return;
@@ -271,14 +300,11 @@ public partial class RgbSeriesView : ContentView
                 sb.Append('|').Append(temp.ToString("0.#", CultureInfo.InvariantCulture)).Append(':').Append(hex).Append(':').Append(pct);
                 continue;
             }
-            if (!TryTime(r.A.Text ?? "", out int h, out int m))
-            {
-                await page.DisplayAlertAsync("Hibás érték", $"{n}. sor: az időpont ÓÓ:PP alakú legyen (pl. 18:30).", "OK");
-                return;
-            }
+            var tsel = r.Time!.Time ?? TimeSpan.Zero;
+            int h = tsel.Hours, m = tsel.Minutes;
             if (Kind == "Day")
             {
-                sb.Append('|').Append(h).Append(':').Append(m).Append(':').Append(hex).Append(':').Append(pct);
+                sb.Append('|').Append(h).Append(':').Append(m).Append(':').Append(pct);
                 continue;
             }
             if (!int.TryParse((r.Ramp!.Text ?? "").Trim(), out int ramp) || ramp < 0 || ramp > 3600)

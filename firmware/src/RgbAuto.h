@@ -2,14 +2,17 @@
 // RgbAuto.h - RGB automatikák: Automata/Kézi, időzítő, hőmérséklet-görbe, napszak-görbe, közeledés
 //
 // Csak Automata üzemmódban (rgbAuto) dolgozik; Kézi állapotban egyik automatika sem ír az RGB-re.
-// Elsőbbség (felülről lefelé):  közeledés  >  időzítő  >  napszak-görbe  >  hőmérséklet-görbe.
+// Kézi állapotban egyik automatika sem működik; Automata állapotban a kézi RGB-vezérlés (BLE, menü, MQTT) nem működik.
+// Elsőbbség (felülről lefelé):  közeledés  >  időzítő  >  hőmérséklet-görbe  >  napszak-görbe (önállóan).
+// A SZÍNT mindig az éppen író automatika adja. A FÉNYERŐT, ha a napszak-görbe fut, MINDIG a napszak-görbe pillanatnyi értéke adja
+// (a görbének nincs színe), kivéve a KI műveleteket, azok kikapcsolnak. Ha a görbe nem fut, az automatika saját fényereje érvényes.
 //   - közeledés: X méteren belülre érve a beállított színnel felfut (felfutási idő); a "világítási mód":
 //       0 = csak felkapcsol (a felfutás után a többi automatika dönt, kikapcsolhatja),
 //       1 = amíg ott vagyok (az app távozáskor PROX_LEAVE:RGB-t küld; ha a kapcsolat 15 mp-ig megszakad, az is távozás),
 //       2 = a felfutás után X mp-ig világít, aztán a lefutási idővel kikapcsol.
 //   - időzítő: napokra, órára eseményeket állít (be/ki, szín, fényerő, felfutás). Az utolsó, már elmúlt mai esemény
 //       érvényes (az időzítő tulajdonában van az állapot a következő eseményig).
-//   - napszak-görbe: a napszak szerinti pontok között folyamatosan változik a szín és a fényerő (éjfélen át körbeér).
+//   - napszak-görbe: a napszak szerinti pontok között folyamatosan változik a fényerő (éjfélen át körbeér); önállóan a legutóbbi automatika-színnel világít.
 //   - hőmérséklet-görbe: a hőmérséklet szerinti pontok között folyamatosan változik a szín és a fényerő.
 // Minden változás átmenet-motoron (rgbGoto) megy: a jelenlegi értékről a célra, a megadott idő alatt, lineárisan.
 // ============================================================
@@ -30,6 +33,7 @@ static bool rgbProxActive = false;
 static unsigned long rgbProxStart = 0;
 static int32_t rgbProxSerial = 1000000;
 static unsigned long rgbDiscSince = 0;
+static uint8_t rgbLastCol[3] = { 255, 255, 255 };   // az utolsó automatika-szín (ezzel világít a napszak-görbe önállóan)
 
 static void rgbEngineStep() {
   if (!rgbRamping) return;
@@ -96,9 +100,9 @@ void rgbProxLeaveCmd() {
   if (rgbProxActive && rgbProxCfg.mode == 1) rgbProxLeave();
 }
 
-// A napszak-görbe pillanatnyi értéke (szín + fényerő %). false, ha a görbe nem fut (ki van kapcsolva, nincs pontja,
-// vagy az adott napon nem él).
-static bool rgbDayNow(uint8_t &tr, uint8_t &tg, uint8_t &tb, uint8_t &tp) {
+// A napszak-görbe pillanatnyi fényereje (%). false, ha a görbe nem fut (ki van kapcsolva, nincs pontja,
+// vagy az adott napon nem él). A görbének nincs színe.
+static bool rgbDayPct(uint8_t &tp) {
   if (!(rgbDayCfg.enabled && rgbDayCfg.count > 0 && rgbRunsToday(rgbDayCfg.days))) return false;
   int nowMin = hr * 60 + min_t;
   int n = rgbDayCfg.count;
@@ -112,7 +116,6 @@ static bool rgbDayNow(uint8_t &tr, uint8_t &tg, uint8_t &tb, uint8_t &tp) {
   float span = (float)(nextMin - prevMin);
   float f = span <= 0.0f ? 0.0f : (float)(nowMin - prevMin) / span;
   f = constrain(f, 0.0f, 1.0f);
-  tr = rgbLerp8(a->r, b->r, f); tg = rgbLerp8(a->g, b->g, f); tb = rgbLerp8(a->b, b->b, f);
   tp = rgbLerp8(a->pct, b->pct, f);
   return true;
 }
@@ -144,17 +147,20 @@ void applyRgbAutomation() {
     }
   }
 
+  // A napszak-görbe pillanatnyi fényereje: ha fut, minden automatika fényerejét ez adja
+  uint8_t dp = 0;
+  bool dayOn = rgbDayPct(dp);
+  int32_t dayBits = dayOn ? ((int32_t)(dp + 1) << 24) : 0;   // a kulcsba is bekerül, így a fény követi a görbét
+
   // 1) közeledés
   if (rgbProxActive) {
-    if (rgbSrc != RS_PROX || rgbSrcKey != rgbProxSerial) {
-      // Fényerő: a közeledésnél beállított érték, de ha kérted, legfeljebb a napszak-görbe pillanatnyi fényereje
-      uint8_t pct = rgbProxCfg.pct;
-      if (rgbProxCfg.capByDay) {
-        uint8_t dr, dg, db, dp;
-        if (rgbDayNow(dr, dg, db, dp) && dp < pct) pct = dp;
-      }
-      rgbGoto(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b, pct, pct > 0, rgbProxCfg.rampUpSec);
-      rgbSrc = RS_PROX; rgbSrcKey = rgbProxSerial;
+    int32_t key = rgbProxSerial + dayBits;
+    if (rgbSrc != RS_PROX || rgbSrcKey != key) {
+      bool fresh = (rgbSrc != RS_PROX) || ((rgbSrcKey & 0xFFFFFF) != rgbProxSerial);
+      uint8_t pct = dayOn ? dp : rgbProxCfg.pct;
+      rgbLastCol[0] = rgbProxCfg.r; rgbLastCol[1] = rgbProxCfg.g; rgbLastCol[2] = rgbProxCfg.b;
+      rgbGoto(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b, pct, pct > 0, fresh ? rgbProxCfg.rampUpSec : 2);
+      rgbSrc = RS_PROX; rgbSrcKey = key;
     }
     return;
   }
@@ -168,24 +174,26 @@ void applyRgbAutomation() {
       if (m <= nowMin && m >= bestMin) { best = i; bestMin = m; }
     }
     if (best >= 0) {
-      int32_t key = 100000 + bestMin * 8 + best;
+      const RgbSlot &s = rgbTimerCfg.slots[best];
+      int32_t base = 100000 + bestMin * 8 + best;
+      int32_t key = base + (s.on ? dayBits : 0);
       if (rgbSrc != RS_TIMER || rgbSrcKey != key) {
-        const RgbSlot &s = rgbTimerCfg.slots[best];
-        rgbGoto(s.r, s.g, s.b, s.pct, s.on != 0, s.rampSec);
+        bool fresh = (rgbSrc != RS_TIMER) || ((rgbSrcKey & 0xFFFFFF) != base);
+        uint8_t pct = (s.on && dayOn) ? dp : s.pct;
+        if (s.on) { rgbLastCol[0] = s.r; rgbLastCol[1] = s.g; rgbLastCol[2] = s.b; }
+        rgbGoto(s.r, s.g, s.b, pct, s.on != 0 && pct > 0, fresh ? s.rampSec : 2);
         rgbSrc = RS_TIMER; rgbSrcKey = key;
       }
       return;
     }
   }
 
-  // 3) napszak-görbe és 4) hőmérséklet-görbe: folyamatos érték
+  // 3) hőmérséklet-görbe (szín a görbéből) és 4) napszak-görbe önállóan (szín: az utolsó automatika-szín)
   bool have = false;
   uint8_t tr = 0, tg = 0, tb = 0, tp = 0;
   uint8_t src = RS_NONE;
 
-  if (rgbDayNow(tr, tg, tb, tp)) {
-    have = true; src = RS_DAY;
-  } else if (rgbThermCfg.enabled && rgbThermCfg.count > 0) {
+  if (rgbThermCfg.enabled && rgbThermCfg.count > 0) {
     float t = getSensorTemp(rgbThermCfg.sensor);
     if (!isnan(t)) {
       int n = rgbThermCfg.count;
@@ -203,11 +211,17 @@ void applyRgbAutomation() {
           }
         }
       }
+      rgbLastCol[0] = tr; rgbLastCol[1] = tg; rgbLastCol[2] = tb;
       have = true; src = RS_THERM;
     }
   }
+  if (!have && dayOn) {
+    tr = rgbLastCol[0]; tg = rgbLastCol[1]; tb = rgbLastCol[2]; tp = dp;
+    have = true; src = RS_DAY;
+  }
 
   if (!have) { rgbSrc = RS_NONE; return; }
+  if (dayOn) tp = dp;   // a fényerőt a napszak-görbe adja
   // a fényerő a színbe számolva; 0 fényerő = kikapcsolt állapot
   uint8_t sr = (uint8_t)((int)tr * tp / 100), sg = (uint8_t)((int)tg * tp / 100), sb = (uint8_t)((int)tb * tp / 100);
   int32_t key = ((int32_t)sr << 16) | ((int32_t)sg << 8) | (int32_t)sb;
@@ -303,7 +317,7 @@ void handleSetRgbTherm(const String &body) {
   notifyLine("RGBAUTO_OK");
 }
 
-// SET_RGBDAY:<be>:<napok>|<óra>:<perc>:<RRGGBB>:<fényerő>|...   (max. 10 pont, napszak szerint rendezve tárolódnak)
+// SET_RGBDAY:<be>:<napok>|<óra>:<perc>:<fényerő>|...   (max. 10 pont, napszak szerint rendezve tárolódnak)
 void handleSetRgbDay(const String &body) {
   String part[11];
   int np = rgbSplit(body, '|', part, 11);
@@ -314,11 +328,12 @@ void handleSetRgbDay(const String &body) {
   c.days = (uint8_t)constrain(h[1].toInt(), 0, 127);
   for (int i = 1; i < np && c.count < 10; i++) {
     String t[4];
-    if (rgbSplit(part[i], ':', t, 4) < 4) continue;
+    int nt = rgbSplit(part[i], ':', t, 4);   // új alak: óra:perc:fényerő (a régi óra:perc:szín:fényerő is jó, a színt eldobjuk)
+    if (nt < 3) continue;
     RgbDayPt &p = c.pts[c.count];
     p.minute = (uint16_t)(constrain(t[0].toInt(), 0, 23) * 60 + constrain(t[1].toInt(), 0, 59));
-    rgbParseHex(t[2], p.r, p.g, p.b);
-    p.pct = (uint8_t)constrain(t[3].toInt(), 0, 100);
+    p.r = p.g = p.b = 255;
+    p.pct = (uint8_t)constrain(t[nt - 1].toInt(), 0, 100);
     c.count++;
   }
   for (int i = 1; i < c.count; i++) {
@@ -333,13 +348,13 @@ void handleSetRgbDay(const String &body) {
   notifyLine("RGBAUTO_OK");
 }
 
-// SET_RGBPROX:<be>:<RRGGBB>:<fényerő>:<felfutás mp>:<mód 0/1/2>:<világítás mp>:<lefutás mp>[:<napszak-görbéhez igazodik 0/1>]
+// SET_RGBPROX:<be>:<RRGGBB>:<fényerő>:<felfutás mp>:<mód 0/1/2>:<világítás mp>:<lefutás mp>[:<régi, figyelmen kívül marad>]
 void handleSetRgbProx(const String &body) {
   String t[8];
   int n = rgbSplit(body, ':', t, 8);
   if (n < 7) return;
   RgbProxCfg c;
-  c.capByDay = (n >= 8 && t[7].toInt() != 0) ? 1 : 0;
+  c.capByDay = 0;   // már nem használt: a napszak-görbe fényereje mindig érvényes, ha fut
   c.enabled = t[0].toInt() != 0;
   rgbParseHex(t[1], c.r, c.g, c.b);
   c.pct = (uint8_t)constrain(t[2].toInt(), 0, 100);
@@ -373,13 +388,13 @@ void handleGetRgbAuto() {
   s = "LOAD_RGBDAY:" + String(rgbDayCfg.enabled ? 1 : 0) + ":" + String(rgbDayCfg.days);
   for (int i = 0; i < rgbDayCfg.count; i++) {
     const RgbDayPt &x = rgbDayCfg.pts[i];
-    s += "|" + String(x.minute / 60) + ":" + String(x.minute % 60) + ":" + rgbHex(x.r, x.g, x.b) + ":" + String(x.pct);
+    s += "|" + String(x.minute / 60) + ":" + String(x.minute % 60) + ":" + String(x.pct);
   }
   notifyLine(s);
 
   notifyLine("LOAD_RGBPROX:" + String(rgbProxCfg.enabled ? 1 : 0) + ":" + rgbHex(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b) + ":" +
              String(rgbProxCfg.pct) + ":" + String(rgbProxCfg.rampUpSec) + ":" + String(rgbProxCfg.mode) + ":" +
-             String(rgbProxCfg.holdSec) + ":" + String(rgbProxCfg.rampDownSec) + ":" + String(rgbProxCfg.capByDay ? 1 : 0));
+             String(rgbProxCfg.holdSec) + ":" + String(rgbProxCfg.rampDownSec));
 }
 
 // SET_AUTO:RGB:<0/1>

@@ -1,6 +1,7 @@
 // Pages/ThermoDrawables.cs
 // Grafikus megjelenítők a Timing oldal termosztát panelekhez:
 // - FanCurveDrawable: hőmérséklet -> fordulatszám % görbe (1-5 pont)
+// - DayCurveDrawable: napszak -> fényerő % görbe (RGB napszak-görbe, 0:00-24:00, éjfélen át körbeér)
 // - RelayThermoDrawable: BE/KI küszöb szemléltetése (fűtés/hűtés irány automatikus felismeréssel)
 
 using Microsoft.Maui.Graphics;
@@ -164,6 +165,83 @@ public class RelayThermoDrawable : IDrawable
             float cx = X(Math.Clamp(CurrentTemp, minT, maxT));
             canvas.FillColor = Color.FromArgb("#3498db");
             canvas.FillCircle(cx, y, 6);
+        }
+    }
+}
+
+public class DayCurveDrawable : IDrawable
+{
+    public List<(int Minute, int Pct)> Points = new();
+    public int NowMinute = -1;
+
+    public void Draw(ICanvas canvas, RectF rect)
+    {
+        canvas.FillColor = Color.FromArgb("#1A1A1A");
+        canvas.FillRoundedRectangle(rect, 8);
+
+        const float padL = 34, padR = 14, padT = 12, padB = 22;
+        float w = rect.Width - padL - padR;
+        float h = rect.Height - padT - padB;
+        float X(float min) => rect.X + padL + min / 1440f * w;
+        float Y(float pct) => rect.Y + padT + h - pct / 100f * h;
+
+        // Rács + % feliratok
+        canvas.StrokeColor = Color.FromArgb("#333333");
+        canvas.StrokeSize = 1;
+        canvas.FontSize = 9;
+        canvas.FontColor = Color.FromArgb("#777777");
+        for (int p = 0; p <= 100; p += 25)
+        {
+            float y = Y(p);
+            canvas.DrawLine(rect.X + padL, y, rect.X + rect.Width - padR, y);
+            canvas.DrawString($"{p}", rect.X, y - 6, padL - 4, 12, HorizontalAlignment.Right, VerticalAlignment.Center);
+        }
+        // Idő felirat (6 óránként)
+        for (int hh = 0; hh <= 24; hh += 6)
+        {
+            float x = X(hh * 60);
+            canvas.StrokeColor = Color.FromArgb("#262626");
+            canvas.DrawLine(x, rect.Y + padT, x, rect.Y + padT + h);
+            canvas.DrawString($"{hh}:00", x - 20, rect.Y + rect.Height - padB + 4, 40, 14, HorizontalAlignment.Center, VerticalAlignment.Top);
+        }
+
+        if (Points.Count == 0) return;
+        var pts = Points.OrderBy(p => p.Minute).ToList();
+
+        // Érték az éjfélnél: az utolsó és az első pont között (a nap körbeér)
+        float v0;
+        if (pts.Count == 1) v0 = pts[0].Pct;
+        else
+        {
+            int prevMin = pts[^1].Minute - 1440, nextMin = pts[0].Minute;
+            float span = nextMin - prevMin;
+            float f = span <= 0 ? 0 : (0 - prevMin) / span;
+            v0 = pts[^1].Pct + (pts[0].Pct - pts[^1].Pct) * f;
+        }
+
+        canvas.StrokeColor = Color.FromArgb("#e74c3c");
+        canvas.StrokeSize = 3;
+        float px = X(0), py = Y(v0);
+        foreach (var p in pts)
+        {
+            float x = X(p.Minute), y = Y(p.Pct);
+            canvas.DrawLine(px, py, x, y);
+            px = x; py = y;
+        }
+        canvas.DrawLine(px, py, X(1440), Y(v0));
+
+        canvas.FillColor = Colors.White;
+        foreach (var p in pts) canvas.FillCircle(X(p.Minute), Y(p.Pct), 4);
+
+        // Aktuális idő jelölő
+        if (NowMinute >= 0)
+        {
+            float cx = X(NowMinute);
+            canvas.StrokeColor = Color.FromArgb("#3498db");
+            canvas.StrokeSize = 1;
+            canvas.StrokeDashPattern = new float[] { 4, 3 };
+            canvas.DrawLine(cx, rect.Y + padT, cx, rect.Y + padT + h);
+            canvas.StrokeDashPattern = null;
         }
     }
 }

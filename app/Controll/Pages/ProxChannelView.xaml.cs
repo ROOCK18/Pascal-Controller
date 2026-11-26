@@ -34,18 +34,15 @@ public partial class ProxChannelView : ContentView
         switch (Kind)
         {
             case "Relay":
-                ActionPicker.Items.Add("BE az időtartamra (impulzus)");
+                ActionPicker.Items.Add("BE az időtartamra");
                 ActionPicker.Items.Add("KI az időtartamra");
-                LblDur.Text = "Meddig (mp) - 0: a relé Kapuzás ideje";
-                LblIntro.Text = "Amikor a telefon a megadott távolságon belülre ér, a relé végrehajtja ezt (csak Automata állapotban). Az időtartam alatt az automatika nem írja felül.";
+                LblDur.Text = "Meddig (mp), 0 = Kapuzás ideje";
                 break;
             case "Rgb":
                 RgbModePicker.SelectedIndex = 1;
-                LblIntro.Text = "Amikor a telefon a megadott távolságon belülre ér, az RGB a beállított színnel, a felfutási idővel elkezd világítani (csak Automata állapotban). Az \"Amíg ott vagyok\" módban a távozást az Újraélesedés X métere adja.";
                 break;
             default:
-                LblDur.Text = "Meddig (mp) - 0: marad az érték";
-                LblIntro.Text = "Amikor a telefon a megadott távolságon belülre ér, a ventilátor erre a fordulatszámra áll (csak Automata állapotban), az időtartam után visszaáll az előző értékre.";
+                LblDur.Text = "Meddig (mp), 0 = marad";
                 break;
         }
         if (ActionPicker.Items.Count > 0) ActionPicker.SelectedIndex = 0;
@@ -76,6 +73,9 @@ public partial class ProxChannelView : ContentView
         if (Kind == "Rgb") RgbModePicker.SelectedIndex = Math.Clamp(c.RgbMode, 0, 2);
         UpdateRearmVisibility();
     }
+
+    // Csak bekapcsolt közeledésnél látszanak a beállítások (kikapcsolva: csak a kapcsoló és a mentés)
+    private void OnEnabledToggled(object? sender, ToggledEventArgs e) => SettingsBox.IsVisible = EnabledSwitch.IsToggled;
 
     private void OnRgbModeChanged(object? sender, EventArgs e)
     {
@@ -149,7 +149,6 @@ public partial class ProxChannelView : ContentView
             RgbModePicker.SelectedIndex = mode;
             RgbHoldEntry.Text = p[5];
             RgbRampDownEntry.Text = p[6];
-            RgbCapSwitch.IsToggled = p.Length >= 8 && p[7] == "1";
             var id = DeviceId;
             if (id != null && BluetoothManager.FindSaved(id) != null)
             {
@@ -241,7 +240,7 @@ public partial class ProxChannelView : ContentView
             Enabled = enabled, Meters = meters, RearmMode = rearmMode, RearmMeters = rearmMeters, RearmSec = rearmSec, RgbMode = rgbMode
         });
         if (Kind == "Rgb")
-            await BluetoothManager.WriteAsync($"SET_RGBPROX:{(enabled ? 1 : 0)}:{RgbColor.Hex}:{rgbPct}:{rgbUp}:{rgbMode}:{rgbHold}:{rgbDown}:{(RgbCapSwitch.IsToggled ? 1 : 0)}");
+            await BluetoothManager.WriteAsync($"SET_RGBPROX:{(enabled ? 1 : 0)}:{RgbColor.Hex}:{rgbPct}:{rgbUp}:{rgbMode}:{rgbHold}:{rgbDown}");
         else
             await BluetoothManager.WriteAsync($"SET_PROX:{ChannelKey}:{(enabled ? 1 : 0)}:{value}:{seconds}:{action}");
 
