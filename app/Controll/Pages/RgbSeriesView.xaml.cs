@@ -18,6 +18,7 @@ public partial class RgbSeriesView : ContentView
         public Entry? A;                  // csak hőmérséklet-görbe: hőmérséklet
         public TimePicker? Time;          // időzítő / napszak-görbe: görgethető időválasztó
         public Picker? Action;            // csak időzítő: BE / KI
+        public VerticalStackLayout? OnBox; // szín + fényerő (időzítő KI műveletnél rejtett)
         public ColorField? Color;         // napszak-görbénél nincs szín
         public Entry Pct = null!;
         public Entry? Ramp;               // csak időzítő: átmenet (mp)
@@ -160,17 +161,26 @@ public partial class RgbSeriesView : ContentView
             stack.Add(row.Action);
         }
 
+        // Szín + fényerő: időzítőnél csak BE műveletnél látszik (KI-nél felesleges)
+        var onBox = new VerticalStackLayout { Spacing = 6 };
         if (Kind != "Day")
         {
-            stack.Add(Small("Szín"));
+            onBox.Add(Small("Szín"));
             row.Color = new ColorField { Hex = hex };
-            stack.Add(row.Color);
+            onBox.Add(row.Color);
         }
 
-        stack.Add(Small(Kind == "Day" ? "Max. fényerő (%)" : "Fényerő (%)"));
+        onBox.Add(Small(Kind == "Day" ? "Max. fényerő (%)" : "Fényerő (%)"));
         row.Pct = NewEntry(pct.ToString(CultureInfo.InvariantCulture), Keyboard.Numeric);
         row.Pct.TextChanged += (s, e) => RefreshGraph();
-        stack.Add(row.Pct);
+        onBox.Add(row.Pct);
+        stack.Add(onBox);
+        row.OnBox = onBox;
+        if (row.Action != null)
+        {
+            onBox.IsVisible = row.Action.SelectedIndex == 0;
+            row.Action.SelectedIndexChanged += (s, e) => onBox.IsVisible = row.Action.SelectedIndex == 0;
+        }
 
         if (Kind == "Timer")
         {
@@ -284,7 +294,9 @@ public partial class RgbSeriesView : ContentView
         foreach (var r in _rows)
         {
             n++;
-            if (!int.TryParse((r.Pct.Text ?? "").Trim(), out int pct) || pct < 0 || pct > 100)
+            bool isOff = r.Action != null && r.Action.SelectedIndex == 1;   // KI: szín/fényerő nem számít
+            int pct = 100;
+            if (!isOff && (!int.TryParse((r.Pct.Text ?? "").Trim(), out pct) || pct < 0 || pct > 100))
             {
                 await page.DisplayAlertAsync("Hibás érték", $"{n}. sor: a fényerő 0 és 100 közötti szám legyen.", "OK");
                 return;
