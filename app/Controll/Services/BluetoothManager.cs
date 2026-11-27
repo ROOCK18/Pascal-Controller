@@ -61,10 +61,17 @@ public static class BluetoothManager
     // megy át BLE-n: az eszköz egy véletlen nonce-t küld, az app HMAC-SHA256(PIN, nonce)-szal válaszol.
     private static string PinKey(string id) => "blepin_" + id;
 
+    // A PIN-t előbb a SecureStorage-ból (Android Keystore), ha ott nincs vagy hibás, a Preferences tartalékból olvassuk.
+    // (A SecureStorage újratelepítés / frissítés után előfordul, hogy nem olvasható vissza - ilyenkor ne kelljen újra beírni.)
     private static async Task<string?> GetPinAsync(string id)
     {
-        try { return await SecureStorage.Default.GetAsync(PinKey(id)); }
-        catch { return GetPrefOrNull(PinKey(id)); }
+        try
+        {
+            var v = await SecureStorage.Default.GetAsync(PinKey(id));
+            if (!string.IsNullOrEmpty(v)) return v;
+        }
+        catch { }
+        return GetPrefOrNull(PinKey(id));
     }
 
     // Preferences.Get null alapértéket nem fogad el: az üres szöveget tekintjük "nincs értéknek".
@@ -73,10 +80,16 @@ public static class BluetoothManager
         var v = Preferences.Get(key, "");
         return v.Length == 0 ? null : v;
     }
+    // Mentés a SecureStorage-ba, visszaolvasással ellenőrizve; ha az nem megbízható, a Preferences tartalékba.
     private static async Task SetPinAsync(string id, string pin)
     {
-        try { await SecureStorage.Default.SetAsync(PinKey(id), pin); }
-        catch { Preferences.Set(PinKey(id), pin); }
+        try
+        {
+            await SecureStorage.Default.SetAsync(PinKey(id), pin);
+            if (await SecureStorage.Default.GetAsync(PinKey(id)) == pin) { Preferences.Remove(PinKey(id)); return; }
+        }
+        catch { }
+        Preferences.Set(PinKey(id), pin);
     }
     private static void ClearPin(string id)
     {
@@ -105,10 +118,14 @@ public static class BluetoothManager
         finally { OnDataReceived -= Handler; }
     }
 
-    // "OK" | "FAIL" | "LOCKED" | "NOAUTH" (a firmware nem kér hitelesítést / régi firmware)
+    // "OK" | "FAIL" (az eszköz kifejezetten elutasította a PIN-t) | "LOCKED" | "NOAUTH" (a firmware nem kér hitelesítést / régi firmware)
+    // | "TIMEOUT" (a válasz elmaradt: átmeneti BLE-hiba, a mentett PIN-t ilyenkor NEM töröljük)
     private static async Task<string> TryAuthAsync(string pin)
     {
-        var r = await RequestAsync("AUTH_BEGIN", new[] { "AUTH_NONCE:", "AUTH_OFF", "ERROR:AUTH" }, 3000);
+        // Elveszett válasz ellen kétszer próbáljuk: egyetlen kimaradt válasz miatt ne tűnjön úgy, hogy nincs védelem
+        string? r = null;
+        for (int i = 0; i < 2 && r == null; i++)
+            r = await RequestAsync("AUTH_BEGIN", new[] { "AUTH_NONCE:", "AUTH_OFF", "ERROR:AUTH" }, 3000);
         if (r == null || r.StartsWith("AUTH_OFF")) return "NOAUTH";
         if (!r.StartsWith("AUTH_NONCE:")) return "FAIL";
 
@@ -117,7 +134,7 @@ public static class BluetoothManager
         string mac = Convert.ToHexString(hmac.ComputeHash(Encoding.ASCII.GetBytes(nonce))).ToLowerInvariant();
 
         var a = await RequestAsync("AUTH:" + mac, new[] { "AUTH_OK", "AUTH_FAIL", "AUTH_LOCKED" }, 3000);
-        if (a == null) return "FAIL";
+        if (a == null) return "TIMEOUT";
         if (a.StartsWith("AUTH_OK")) return "OK";
         if (a.StartsWith("AUTH_LOCKED")) return "LOCKED";
         return "FAIL";
@@ -136,6 +153,7 @@ public static class BluetoothManager
         string id = connected.Id.ToString();
 
         string message = "Add meg az eszköz kijelzőjén látható PIN-kódot (Beállítások → BLE védelem).";
+        int timeouts = 0;
         for (int attempt = 0; attempt < 4; attempt++)
         {
             string? pin = await GetPinAsync(id);
@@ -150,6 +168,12 @@ public static class BluetoothManager
             {
                 case "OK": await SetPinAsync(id, pin); return true;
                 case "NOAUTH": return true;
+                case "TIMEOUT":
+                    // Átmeneti hiba: a mentett PIN megmarad, újrapróbáljuk (nem kérünk új PIN-t)
+                    if (++timeouts >= 3) return false;
+                    attempt--;
+                    await Task.Delay(600);
+                    break;
                 case "LOCKED":
                     await MainThread.InvokeOnMainThreadAsync(() => UiHelper.CurrentPage.DisplayAlertAsync(
                         "Zárolva", "Túl sok hibás PIN. Próbáld újra egy perc múlva.", "OK"));

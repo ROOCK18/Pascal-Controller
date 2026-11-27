@@ -13,7 +13,7 @@
                     <Border x:Name="Fan1PowerBorder"                        Grid.Column="2"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0"
@@ -36,7 +36,7 @@
                     </Border>
                 </Grid>
 
-                <Border x:Name="Fan1AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Start">
+                <Border x:Name="Fan1AutoBorder" BackgroundColor="{StaticResource ControlGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Start">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnFan1AutoToggle"/>
                     </Border.GestureRecognizers>
@@ -48,7 +48,7 @@
                     <Slider x:Name="Fan1Slider" 
                             ThumbColor="{StaticResource White}"
                             MinimumTrackColor="{StaticResource PrimaryRed}"
-                            MaximumTrackColor="{StaticResource LightGray}" 
+                            MaximumTrackColor="{StaticResource ControlGray}" 
                             Grid.Column="1" 
                             Minimum="0" 
                             Maximum="100" 
@@ -64,7 +64,7 @@
                         Grid.Row="1"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0,25,0,0"
@@ -89,7 +89,7 @@
                         Grid.Row="1"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0,25,0,0"
@@ -114,7 +114,7 @@
                         Grid.Row="1"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0,25,0,0"
@@ -149,7 +149,7 @@
                         Grid.Column="2"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0"
@@ -176,7 +176,7 @@
                     </Border>
                 </Grid>
 
-                <Border x:Name="Fan2AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Start">
+                <Border x:Name="Fan2AutoBorder" BackgroundColor="{StaticResource ControlGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Start">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnFan2AutoToggle"/>
                     </Border.GestureRecognizers>
@@ -188,7 +188,7 @@
                     <Slider x:Name="Fan2Slider" 
                             ThumbColor="{StaticResource White}"
                             MinimumTrackColor="{StaticResource PrimaryRed}"
-                            MaximumTrackColor="{StaticResource LightGray}" 
+                            MaximumTrackColor="{StaticResource ControlGray}" 
                             Grid.Column="1" 
                             Minimum="0" 
                             Maximum="100" 
@@ -204,7 +204,7 @@
                         Grid.Row="1"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0,25,0,0"
@@ -229,7 +229,7 @@
                         Grid.Row="1"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0,25,0,0"
@@ -254,7 +254,7 @@
                         Grid.Row="1"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0,25,0,0"
@@ -294,7 +294,7 @@
                        FontSize="{StaticResource MediumFontSize}"
                        FontAttributes="Bold" />
 
-                    <Border x:Name="Relay1AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Center">
+                    <Border x:Name="Relay1AutoBorder" BackgroundColor="{StaticResource ControlGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Center">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnRelay1AutoToggle"/>
                         </Border.GestureRecognizers>
@@ -305,7 +305,7 @@
                         Grid.Column="2"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0"
@@ -345,7 +345,7 @@
                        FontSize="{StaticResource MediumFontSize}"
                        FontAttributes="Bold" />
 
-                    <Border x:Name="Relay2AutoBorder" BackgroundColor="{StaticResource LightGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Center">
+                    <Border x:Name="Relay2AutoBorder" BackgroundColor="{StaticResource ControlGray}" Stroke="#000000" StrokeThickness="1" StrokeShape="RoundRectangle 12,0,0,12" Padding="6,2" WidthRequest="72" HeightRequest="24" HorizontalOptions="Center">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnRelay2AutoToggle"/>
                         </Border.GestureRecognizers>
@@ -356,7 +356,7 @@
                         Grid.Column="2"
                         WidthRequest="80"
                         HeightRequest="35"
-                        BackgroundColor="{StaticResource LightGray}"
+                        BackgroundColor="{StaticResource ControlGray}"
                         Stroke="#000000"
                         StrokeThickness="1"
                         Margin="0"

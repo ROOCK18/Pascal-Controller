@@ -232,7 +232,7 @@ public partial class MainPage : ContentPage
         int? avg = rssi == null ? null : (int)Math.Round(_rssiHist.Average());
         int bars = avg == null ? 0 : avg >= -55 ? 5 : avg >= -65 ? 4 : avg >= -75 ? 3 : avg >= -85 ? 2 : 1;
         var active = bars <= 1 ? Colors.OrangeRed : Colors.LimeGreen;
-        var off = Color.FromArgb("#3A3A3C");
+        var off = Color.FromArgb("#5A5A5E");
         Border[] all = { SigBar1, SigBar2, SigBar3, SigBar4, SigBar5 };
         for (int i = 0; i < all.Length; i++) all[i].BackgroundColor = i < bars ? active : off;
         LblRssi.Text = avg == null ? "--" : $"{avg} dBm";
@@ -283,6 +283,30 @@ public partial class MainPage : ContentPage
         _rssiTimer.Start();
         if (!string.IsNullOrEmpty(_currentTabKey))
             LoadContent(_currentTabKey);
+        _ = PrewarmPagesAsync();
+    }
+
+    // Az oldalak felépítése (XAML) lassú: az első megjelenés után, a háttérben egymás után előre létrehozzuk őket,
+    // hogy a fülváltás / megnyitás ne az érintéskor építse fel az oldalt.
+    private bool _prewarmed;
+    private async Task PrewarmPagesAsync()
+    {
+        if (_prewarmed) return;
+        _prewarmed = true;
+        try
+        {
+            await Task.Delay(500);
+            foreach (var key in new[] { "controll", "RGB", "data" })
+            {
+                if (_pages.ContainsKey(key)) continue;
+                _pages[key] = key switch { "RGB" => new RGB(), "controll" => new Ctrl(), _ => new Data() };
+                await Task.Delay(60);   // közben a felület reagálhat
+            }
+            _timingPage ??= new Timing();
+            await Task.Delay(60);
+            _rgbAutoPage ??= new RgbAuto();
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Előtöltés: {ex.Message}"); }
     }
 
     protected override void OnDisappearing()

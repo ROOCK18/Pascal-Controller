@@ -1,26 +1,25 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Controll.Pages.NoteEditorPage"
-             Title="Szerkesztés"
-             BackgroundColor="#1A1A1A">
+             Title="Szerkesztés">
 
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20">
             <Label Text="Bejegyzés adatai" TextColor="White" FontSize="20" FontAttributes="Bold" />
 
-            <Entry x:Name="TitleEntry" Placeholder="Cím" TextColor="White" PlaceholderColor="Gray" />
+            <Entry x:Name="TitleEntry" Placeholder="Cím" TextColor="White" PlaceholderColor="#8E8E93" />
 
-            <Editor x:Name="DescriptionEditor" Placeholder="Leírás" TextColor="White" PlaceholderColor="Gray" 
+            <Editor x:Name="DescriptionEditor" Placeholder="Leírás" TextColor="White" PlaceholderColor="#8E8E93" 
                     HeightRequest="200" AutoSize="TextChanges" />
 
             <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
                 <VerticalStackLayout Grid.Column="0" Spacing="5">
-                    <Label Text="Kategória" TextColor="Gray" FontSize="12" Margin="5,0" />
-                    <Entry x:Name="CategoryEntry" Placeholder="Pl. Hiba, Munka..." TextColor="White" PlaceholderColor="Gray" />
+                    <Label Text="Kategória" TextColor="#AEAEB2" FontSize="12" Margin="5,0" />
+                    <Entry x:Name="CategoryEntry" Placeholder="Pl. Hiba, Munka..." TextColor="White" PlaceholderColor="#8E8E93" />
                 </VerticalStackLayout>
 
                 <VerticalStackLayout Grid.Column="1" Spacing="5">
-                    <Label Text="Prioritás" TextColor="Gray" FontSize="12" Margin="5,0" />
+                    <Label Text="Prioritás" TextColor="#AEAEB2" FontSize="12" Margin="5,0" />
                     <Picker x:Name="PriorityPicker" TextColor="White">
                         <Picker.Items>
                             <x:String>Alacsony</x:String>
@@ -32,7 +31,7 @@
             </Grid>
 
             <VerticalStackLayout Spacing="5">
-                <Label Text="Határidő" TextColor="Gray" FontSize="12" Margin="5,0" />
+                <Label Text="Határidő" TextColor="#AEAEB2" FontSize="12" Margin="5,0" />
                 <DatePicker x:Name="DeadlinePicker" TextColor="White" />
             </VerticalStackLayout>
 

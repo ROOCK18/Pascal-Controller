@@ -18,33 +18,33 @@
 
         <VerticalStackLayout x:Name="DetailsPanel" Spacing="8" IsVisible="False">
             <HorizontalStackLayout Spacing="10">
-                <Label Text="Bekapcsolva" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                <Label Text="Bekapcsolva" TextColor="#AEAEB2" FontSize="13" VerticalOptions="Center" />
                 <Switch x:Name="EnabledSwitch" Toggled="OnEnabledToggled" />
             </HorizontalStackLayout>
 
             <VerticalStackLayout x:Name="SettingsBox" Spacing="8" IsVisible="False">
-                <Label Text="Távolság (m)" TextColor="Gray" FontSize="12" />
-                <Entry x:Name="MetersEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="10" />
+                <Label Text="Távolság (m)" TextColor="#AEAEB2" FontSize="12" />
+                <Entry x:Name="MetersEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="10" />
 
                 <VerticalStackLayout x:Name="FanValueBox" Spacing="4">
-                    <Label Text="Fordulatszám (%)" TextColor="Gray" FontSize="12" />
-                    <Entry x:Name="ValueEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="100" />
+                    <Label Text="Fordulatszám (%)" TextColor="#AEAEB2" FontSize="12" />
+                    <Entry x:Name="ValueEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="100" />
                 </VerticalStackLayout>
                 <VerticalStackLayout x:Name="ActionBox" Spacing="4">
-                    <Label Text="Mit csináljon" TextColor="Gray" FontSize="12" />
-                    <Picker x:Name="ActionPicker" TextColor="White" BackgroundColor="#3A3A3A" />
+                    <Label Text="Mit csináljon" TextColor="#AEAEB2" FontSize="12" />
+                    <Picker x:Name="ActionPicker" TextColor="White" BackgroundColor="{StaticResource ControlGray}" />
                 </VerticalStackLayout>
 
                 <!-- RGB: szín, fényerő, felfutás, világítási mód, lefutás (csak az RGB automatikák oldalon) -->
                 <VerticalStackLayout x:Name="RgbBox" Spacing="6" IsVisible="False">
-                    <Label Text="Szín" TextColor="Gray" FontSize="12" />
+                    <Label Text="Szín" TextColor="#AEAEB2" FontSize="12" />
                     <pages:ColorField x:Name="RgbColor" />
-                    <Label Text="Fényerő (%)" TextColor="Gray" FontSize="12" />
-                    <Entry x:Name="RgbPctEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="100" />
-                    <Label Text="Felfutás (mp)" TextColor="Gray" FontSize="12" />
-                    <Entry x:Name="RgbRampUpEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="5" />
-                    <Label Text="Világítási mód" TextColor="Gray" FontSize="12" />
-                    <Picker x:Name="RgbModePicker" TextColor="White" BackgroundColor="#3A3A3A" SelectedIndexChanged="OnRgbModeChanged">
+                    <Label Text="Fényerő (%)" TextColor="#AEAEB2" FontSize="12" />
+                    <Entry x:Name="RgbPctEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="100" />
+                    <Label Text="Felfutás (mp)" TextColor="#AEAEB2" FontSize="12" />
+                    <Entry x:Name="RgbRampUpEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="5" />
+                    <Label Text="Világítási mód" TextColor="#AEAEB2" FontSize="12" />
+                    <Picker x:Name="RgbModePicker" TextColor="White" BackgroundColor="{StaticResource ControlGray}" SelectedIndexChanged="OnRgbModeChanged">
                         <Picker.Items>
                             <x:String>Csak felkapcsol</x:String>
                             <x:String>Amíg ott vagyok</x:String>
@@ -52,18 +52,18 @@
                         </Picker.Items>
                     </Picker>
                     <VerticalStackLayout x:Name="RgbHoldBox" Spacing="4">
-                        <Label Text="Világítási idő (mp)" TextColor="Gray" FontSize="12" />
-                        <Entry x:Name="RgbHoldEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="60" />
+                        <Label Text="Világítási idő (mp)" TextColor="#AEAEB2" FontSize="12" />
+                        <Entry x:Name="RgbHoldEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="60" />
                     </VerticalStackLayout>
-                    <Label Text="Lefutás (mp)" TextColor="Gray" FontSize="12" />
-                    <Entry x:Name="RgbRampDownEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="5" />
+                    <Label Text="Lefutás (mp)" TextColor="#AEAEB2" FontSize="12" />
+                    <Entry x:Name="RgbRampDownEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="5" />
                 </VerticalStackLayout>
 
-                <Label x:Name="LblDur" Text="Meddig (mp)" TextColor="Gray" FontSize="12" />
-                <Entry x:Name="DurEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="60" />
+                <Label x:Name="LblDur" Text="Meddig (mp)" TextColor="#AEAEB2" FontSize="12" />
+                <Entry x:Name="DurEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="60" />
 
-                <Label Text="Újraélesedés" TextColor="Gray" FontSize="12" />
-                <Picker x:Name="RearmPicker" TextColor="White" BackgroundColor="#3A3A3A" SelectedIndexChanged="OnRearmChanged">
+                <Label Text="Újraélesedés" TextColor="#AEAEB2" FontSize="12" />
+                <Picker x:Name="RearmPicker" TextColor="White" BackgroundColor="{StaticResource ControlGray}" SelectedIndexChanged="OnRearmChanged">
                     <Picker.Items>
                         <x:String>Teljes szétkapcsolás után</x:String>
                         <x:String>X m-en kívül</x:String>
@@ -71,12 +71,12 @@
                     </Picker.Items>
                 </Picker>
                 <VerticalStackLayout x:Name="RearmMetersBox" Spacing="4">
-                    <Label Text="X méter" TextColor="Gray" FontSize="12" />
-                    <Entry x:Name="RearmMetersEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="15" />
+                    <Label Text="X méter" TextColor="#AEAEB2" FontSize="12" />
+                    <Entry x:Name="RearmMetersEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="15" />
                 </VerticalStackLayout>
                 <VerticalStackLayout x:Name="RearmSecBox" Spacing="4">
-                    <Label Text="X másodperc" TextColor="Gray" FontSize="12" />
-                    <Entry x:Name="RearmSecEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="30" />
+                    <Label Text="X másodperc" TextColor="#AEAEB2" FontSize="12" />
+                    <Entry x:Name="RearmSecEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="30" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
 

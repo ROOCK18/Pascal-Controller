@@ -257,23 +257,23 @@ public partial class Settings : ContentPage
             RefreshSchemePicker();
             BluetoothManager.NotifyConnectionSuccess();
             await SyncTimeAsync();
-            await Task.Delay(200);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_STATE");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_COMP");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:1");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:2");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_MQTT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_ALERT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_WIFI_STATUS");
             // Nincs felugró "sikeres csatlakozás" ablak - a UI (UpdateLocalUI)
             // már addigra átvált a csatlakoztatott nézetre, ez elég visszajelzés.
@@ -304,21 +304,21 @@ public partial class Settings : ContentPage
             BluetoothManager.OnDataReceived -= OnSettingsDataReceived;
             BluetoothManager.OnDataReceived += OnSettingsDataReceived;
             await BluetoothManager.WriteAsync("GET_STATE");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_COMP");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:1");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:2");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_MQTT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_ALERT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_WIFI_STATUS");
             RefreshSchemePicker();
         }
@@ -1346,21 +1346,21 @@ public partial class Settings : ContentPage
             RefreshSchemePicker();
             await Task.Delay(400);
             await BluetoothManager.WriteAsync("GET_STATE");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_COMP");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:1");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:2");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_MQTT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_ALERT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_WIFI_STATUS");
         }
         catch (Exception ex) { Debug.WriteLine($"Frissítés újracsatlakozás után: {ex.Message}"); }
@@ -1380,9 +1380,17 @@ public partial class Settings : ContentPage
         DeviceSearchSection.IsVisible = !connected;
         ProximityPanel.IsVisible = connected;   // közeledés-beállítás csak csatlakozva (a csatlakoztatott eszközre); egyébként csak az eszközkereső látszik
         if (connected) RefreshProximityPanel();
-        // Comp/Display/DateTime panelek csak akkor válnak láthatóvá, ha a
-        // megfelelő LOAD_* válasz megérkezett (lásd OnSettingsDataReceived) -
+        // Csatlakozva minden menüpont azonnal ott van (a lekérdezés csak a szövegeket / értékeket tölti ki, a kép nem ugrál);
         // lecsatlakozáskor viszont mindenképp el kell tüntetni őket.
+        CompPanel.IsVisible = connected;
+        MqttPanel.IsVisible = connected;
+        AlertPanel.IsVisible = connected;
+        DisplayPanel.IsVisible = connected;
+        DateTimePanel.IsVisible = connected;
+        if (connected)
+        {
+            SensBlock1.IsVisible = true; SensBlock2.IsVisible = true; SaveSensButton.IsVisible = true;
+        }
         if (!connected)
         {
             CompPanel.IsVisible = false;
@@ -1493,21 +1501,21 @@ public partial class Settings : ContentPage
             // Minden beállítás-csoport lekérdezése - a válaszokat
             // OnSchemeCaptureData gyűjti a _capturedSchemeLines listába.
             await BluetoothManager.WriteAsync("GET_STATE");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_COMP");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:1");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_SENS:2");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_MQTT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_ALERT");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DISPLAY");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_DATEPOS");
-            await Task.Delay(150);
+            await Task.Delay(40);
             await BluetoothManager.WriteAsync("GET_ALL"); // ventilátor/relé görbék, logika, időzítők, kapuzás mind
 
             // Az eszköz több tucat sort küld vissza BLE notify-n - erre időt
@@ -1602,11 +1610,11 @@ public partial class Settings : ContentPage
         await BluetoothManager.WriteAsync("GET_STATE");
         await Task.Delay(250);
         await BluetoothManager.WriteAsync("GET_COMP");
-        await Task.Delay(150);
+        await Task.Delay(40);
         await BluetoothManager.WriteAsync("GET_SENS:1");
-        await Task.Delay(150);
+        await Task.Delay(40);
         await BluetoothManager.WriteAsync("GET_SENS:2");
-        await Task.Delay(150);
+        await Task.Delay(40);
         await BluetoothManager.WriteAsync("GET_MQTT");
         await Task.Delay(250);
         await BluetoothManager.WriteAsync("GET_DISPLAY");

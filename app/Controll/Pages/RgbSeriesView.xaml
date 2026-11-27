@@ -16,15 +16,15 @@
 
         <VerticalStackLayout x:Name="DetailsPanel" Spacing="8" IsVisible="False">
             <HorizontalStackLayout Spacing="10">
-                <Label Text="Bekapcsolva" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                <Label Text="Bekapcsolva" TextColor="#AEAEB2" FontSize="13" VerticalOptions="Center" />
                 <Switch x:Name="EnabledSwitch" />
             </HorizontalStackLayout>
 
-            <Label x:Name="IntroLabel" Text="" TextColor="Gray" FontSize="12" />
+            <Label x:Name="IntroLabel" Text="" TextColor="#AEAEB2" FontSize="12" />
 
             <VerticalStackLayout x:Name="SensorBox" Spacing="4" IsVisible="False">
-                <Label Text="Hőmérő (forrás)" TextColor="Gray" FontSize="12" />
-                <Picker x:Name="SensorPicker" TextColor="White" BackgroundColor="#3A3A3A">
+                <Label Text="Hőmérő (forrás)" TextColor="#AEAEB2" FontSize="12" />
+                <Picker x:Name="SensorPicker" TextColor="White" BackgroundColor="{StaticResource ControlGray}">
                     <Picker.Items>
                         <x:String>1. hőmérő</x:String>
                         <x:String>2. hőmérő</x:String>
@@ -33,7 +33,7 @@
             </VerticalStackLayout>
 
             <VerticalStackLayout x:Name="DaysBox" Spacing="4" IsVisible="False">
-                <Label Text="Napok" TextColor="Gray" FontSize="12" />
+                <Label Text="Napok" TextColor="#AEAEB2" FontSize="12" />
                 <HorizontalStackLayout x:Name="DaysRow" Spacing="4" />
             </VerticalStackLayout>
 
@@ -41,7 +41,7 @@
 
             <VerticalStackLayout x:Name="RowsContainer" Spacing="8" />
 
-            <Border x:Name="AddBtn" BackgroundColor="#444444" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">
+            <Border x:Name="AddBtn" BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="38">
                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnAddTapped"/></Border.GestureRecognizers>
                 <Label x:Name="AddLabel" Text="+ Hozzáadás" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
             </Border>

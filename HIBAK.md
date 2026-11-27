@@ -117,3 +117,9 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - Az Androidos CameraX-hívások (AE-zár, napfény-fehéregyensúly) eszközönként eltérően támogatottak; ha egy telefon nem veszi figyelembe, a mérés pontatlanabb lehet.
 - A kézi csúszkák a csatorna fényerő-skáláját állítják (a táblázat alakja megmarad); a referencia-fehér mód az eszközön nem perzisztens: mentés nélküli kilépéskor a régi kalibráció marad.
 - Hardveren / telefonon nem próbáltam: a teljes kalibrálási menet (kamera, mérés, számítás, mentés), a csúszkás referencia-fehér, a "Kalibráció használata" kapcsoló, a törlés.
+
+## App – kezelőfelület / BLE védelem: ismert korlátok
+- A PIN mentése: ha a telefon SecureStorage-a nem olvasható vissza (pl. újratelepítés után), tartalékként a Preferences-be kerül. Hibás PIN esetén (az eszköz kifejezett elutasítása) a mentett PIN törlődik és újat kér.
+- Az oldalak előtöltése a háttérben történik az első megjelenés után: a legelső pár másodpercben a lassabb telefonokon még lehet kis késés. Debug build lényegesen lassabb a Release-nél (XAML-értelmezés, JIT): a gyors működéshez Release-ben telepítsd.
+- A fejléc WiFi/BT ikonjai (5.5.3-tól) csak az új firmware-rel jelennek meg; a régebbi (5.5.2) csak csatlakozva mutatta őket.
+- Hardveren / telefonon nem próbáltam: az új kontrasztok, az előtöltés, a PIN-mentés.

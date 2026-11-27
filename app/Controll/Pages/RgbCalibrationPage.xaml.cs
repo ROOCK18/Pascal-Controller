@@ -150,7 +150,7 @@ public partial class RgbCalibrationPage : ContentPage
     }
 
     // ── Gombok ──
-    private async void OnSaveClicked(object? sender, EventArgs e)
+    private async void OnSaveTapped(object? sender, TappedEventArgs e)
     {
         if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
         _debounce?.Cancel();
@@ -162,7 +162,7 @@ public partial class RgbCalibrationPage : ContentPage
         StatusLabel.Text = "Mentve.";
     }
 
-    private async void OnCameraClicked(object? sender, EventArgs e)
+    private async void OnCameraTapped(object? sender, TappedEventArgs e)
     {
         if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
         await Navigation.PushAsync(new RgbCameraCalibrationPage());
@@ -174,7 +174,7 @@ public partial class RgbCalibrationPage : ContentPage
         await BluetoothManager.WriteAsync(e.Value ? "RGBCAL_ON:1" : "RGBCAL_ON:0");
     }
 
-    private async void OnResetClicked(object? sender, EventArgs e)
+    private async void OnResetTapped(object? sender, TappedEventArgs e)
     {
         if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
         bool ok = await DisplayAlertAsync("Törlés", "Törlöd a kalibrációt? Minden csatorna 100 % lesz.", "Törlés", "Mégse");

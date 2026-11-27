@@ -10,7 +10,7 @@
                 <BoxView x:Name="Preview" Color="White" />
             </Border>
             <Entry Grid.Column="1" x:Name="HexEntry" Placeholder="RRGGBB" MaxLength="7" Text="FFFFFF"
-                   TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" TextChanged="OnHexChanged" />
+                   TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" TextChanged="OnHexChanged" />
         </Grid>
         <FlexLayout x:Name="Swatches" Wrap="Wrap" JustifyContent="Start" />
     </VerticalStackLayout>

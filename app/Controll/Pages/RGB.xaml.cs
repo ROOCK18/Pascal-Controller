@@ -226,7 +226,7 @@ public partial class RGB : ContentView
 
     private void UpdateToggleVisuals()
     {
-        ToggleBorder.BackgroundColor = _colorEnabled ? UiHelper.ThemeColor("PrimaryRed") : UiHelper.ThemeColor("LightGray");
+        ToggleBorder.BackgroundColor = _colorEnabled ? UiHelper.ThemeColor("PrimaryRed") : UiHelper.ThemeColor("ControlGray");
         ToggleLabel.Text = _colorEnabled ? "ON" : "OFF";
     }
 

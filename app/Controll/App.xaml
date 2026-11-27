@@ -8,6 +8,8 @@
             <Color x:Key="GraphiteGray">#2C2C2E</Color>
             <Color x:Key="DarkGray">#1C1C1E</Color>
             <Color x:Key="LightGray">#3A3A3C</Color>
+            <!-- Vezérlők (mezők, gombok inaktív állapota) háttere: jól elüt a kártyák (#1C1C1E / #2C2C2E) hátterétől -->
+            <Color x:Key="ControlGray">#5A5A5E</Color>
             <Color x:Key="PrimaryRed">#FF453A</Color>
             <Color x:Key="DarkRed">#D70015</Color>
             <Color x:Key="White">#FFFFFF</Color>
@@ -44,7 +46,7 @@
                  szöveg, szürke keret). Az Android natív "indigo" alávonás
                  platform-szintű felülírását lásd MauiProgram.cs (PickerHandler). -->
             <Style TargetType="Picker">
-                <Setter Property="BackgroundColor" Value="{StaticResource LightGray}" />
+                <Setter Property="BackgroundColor" Value="{StaticResource ControlGray}" />
                 <Setter Property="TextColor" Value="{StaticResource White}" />
                 <Setter Property="TitleColor" Value="#AEAEB2" />
                 <Setter Property="FontSize" Value="{StaticResource MediumFontSize}" />
@@ -57,9 +59,19 @@
                  CursorColor property nem alkalmazható innen (implicit Style
                  Setterként induláskor XamlParseException-t dobott). -->
             <Style TargetType="Entry">
-                <Setter Property="BackgroundColor" Value="{StaticResource LightGray}" />
+                <Setter Property="BackgroundColor" Value="{StaticResource ControlGray}" />
                 <Setter Property="TextColor" Value="{StaticResource White}" />
                 <Setter Property="PlaceholderColor" Value="#8E8E93" />
+            </Style>
+
+            <!-- Időválasztó / dátumválasztó: ugyanaz a stílus, mint a mezőké -->
+            <Style TargetType="TimePicker">
+                <Setter Property="BackgroundColor" Value="{StaticResource ControlGray}" />
+                <Setter Property="TextColor" Value="{StaticResource White}" />
+            </Style>
+            <Style TargetType="DatePicker">
+                <Setter Property="BackgroundColor" Value="{StaticResource ControlGray}" />
+                <Setter Property="TextColor" Value="{StaticResource White}" />
             </Style>
 
             <!-- ... többi stílus ... -->

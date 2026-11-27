@@ -14,7 +14,7 @@ public partial class RgbAuto : ContentView
     public async void RequestProx()
     {
         ProxRgbView.Reload();
-        await Task.Delay(300);
+        await Task.Delay(100);
         if (BluetoothManager.IsConnected)
         {
             await BluetoothManager.WriteAsync("GET_RGBAUTO");   // Automata/Kézi, időzítő, görbék, közeledés

@@ -16,30 +16,30 @@
 
         <VerticalStackLayout x:Name="DetailsPanel" Spacing="8" IsVisible="False">
             <HorizontalStackLayout Spacing="10">
-                <Label Text="Bekapcsolva" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                <Label Text="Bekapcsolva" TextColor="#AEAEB2" FontSize="13" VerticalOptions="Center" />
                 <Switch x:Name="EnabledSwitch" />
             </HorizontalStackLayout>
 
-            <Label Text="Értesítést kapsz a telefonra, ha a csatorna hőmérője meghibásodik, vagy a hőmérséklet kilép a megadott határok közül. Az értesítés akkor érkezik meg, ha a telefon kapcsolatban van az eszközzel." TextColor="Gray" FontSize="12" />
+            <Label Text="Értesítést kapsz a telefonra, ha a csatorna hőmérője meghibásodik, vagy a hőmérséklet kilép a megadott határok közül. Az értesítés akkor érkezik meg, ha a telefon kapcsolatban van az eszközzel." TextColor="#AEAEB2" FontSize="12" />
 
             <HorizontalStackLayout Spacing="10">
-                <Label Text="Szenzorhiba" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                <Label Text="Szenzorhiba" TextColor="#AEAEB2" FontSize="13" VerticalOptions="Center" />
                 <Switch x:Name="FaultSwitch" />
             </HorizontalStackLayout>
 
             <HorizontalStackLayout Spacing="10">
-                <Label Text="Túl alacsony hőmérséklet" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                <Label Text="Túl alacsony hőmérséklet" TextColor="#AEAEB2" FontSize="13" VerticalOptions="Center" />
                 <Switch x:Name="LowSwitch" />
             </HorizontalStackLayout>
-            <Label Text="Alsó határ (°C)" TextColor="Gray" FontSize="12" />
-            <Entry x:Name="LowEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="5" />
+            <Label Text="Alsó határ (°C)" TextColor="#AEAEB2" FontSize="12" />
+            <Entry x:Name="LowEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="5" />
 
             <HorizontalStackLayout Spacing="10">
-                <Label Text="Túl magas hőmérséklet" TextColor="Gray" FontSize="13" VerticalOptions="Center" />
+                <Label Text="Túl magas hőmérséklet" TextColor="#AEAEB2" FontSize="13" VerticalOptions="Center" />
                 <Switch x:Name="HighSwitch" />
             </HorizontalStackLayout>
-            <Label Text="Felső határ (°C)" TextColor="Gray" FontSize="12" />
-            <Entry x:Name="HighEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="#3A3A3A" HeightRequest="40" Text="35" />
+            <Label Text="Felső határ (°C)" TextColor="#AEAEB2" FontSize="12" />
+            <Entry x:Name="HighEntry" Keyboard="Numeric" TextColor="White" BackgroundColor="{StaticResource ControlGray}" HeightRequest="40" Text="35" />
 
             <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveTapped"/></Border.GestureRecognizers>

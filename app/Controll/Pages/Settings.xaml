@@ -75,11 +75,11 @@
                                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveSchemeClicked"/></Border.GestureRecognizers>
                                 <Label Text="MENTÉS" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
-                            <Border Grid.Column="1" BackgroundColor="{StaticResource LightGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                            <Border Grid.Column="1" BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnLoadSchemeClicked"/></Border.GestureRecognizers>
                                 <Label Text="BETÖLTÉS" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
-                            <Border Grid.Column="2" BackgroundColor="{StaticResource LightGray}" StrokeShape="RoundRectangle 22,0,0,22" WidthRequest="45" HeightRequest="45">
+                            <Border Grid.Column="2" BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 22,0,0,22" WidthRequest="45" HeightRequest="45">
                                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnShareSchemeClicked"/></Border.GestureRecognizers>
                                 <Label Text="&#8593;" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
@@ -108,15 +108,15 @@
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="6">
                                     <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
                                         <Label Text="Névleges ellenállás (Ω)" TextColor="#AEAEB2" FontSize="12" />
-                                        <Entry x:Name="SensR0Entry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                        <Entry x:Name="SensR0Entry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                     </VerticalStackLayout>
                                     <VerticalStackLayout x:Name="SensT0Box1" Grid.Row="1" Grid.Column="0" Spacing="4">
                                         <Label Text="Alap hőfok (°C)" TextColor="#AEAEB2" FontSize="12" />
-                                        <Entry x:Name="SensT0Entry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                        <Entry x:Name="SensT0Entry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                     </VerticalStackLayout>
                                     <VerticalStackLayout x:Name="SensBetaBox1" Grid.Row="1" Grid.Column="1" Spacing="4">
                                         <Label Text="Béta (β)" TextColor="#AEAEB2" FontSize="12" />
-                                        <Entry x:Name="SensBetaEntry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                        <Entry x:Name="SensBetaEntry1" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                     </VerticalStackLayout>
                                 </Grid>
                             </VerticalStackLayout>
@@ -126,15 +126,15 @@
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="6">
                                     <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
                                         <Label Text="Névleges ellenállás (Ω)" TextColor="#AEAEB2" FontSize="12" />
-                                        <Entry x:Name="SensR0Entry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                        <Entry x:Name="SensR0Entry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                     </VerticalStackLayout>
                                     <VerticalStackLayout x:Name="SensT0Box2" Grid.Row="1" Grid.Column="0" Spacing="4">
                                         <Label Text="Alap hőfok (°C)" TextColor="#AEAEB2" FontSize="12" />
-                                        <Entry x:Name="SensT0Entry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                        <Entry x:Name="SensT0Entry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                     </VerticalStackLayout>
                                     <VerticalStackLayout x:Name="SensBetaBox2" Grid.Row="1" Grid.Column="1" Spacing="4">
                                         <Label Text="Béta (β)" TextColor="#AEAEB2" FontSize="12" />
-                                        <Entry x:Name="SensBetaEntry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                        <Entry x:Name="SensBetaEntry2" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                     </VerticalStackLayout>
                                 </Grid>
                             </VerticalStackLayout>
@@ -146,11 +146,11 @@
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                 <VerticalStackLayout Grid.Column="0" Spacing="4">
                                     <Label Text="NTC1 (°C)" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="CompNtc1Entry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Placeholder="0.0" />
+                                    <Entry x:Name="CompNtc1Entry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Placeholder="0.0" />
                                 </VerticalStackLayout>
                                 <VerticalStackLayout Grid.Column="1" Spacing="4">
                                     <Label Text="NTC2 (°C)" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="CompNtc2Entry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Placeholder="0.0" />
+                                    <Entry x:Name="CompNtc2Entry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Placeholder="0.0" />
                                 </VerticalStackLayout>
                             </Grid>
                             <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
@@ -178,26 +178,26 @@
                             <Grid ColumnDefinitions="*,110" ColumnSpacing="10">
                                 <VerticalStackLayout Grid.Column="0" Spacing="4">
                                     <Label Text="Bróker címe (IP vagy név)" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="MqttHostEntry" Keyboard="Url" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Placeholder="pl. 192.168.1.10" />
+                                    <Entry x:Name="MqttHostEntry" Keyboard="Url" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Placeholder="pl. 192.168.1.10" />
                                 </VerticalStackLayout>
                                 <VerticalStackLayout Grid.Column="1" Spacing="4">
                                     <Label Text="Port" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="MqttPortEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="1883" />
+                                    <Entry x:Name="MqttPortEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Text="1883" />
                                 </VerticalStackLayout>
                             </Grid>
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                 <VerticalStackLayout Grid.Column="0" Spacing="4">
                                     <Label Text="Felhasználó" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="MqttUserEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    <Entry x:Name="MqttUserEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                 </VerticalStackLayout>
                                 <VerticalStackLayout Grid.Column="1" Spacing="4">
                                     <Label Text="Jelszó" TextColor="#AEAEB2" FontSize="12" />
-                                    <Entry x:Name="MqttPassEntry" IsPassword="True" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" />
+                                    <Entry x:Name="MqttPassEntry" IsPassword="True" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" />
                                 </VerticalStackLayout>
                             </Grid>
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="Az eszköz neve a Home Assistantban" TextColor="#AEAEB2" FontSize="12" />
-                                <Entry x:Name="MqttNameEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Placeholder="pl. Terrárium" />
+                                <Entry x:Name="MqttNameEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Placeholder="pl. Terrárium" />
                             </VerticalStackLayout>
                             <Label x:Name="LblMqttStatus" Text="" TextColor="#AEAEB2" FontSize="12" />
                             <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
@@ -232,7 +232,7 @@
                             </Grid>
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="Alsó határ (°C) - ez alatt riaszt" TextColor="#AEAEB2" FontSize="12" />
-                                <Entry x:Name="AlertLowEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="5" />
+                                <Entry x:Name="AlertLowEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Text="5" />
                             </VerticalStackLayout>
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label Grid.Column="0" Text="Túl magas hőmérséklet" TextColor="{StaticResource White}" VerticalOptions="Center" />
@@ -240,7 +240,7 @@
                             </Grid>
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="Felső határ (°C) - ez felett riaszt" TextColor="#AEAEB2" FontSize="12" />
-                                <Entry x:Name="AlertHighEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" Text="35" />
+                                <Entry x:Name="AlertHighEntry" Keyboard="Numeric" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" Text="35" />
                             </VerticalStackLayout>
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label Grid.Column="0" Text="Háttérben is figyeljen" TextColor="{StaticResource White}" VerticalOptions="Center" />
@@ -268,7 +268,7 @@
                                 <Slider Grid.Column="0" x:Name="BrightnessSlider" Minimum="1" Maximum="100"
                                         ThumbColor="{StaticResource White}"
                                         MinimumTrackColor="{StaticResource PrimaryRed}"
-                                        MaximumTrackColor="{StaticResource LightGray}"
+                                        MaximumTrackColor="{StaticResource ControlGray}"
                                         ValueChanged="OnBrightnessChanged" />
                                 <Label Grid.Column="1" x:Name="BrightnessLabel" Text="100%" TextColor="{StaticResource White}" VerticalOptions="Center" WidthRequest="45" />
                             </Grid>
@@ -388,7 +388,7 @@
 
                             <!-- Ha NINCS mentett hálózat: keresés + csatlakozás UI -->
                             <VerticalStackLayout x:Name="WifiDisconnectedView" Spacing="10" IsVisible="True">
-                                <Border BackgroundColor="{StaticResource LightGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                                <Border BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                     <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnScanWifiClicked"/></Border.GestureRecognizers>
                                     <Label Text="HÁLÓZATOK KERESÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
                                 </Border>
@@ -398,7 +398,7 @@
                                 <Picker x:Name="WifiNetworksPicker" Title="Válassz hálózatot" IsVisible="False" SelectedIndexChanged="OnWifiNetworkSelected" />
 
                                 <Label Text="Jelszó" TextColor="#AEAEB2" FontSize="12" />
-                                <Entry x:Name="WifiPasswordEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource LightGray}" IsPassword="True" Placeholder="Jelszó" />
+                                <Entry x:Name="WifiPasswordEntry" TextColor="{StaticResource White}" BackgroundColor="{StaticResource ControlGray}" IsPassword="True" Placeholder="Jelszó" />
 
                                 <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                     <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveWifiClicked"/></Border.GestureRecognizers>
@@ -425,7 +425,7 @@
 
                             <Label x:Name="LblUpdateAvailable" Text="" TextColor="{StaticResource PrimaryRed}" FontAttributes="Bold" IsVisible="False" />
 
-                            <Border BackgroundColor="{StaticResource LightGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                            <Border BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnCheckReleasesClicked"/></Border.GestureRecognizers>
                                 <Label Text="ELÉRHETŐ VERZIÓK LEKÉRÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
@@ -439,9 +439,9 @@
                                 <Label Text="KIVÁLASZTOTT VERZIÓ TELEPÍTÉSE" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
 
-                            <BoxView HeightRequest="1" BackgroundColor="{StaticResource LightGray}" Margin="0,10" />
+                            <BoxView HeightRequest="1" BackgroundColor="{StaticResource ControlGray}" Margin="0,10" />
 
-                            <Border BackgroundColor="{StaticResource LightGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                            <Border BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
                                 <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnUpdateFirmwareClicked"/></Border.GestureRecognizers>
                                 <Label Text="FIRMWARE FRISSÍTÉS HELYI FÁJLBÓL (.bin)" TextColor="{StaticResource White}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>

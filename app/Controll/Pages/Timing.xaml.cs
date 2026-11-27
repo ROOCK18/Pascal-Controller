@@ -89,11 +89,11 @@ public partial class Timing : ContentView
     public async void RequestProx()
     {
         ProxF1View.Reload(); ProxF2View.Reload(); ProxR1View.Reload(); ProxR2View.Reload();
-        await Task.Delay(800);
+        await Task.Delay(250);
         if (BluetoothManager.IsConnected)
         {
             await BluetoothManager.WriteAsync("GET_PROX");
-            await Task.Delay(300);
+            await Task.Delay(80);
             await BluetoothManager.WriteAsync("GET_CALERT");   // csatornánkénti figyelmeztetések
         }
     }
@@ -127,7 +127,7 @@ public partial class Timing : ContentView
                         VerticalStackLayout showPanel, VerticalStackLayout hidePanel)
     {
         var red  = UiHelper.ThemeColor("PrimaryRed");
-        var gray = Color.FromArgb("#444444");
+        var gray = Color.FromArgb("#5A5A5E");
         activeTab.BackgroundColor   = red;
         inactiveTab.BackgroundColor = gray;
         showPanel.IsVisible = true;
@@ -164,7 +164,7 @@ public partial class Timing : ContentView
     private void RefreshDayUI(Border[] borders, int mask)
     {
         var red  = UiHelper.ThemeColor("PrimaryRed");
-        var gray = Color.FromArgb("#444444");
+        var gray = Color.FromArgb("#5A5A5E");
         for (int i = 0; i < 7; i++)
             borders[i].BackgroundColor = (mask & (1 << i)) != 0 ? red : gray;
     }
@@ -198,7 +198,7 @@ public partial class Timing : ContentView
         var timePicker = new TimePicker
         {
             Time = new TimeSpan(slot.Hour, slot.Minute, 0),
-            BackgroundColor = Color.FromArgb("#3A3A3A"),
+            BackgroundColor = Color.FromArgb("#5A5A5E"),
             TextColor = Colors.White
         };
         timePicker.PropertyChanged += (s, e) =>
@@ -236,7 +236,7 @@ public partial class Timing : ContentView
         var deleteBtn = new Button
         {
             Text = "✕",
-            BackgroundColor = Color.FromArgb("#8B0000"),
+            BackgroundColor = Color.FromArgb("#D70015"),
             TextColor = Colors.White,
             WidthRequest = 38, HeightRequest = 38,
             CornerRadius = 6, Padding = new Thickness(0)
@@ -280,7 +280,7 @@ public partial class Timing : ContentView
         var timePicker = new TimePicker
         {
             Time = new TimeSpan(slot.Hour, slot.Minute, 0),
-            BackgroundColor = Color.FromArgb("#3A3A3A"),
+            BackgroundColor = Color.FromArgb("#5A5A5E"),
             TextColor = Colors.White
         };
         timePicker.PropertyChanged += (s, e) =>
@@ -297,7 +297,7 @@ public partial class Timing : ContentView
         {
             BackgroundColor = slot.Value == 1
                 ? UiHelper.ThemeColor("PrimaryRed")
-                : Color.FromArgb("#444444"),
+                : Color.FromArgb("#5A5A5E"),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
             Padding = new Thickness(14, 8),
             VerticalOptions = LayoutOptions.Center
@@ -317,14 +317,14 @@ public partial class Timing : ContentView
                 slot.Value = slot.Value == 1 ? 0 : 1;
                 stateLabel.Text = slot.Value == 1 ? "BE" : "KI";
                 var red  = UiHelper.ThemeColor("PrimaryRed");
-                stateBtn.BackgroundColor = slot.Value == 1 ? red : Color.FromArgb("#444444");
+                stateBtn.BackgroundColor = slot.Value == 1 ? red : Color.FromArgb("#5A5A5E");
             })
         });
 
         var deleteBtn = new Button
         {
             Text = "✕",
-            BackgroundColor = Color.FromArgb("#8B0000"),
+            BackgroundColor = Color.FromArgb("#D70015"),
             TextColor = Colors.White,
             WidthRequest = 38, HeightRequest = 38,
             CornerRadius = 6, Padding = new Thickness(0)

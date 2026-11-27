@@ -53,7 +53,7 @@ public partial class RgbAutoToggle : ContentView
 
     private void UpdateVisual()
     {
-        AutoBorder.BackgroundColor = _auto ? UiHelper.ThemeColor("LightGray") : UiHelper.ThemeColor("PrimaryRed");
+        AutoBorder.BackgroundColor = _auto ? UiHelper.ThemeColor("ControlGray") : UiHelper.ThemeColor("PrimaryRed");
         AutoLabel.Text = _auto ? "Automata" : "Kézi";
         if (ManualControls != null)
         {

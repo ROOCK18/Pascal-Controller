@@ -109,15 +109,15 @@ public partial class RgbSeriesView : ContentView
     {
         var red = UiHelper.ThemeColor("PrimaryRed");
         for (int i = 0; i < _dayButtons.Count; i++)
-            _dayButtons[i].BackgroundColor = ((_days >> i) & 1) != 0 ? red : Color.FromArgb("#444444");
+            _dayButtons[i].BackgroundColor = ((_days >> i) & 1) != 0 ? red : Color.FromArgb("#5A5A5E");
     }
 
     // ── Sorok ──
-    private static Label Small(string text) => new Label { Text = text, TextColor = Colors.Gray, FontSize = 12 };
+    private static Label Small(string text) => new Label { Text = text, TextColor = Color.FromArgb("#AEAEB2"), FontSize = 12 };
 
     private static Entry NewEntry(string text, Keyboard? kb = null, string? placeholder = null) => new Entry
     {
-        Text = text, TextColor = Colors.White, BackgroundColor = Color.FromArgb("#3A3A3A"), HeightRequest = 40,
+        Text = text, TextColor = Colors.White, BackgroundColor = Color.FromArgb("#5A5A5E"), HeightRequest = 40,
         Keyboard = kb ?? Keyboard.Default, Placeholder = placeholder
     };
 
@@ -146,7 +146,7 @@ public partial class RgbSeriesView : ContentView
         {
             stack.Add(Small("Időpont"));
             TimeSpan.TryParse(a, CultureInfo.InvariantCulture, out var ts);
-            row.Time = new TimePicker { Time = ts, Format = "HH:mm", TextColor = Colors.White, BackgroundColor = Color.FromArgb("#3A3A3A") };
+            row.Time = new TimePicker { Time = ts, Format = "HH:mm", TextColor = Colors.White, BackgroundColor = Color.FromArgb("#5A5A5E") };
             row.Time.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(TimePicker.Time)) RefreshGraph(); };
             stack.Add(row.Time);
         }
@@ -154,7 +154,7 @@ public partial class RgbSeriesView : ContentView
         if (Kind == "Timer")
         {
             stack.Add(Small("Művelet"));
-            row.Action = new Picker { TextColor = Colors.White, BackgroundColor = Color.FromArgb("#3A3A3A") };
+            row.Action = new Picker { TextColor = Colors.White, BackgroundColor = Color.FromArgb("#5A5A5E") };
             row.Action.Items.Add("BE");
             row.Action.Items.Add("KI");
             row.Action.SelectedIndex = action == 0 ? 1 : 0;

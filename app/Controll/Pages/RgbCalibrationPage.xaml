@@ -1,58 +1,67 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Controll.Pages.RgbCalibrationPage"
-             Title="Kalibrálás"
-             BackgroundColor="#1A1A1A">
+             Title="Kalibrálás">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="18">
+        <VerticalStackLayout Padding="12" Spacing="12">
 
             <!-- Csatornánkénti fényerő (%): a LED fehéren világít, a csúszka élőben változtatja -->
-            <Grid ColumnDefinitions="56,*,64" ColumnSpacing="8">
-                <Label Grid.Column="0" Text="Piros" TextColor="#FF453A" FontSize="15" VerticalOptions="Center" />
-                <Slider x:Name="SliderR" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
-                        MinimumTrackColor="#FF453A" MaximumTrackColor="#3A3A3C" ThumbColor="#FF453A"
-                        ValueChanged="OnSliderChanged" />
-                <Entry x:Name="EntryR" Grid.Column="2" Text="100" Keyboard="Numeric" TextColor="White"
-                       HorizontalTextAlignment="Center" TextChanged="OnEntryChanged" />
-            </Grid>
+            <Border BackgroundColor="{StaticResource DarkGray}" StrokeShape="RoundRectangle 12" Padding="15">
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="56,*,64" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="Piros" TextColor="{StaticResource White}" FontSize="16" VerticalOptions="Center" />
+                        <Slider x:Name="SliderR" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
+                                MinimumTrackColor="#FF453A" MaximumTrackColor="{StaticResource ControlGray}" ThumbColor="#FF453A"
+                                ValueChanged="OnSliderChanged" />
+                        <Entry x:Name="EntryR" Grid.Column="2" Text="100" Keyboard="Numeric"
+                               HorizontalTextAlignment="Center" TextChanged="OnEntryChanged" />
+                    </Grid>
 
-            <Grid ColumnDefinitions="56,*,64" ColumnSpacing="8">
-                <Label Grid.Column="0" Text="Zöld" TextColor="#30D158" FontSize="15" VerticalOptions="Center" />
-                <Slider x:Name="SliderG" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
-                        MinimumTrackColor="#30D158" MaximumTrackColor="#3A3A3C" ThumbColor="#30D158"
-                        ValueChanged="OnSliderChanged" />
-                <Entry x:Name="EntryG" Grid.Column="2" Text="100" Keyboard="Numeric" TextColor="White"
-                       HorizontalTextAlignment="Center" TextChanged="OnEntryChanged" />
-            </Grid>
+                    <Grid ColumnDefinitions="56,*,64" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="Zöld" TextColor="{StaticResource White}" FontSize="16" VerticalOptions="Center" />
+                        <Slider x:Name="SliderG" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
+                                MinimumTrackColor="#30D158" MaximumTrackColor="{StaticResource ControlGray}" ThumbColor="#30D158"
+                                ValueChanged="OnSliderChanged" />
+                        <Entry x:Name="EntryG" Grid.Column="2" Text="100" Keyboard="Numeric"
+                               HorizontalTextAlignment="Center" TextChanged="OnEntryChanged" />
+                    </Grid>
 
-            <Grid ColumnDefinitions="56,*,64" ColumnSpacing="8">
-                <Label Grid.Column="0" Text="Kék" TextColor="#0A84FF" FontSize="15" VerticalOptions="Center" />
-                <Slider x:Name="SliderB" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
-                        MinimumTrackColor="#0A84FF" MaximumTrackColor="#3A3A3C" ThumbColor="#0A84FF"
-                        ValueChanged="OnSliderChanged" />
-                <Entry x:Name="EntryB" Grid.Column="2" Text="100" Keyboard="Numeric" TextColor="White"
-                       HorizontalTextAlignment="Center" TextChanged="OnEntryChanged" />
-            </Grid>
+                    <Grid ColumnDefinitions="56,*,64" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="Kék" TextColor="{StaticResource White}" FontSize="16" VerticalOptions="Center" />
+                        <Slider x:Name="SliderB" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
+                                MinimumTrackColor="#0A84FF" MaximumTrackColor="{StaticResource ControlGray}" ThumbColor="#0A84FF"
+                                ValueChanged="OnSliderChanged" />
+                        <Entry x:Name="EntryB" Grid.Column="2" Text="100" Keyboard="Numeric"
+                               HorizontalTextAlignment="Center" TextChanged="OnEntryChanged" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
 
-            <Label x:Name="StatusLabel" Text="" TextColor="#AEAEB2" FontSize="12" HorizontalTextAlignment="Center" />
+            <Label x:Name="StatusLabel" Text="" TextColor="#AEAEB2" FontSize="13" HorizontalTextAlignment="Center" />
 
-            <Button Text="MENTÉS" Clicked="OnSaveClicked"
-                    BackgroundColor="#FF453A" TextColor="White" FontAttributes="Bold"
-                    HeightRequest="52" CornerRadius="10" />
+            <!-- Gombok: ugyanaz a forma, mint a többi oldalon (piros = fő művelet, szürke = másodlagos) -->
+            <Border BackgroundColor="{StaticResource PrimaryRed}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnSaveTapped"/></Border.GestureRecognizers>
+                <Label Text="Mentés" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
 
-            <Button Text="Kalibrálás kamerával" Clicked="OnCameraClicked"
-                    BackgroundColor="#3A3A3C" TextColor="White"
-                    HeightRequest="48" CornerRadius="10" />
+            <Border BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnCameraTapped"/></Border.GestureRecognizers>
+                <Label Text="Kalibrálás kamerával" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
 
-            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                <Label Grid.Column="0" Text="Kalibráció használata" TextColor="White" FontSize="15" VerticalOptions="Center" />
-                <Switch x:Name="UseSwitch" Grid.Column="1" OnColor="#FF453A" Toggled="OnUseToggled" />
-            </Grid>
+            <Border BackgroundColor="{StaticResource DarkGray}" StrokeShape="RoundRectangle 12" Padding="15">
+                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="Kalibráció használata" TextColor="{StaticResource White}" FontSize="16" VerticalOptions="Center" />
+                    <Switch x:Name="UseSwitch" Grid.Column="1" OnColor="{StaticResource PrimaryRed}" Toggled="OnUseToggled" />
+                </Grid>
+            </Border>
 
-            <Button Text="Törlés" Clicked="OnResetClicked"
-                    BackgroundColor="#3A3A3C" TextColor="White"
-                    HeightRequest="44" CornerRadius="10" />
+            <Border BackgroundColor="{StaticResource ControlGray}" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="45">
+                <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnResetTapped"/></Border.GestureRecognizers>
+                <Label Text="Törlés" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
 
         </VerticalStackLayout>
     </ScrollView>

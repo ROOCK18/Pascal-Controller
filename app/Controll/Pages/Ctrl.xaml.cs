@@ -310,7 +310,7 @@ namespace Controll.Pages
         private void UpdateAutoVisual(bool isAuto, Border border, Label label)
         {
             var primaryRed = UiHelper.ThemeColor("PrimaryRed");
-            var lightGray = UiHelper.ThemeColor("LightGray");
+            var lightGray = UiHelper.ThemeColor("ControlGray");
             border.BackgroundColor = isAuto ? lightGray : primaryRed;
             label.Text = isAuto ? "Automata" : "Kézi";
 
@@ -344,7 +344,7 @@ namespace Controll.Pages
         private async Task UpdateVisualWithAnimation(bool isOn, Border border, Label label)
         {
             var primaryRed = UiHelper.ThemeColor("PrimaryRed");
-            var lightGray = UiHelper.ThemeColor("LightGray");
+            var lightGray = UiHelper.ThemeColor("ControlGray");
 
             border.BackgroundColor = isOn ? primaryRed : lightGray;
             label.Text = isOn ? "ON" : "OFF";
@@ -357,7 +357,7 @@ namespace Controll.Pages
         private void UpdatePwm1Selection(Border selected)
         {
             var pRed = UiHelper.ThemeColor("PrimaryRed");
-            var lGray = UiHelper.ThemeColor("LightGray");
+            var lGray = UiHelper.ThemeColor("ControlGray");
             Fan1PWM30Border.BackgroundColor = lGray; Fan1PWM20kBorder.BackgroundColor = lGray; Fan1PWMEBorder.BackgroundColor = lGray;
             if (selected != null) selected.BackgroundColor = pRed;
         }
@@ -365,7 +365,7 @@ namespace Controll.Pages
         private void UpdatePwm2Selection(Border selected)
         {
             var pRed = UiHelper.ThemeColor("PrimaryRed");
-            var lGray = UiHelper.ThemeColor("LightGray");
+            var lGray = UiHelper.ThemeColor("ControlGray");
             Fan2PWM30Border.BackgroundColor = lGray; Fan2PWM20kBorder.BackgroundColor = lGray; Fan2PWMEBorder.BackgroundColor = lGray;
             if (selected != null) selected.BackgroundColor = pRed;
         }

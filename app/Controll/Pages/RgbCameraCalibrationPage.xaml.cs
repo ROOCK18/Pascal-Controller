@@ -58,12 +58,18 @@ public partial class RgbCameraCalibrationPage : ContentPage
             _android = await CameraXMeter.StartAsync(activity, pv, owner);
             _meter = _android;
             StatusLabel.Text = BluetoothManager.IsConnected ? "Kész. Irányítsd a LED-re, majd nyomd meg az Indítást." : "Nincs csatlakozva az eszközhöz.";
-            StartButton.IsEnabled = BluetoothManager.IsConnected;
+            SetStartEnabled(BluetoothManager.IsConnected);
 #else
             StatusLabel.Text = "A kalibrálás csak Androidon érhető el.";
 #endif
         }
         catch (Exception ex) { StatusLabel.Text = "Kamera hiba: " + ex.Message; }
+    }
+
+    private void SetStartEnabled(bool on)
+    {
+        StartButton.IsEnabled = on;
+        StartButton.Opacity = on ? 1.0 : 0.4;
     }
 
     private void StopCamera()
@@ -75,12 +81,12 @@ public partial class RgbCameraCalibrationPage : ContentPage
         _meter = null;
     }
 
-    private async void OnStartClicked(object? sender, EventArgs e)
+    private async void OnStartTapped(object? sender, TappedEventArgs e)
     {
         if (_running || _meter == null) return;
         if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
         _running = true;
-        StartButton.IsEnabled = false;
+        SetStartEnabled(false);
         Progress.IsVisible = true;
         Progress.Progress = 0;
         DeviceDisplay.Current.KeepScreenOn = true;
@@ -104,7 +110,7 @@ public partial class RgbCameraCalibrationPage : ContentPage
             DeviceDisplay.Current.KeepScreenOn = false;
             Progress.IsVisible = false;
             _running = false;
-            StartButton.IsEnabled = _meter != null && BluetoothManager.IsConnected;
+            SetStartEnabled(_meter != null && BluetoothManager.IsConnected);
         }
     }
 }
