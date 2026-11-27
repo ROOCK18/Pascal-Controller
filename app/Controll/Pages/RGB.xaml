@@ -162,5 +162,11 @@
             <Label Text="RGB automatikák" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>
         </Border>
 
+        <!-- Színkalibrálás (kamera): a LED-csatornák nyitási küszöbének és fényerejének kiegyenlítése -->
+        <Border BackgroundColor="#3A3A3C" StrokeShape="RoundRectangle 40,0,0,40" HeightRequest="42">
+            <Border.GestureRecognizers><TapGestureRecognizer Tapped="OnCalibrateClicked"/></Border.GestureRecognizers>
+            <Label Text="Kalibrálás" TextColor="{StaticResource White}" FontAttributes="Bold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center"/>
+        </Border>
+
     </VerticalStackLayout>
 </ContentView>

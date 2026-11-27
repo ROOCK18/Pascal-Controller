@@ -24,6 +24,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IBluetoothService, BluetoothService>();
 
 #if ANDROID
+        // Színkalibrálás: a kamera-előnézet natív nézete (CameraX PreviewView)
+        builder.ConfigureMauiHandlers(h => h.AddHandler<Controll.Pages.CameraPreviewView, CameraPreviewHandler>());
+
         // A natív Android Picker (MauiPicker, ami valójában egy szövegmező-
         // alapú vezérlő, nem Spinner) alapból a rendszer "indigo" témaszínét
         // használja az alávonáshoz - ez ütött el az app saját design-

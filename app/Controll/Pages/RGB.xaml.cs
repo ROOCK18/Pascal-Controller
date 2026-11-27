@@ -210,6 +210,12 @@ public partial class RGB : ContentView
         if (Shell.Current.CurrentPage is MainPage main) main.ShowRgbAuto();
     }
 
+    // Color calibration page (camera based)
+    private async void OnCalibrateClicked(object sender, TappedEventArgs e)
+    {
+        await Controll.Services.UiHelper.CurrentPage.Navigation.PushAsync(new RgbCalibrationPage());
+    }
+
     private async void OnToggleTapped(object sender, TappedEventArgs e)
     {
         _colorEnabled = !_colorEnabled;

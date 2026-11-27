@@ -63,6 +63,17 @@
 		<PackageReference Include="Plugin.BLE" Version="3.2.1" />
 	</ItemGroup>
 
+	<!-- Színkalibrálás: CameraX (képkocka-elemzés rögzített expozícióval) - csak Androidon -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<PackageReference Include="Xamarin.AndroidX.Camera.Core" Version="1.6.2" />
+		<PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.6.2" />
+		<PackageReference Include="Xamarin.AndroidX.Camera.Lifecycle" Version="1.6.2" />
+		<PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.6.2" />
+		<!-- A CameraX által behúzott újabb AndroidX-verziókhoz igazított Ktx-csomagok (különben NU1608 verzió-eltérés) -->
+		<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.9.0" />
+		<PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.6.0.1" />
+	</ItemGroup>
+
 	<ItemGroup>
 	  <Compile Update="Pages\Ctrl.xaml.cs">
 	    <DependentUpon>Ctrl.xaml</DependentUpon>
