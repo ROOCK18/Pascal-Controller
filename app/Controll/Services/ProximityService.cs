@@ -78,7 +78,7 @@ public static class ProximityService
                 {
                     if (BluetoothManager.ConnectedDevice?.Id.ToString() == cfg.Id) await PollConnectedAsync(cfg);
                 }
-                else if (BluetoothManager.AutoConnectAllowed) await ScanAndConnectAsync(cfg);
+                else if (BluetoothManager.AutoConnectAllowed && !BluetoothManager.ManualScanBusy) await ScanAndConnectAsync(cfg);
                 await Task.Delay(BluetoothManager.IsConnected ? 2000 : 6000, ct);
             }
             catch (OperationCanceledException) { break; }

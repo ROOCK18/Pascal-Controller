@@ -193,6 +193,8 @@ public static class BluetoothManager
     {
         if (_adapter != null) return;
         _adapter = adapter;
+        // Az alapértelmezett LowPower módban az Android csak rövid ablakokban hallgat: egy 4-5 mp-es keresés lemaradhat az eszközről.
+        adapter.ScanMode = ScanMode.LowLatency;
         adapter.DeviceDisconnected   += (s, e) => CheckAndNotify(e.Device);
         adapter.DeviceConnectionLost += (s, e) => CheckAndNotify(e.Device);
     }
@@ -253,6 +255,9 @@ public static class BluetoothManager
     // Kézi csatlakozás előtt: a háttérben futó újracsatlakozást le kell állítani, különben ugyanahhoz az
     // eszközhöz két csatlakozási kísérlet futna egyszerre.
     public static void StopAutoReconnect() => CancelReconnect();
+
+    // Kézi keresés alatt true: a háttérben futó közeledés-keresés ilyenkor nem indít saját keresést (egyszerre csak egy keresés mehet).
+    public static volatile bool ManualScanBusy;
 
     private static async Task ReconnectLoopAsync(Guid id, CancellationToken ct)
     {

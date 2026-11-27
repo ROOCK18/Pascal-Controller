@@ -83,22 +83,39 @@ public partial class Settings : ContentPage
         var status = await CheckBTPerm();
         if (status != PermissionStatus.Granted) return;
         if (!_ble.IsOn) { await DisplayAlertAsync("BT", "Kapcsold be a Bluetooth-t!", "OK"); return; }
+        int seenTotal = 0;
+        void CountSeen(object? s, Plugin.BLE.Abstractions.EventArgs.DeviceEventArgs a) => seenTotal++;
         try
         {
             _scanned.Clear();
             RefreshDeviceList();
             ScanIndicator.IsRunning = true;
             BtnSearch.IsEnabled = false;
+            // Egyszerre csak egy keresés mehet: a háttérben futó közeledés-keresést és a futó újracsatlakozást megállítjuk
+            BluetoothManager.ManualScanBusy = true;
+            BluetoothManager.StopAutoReconnect();
+            if (_adapter.IsScanning) { try { await _adapter.StopScanningForDevicesAsync(); } catch { } }
             _adapter.DeviceDiscovered += Adapter_DeviceDiscovered;
-            _adapter.ScanTimeout = 5000;
+            _adapter.DeviceDiscovered += CountSeen;
+            _adapter.ScanMode = Plugin.BLE.Abstractions.Contracts.ScanMode.LowLatency;
+            _adapter.ScanTimeout = 8000;
             await _adapter.StartScanningForDevicesAsync();
+            if (_scanned.Count == 0)
+                await DisplayAlertAsync("Nem találtam eszközt",
+                    seenTotal == 0
+                        ? "A telefon egyetlen Bluetooth-eszközt sem látott. Kapcsold ki-be a telefon Bluetooth-ját és a Helyadatokat, majd próbáld újra."
+                        : $"{seenTotal} eszközt láttam, de egyiknek sincs neve (a Pascal-Controller nincs köztük). Indítsd újra az eszközt, és próbáld újra.",
+                    "OK");
         }
         catch (Exception ex) { await DisplayAlertAsync("Hiba", ex.Message, "OK"); }
         finally
         {
             _adapter.DeviceDiscovered -= Adapter_DeviceDiscovered;
+            _adapter.DeviceDiscovered -= CountSeen;
+            BluetoothManager.ManualScanBusy = false;
             ScanIndicator.IsRunning = false;
             BtnSearch.IsEnabled = true;
+            BluetoothManager.StartAutoReconnect();
         }
     }
 
