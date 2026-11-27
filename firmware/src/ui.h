@@ -31,6 +31,7 @@
 #define PAL_WARN   0xFF9F0A
 #define PAL_YELLOW 0xFFD60A
 #define PAL_BLUE   0x0A84FF
+#define PAL_OFF    0x6E6E73   // kikapcsolt / nincs kapcsolat jelzés (szürke)
 
 // ---------------- Betűtípusok ----------------
 // HU_FONTS=1 esetén a saját, magyar ékezetes betűtípusok (src/fonts/lv_font_hu_*.c,

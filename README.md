@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.5.2** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.5.3** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,11 +18,12 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.5.2)
+## Firmware (v5.5.3)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
 - Partíciók (`partitions.csv`, 16 MB): két 6 MB-os OTA slot + ~3,9 MB SPIFFS.
+- Főképernyő, jobb felső sarok: **WiFi** és **Bluetooth** jel mindig látszik. WiFi: zöld = csatlakozva, szürke = nincs. Bluetooth: kék = csatlakozva, szürke = hirdet (nincs kapcsolat), **piros = nem hirdet** (hiba).
 - BLE: NimBLE (a Bluedroid helyett, ~490 KB flash megtakarítás), UUID-k és protokoll változatlan.
 - Kijelző: LovyanGFX (ST7789 meghajtó) + LVGL 9.2, a menü logikája (`Menu.h`) változatlan, a megjelenítés az `ui.h`-ban és a `Display.h`-ban van.
 - Szenzorok: alapértelmezés **PT1000** (Callendar–Van Dusen), mellette NTC 10k és Egyedi (β-modell).

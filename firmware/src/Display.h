@@ -181,11 +181,11 @@ void ui_idle_build() {
   lv_obj_align(idRight, LV_ALIGN_TOP_RIGHT, -6, 0);
   idAlert = ui_label(idRight, FONT_S, PAL_ACCENT, "!");
   lv_obj_add_flag(idAlert, LV_OBJ_FLAG_HIDDEN);   // riasztás esetén piros felkiáltójel
-  idWifi = ui_label(idRight, FONT_S, PAL_TEXT, LV_SYMBOL_WIFI);
-  idBt = ui_label(idRight, FONT_S, PAL_BLUE, LV_SYMBOL_BLUETOOTH);
+  // WiFi / BT állapotjel: mindig látszik. WiFi: zöld = csatlakozva, szürke = nincs. BT: kék = csatlakozva,
+  // szürke = hirdet (nincs kapcsolat), piros = nem hirdet (hiba). A színt a showIdle() állítja.
+  idWifi = ui_label(idRight, FONT_S, PAL_OFF, LV_SYMBOL_WIFI);
+  idBt = ui_label(idRight, FONT_S, PAL_OFF, LV_SYMBOL_BLUETOOTH);
   idMode = ui_label(idRight, FONT_S, PAL_ACCENT, "");
-  lv_obj_add_flag(idWifi, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(idBt, LV_OBJ_FLAG_HIDDEN);
 
   // Szenzor kártyák
   idle_make_tile(0);
@@ -288,14 +288,15 @@ void displayInfo() {
 
   // Jobb felső sarok: WiFi, BT, mód
   int wifiNow = (WiFi.status() == WL_CONNECTED) ? 1 : 0;
-  int btNow = deviceConnected ? 1 : 0;
+  // BT: 2 = csatlakozva (kék), 1 = hirdet (szürke), 0 = nem hirdet (piros). Csatlakozva az ESP32 nem hirdet, ezt nem vizsgáljuk.
+  int btNow = deviceConnected ? 2 : (NimBLEDevice::getAdvertising()->isAdvertising() ? 1 : 0);
   if (wifiNow != lastWifi) {
     lastWifi = wifiNow;
-    if (wifiNow) lv_obj_remove_flag(idWifi, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(idWifi, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_text_color(idWifi, pal(wifiNow ? PAL_OK : PAL_OFF), 0);
   }
   if (btNow != lastBt) {
     lastBt = btNow;
-    if (btNow) lv_obj_remove_flag(idBt, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(idBt, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_text_color(idBt, pal(btNow == 2 ? PAL_BLUE : (btNow == 1 ? PAL_OFF : PAL_BAD)), 0);
   }
   int alertNow = alertActive() ? 1 : 0;
   if (alertNow != lastAlert) {
