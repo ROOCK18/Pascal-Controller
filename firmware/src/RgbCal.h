@@ -23,6 +23,13 @@ bool calPrevOn = false;
 unsigned long calLastCmdMs = 0;
 #define CAL_TIMEOUT_MS 120000UL
 
+// Referencia-fehér mód (a Kalibrálás oldal csúszkái): az RGB kimenet logikai fehér a megadott csatorna-kitöltésekkel (refDuty),
+// élőben állítható; nem perzisztens, a mentés külön (SET_RGBCAL). Az app 30 mp-enként megújítja (REFWHITE:1), különben
+// REF_TIMEOUT_MS után, vagy a BLE-kapcsolat megszakadásakor magától kilép és visszaáll az előző RGB-állapot.
+bool refMode = false;
+uint8_t refDuty[3] = { 255, 255, 255 };
+#define REF_TIMEOUT_MS 120000UL
+
 // Logikai szint (0..255) -> tényleges kitöltés a csatorna táblázatán át
 inline int rgbCalMap(int ch, int v) {
   if (v <= 0) return 0;

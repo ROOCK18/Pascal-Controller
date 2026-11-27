@@ -1,163 +1,189 @@
 using System.Globalization;
 using Controll.Services;
-#if ANDROID
-using AndroidX.Camera.View;
-using AndroidX.Lifecycle;
-#endif
 
 namespace Controll.Pages;
 
-// Színkalibrálás: a kamera a LED fényét méri, az app BLE-n vezérli az eszközt, az eredmény az eszközben (NVS) tárolódik.
-// A teljes menet automatikus, egyetlen gombnyomás (RgbCalibrationRunner).
+// Színkalibrálás (kézi): a LED-ek fehéren világítanak a kalibrációval, a három csúszka (piros, zöld, kék) a csatornák
+// fényerejét (%) állítja élőben; a MENTÉS az eszközbe tárolja. A "Kalibrálás kamerával" az automatikus mérést indítja.
+// Az eszköz oldalán a REFWHITE mód nem perzisztens: mentés nélkül kilépve a régi kalibráció marad.
 public partial class RgbCalibrationPage : ContentPage
 {
-    private ICameraMeter? _meter;
-#if ANDROID
-    private CameraXMeter? _android;
-#endif
-    private CancellationTokenSource? _cts;
-    private bool _running;
-    private bool _loadingSwitch;
+    private readonly byte[][] _base = { RgbCalibrator.IdentityLut(), RgbCalibrator.IdentityLut(), RgbCalibrator.IdentityLut() };
+    private readonly bool[] _got = new bool[3];
+    private bool _loading;
+    private IDispatcherTimer? _keepAlive;
+    private CancellationTokenSource? _debounce;
+    private readonly Slider[] _sl;
+    private readonly Entry[] _en;
 
     public RgbCalibrationPage()
     {
         InitializeComponent();
-        BluetoothManager.OnDataReceived += OnData;
+        _sl = new[] { SliderR, SliderG, SliderB };
+        _en = new[] { EntryR, EntryG, EntryB };
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await StartCameraAsync();
+        BluetoothManager.OnDataReceived += OnData;
+        Array.Clear(_got);
+        if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
+        StatusLabel.Text = "";
+        await BluetoothManager.WriteAsync("REFWHITE:1");
         await BluetoothManager.WriteAsync("GET_RGBCAL");
+
+        // Az eszköz 2 perc után magától kilép a referencia-fehérből: ezért megújítjuk
+        _keepAlive = Dispatcher.CreateTimer();
+        _keepAlive.Interval = TimeSpan.FromSeconds(30);
+        _keepAlive.Tick += async (s, e) => await BluetoothManager.WriteAsync("REFWHITE:1");
+        _keepAlive.Start();
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
-        _cts?.Cancel();
-        StopCamera();
+        _keepAlive?.Stop();
+        _keepAlive = null;
+        _debounce?.Cancel();
         BluetoothManager.OnDataReceived -= OnData;
+        if (BluetoothManager.IsConnected) _ = BluetoothManager.WriteAsync("REFWHITE:0");
     }
 
-    private async Task StartCameraAsync()
-    {
-        try
-        {
-            var perm = await Permissions.CheckStatusAsync<Permissions.Camera>();
-            if (perm != PermissionStatus.Granted) perm = await Permissions.RequestAsync<Permissions.Camera>();
-            if (perm != PermissionStatus.Granted)
-            {
-                StatusLabel.Text = "A kalibráláshoz kamera-engedély kell (Beállítások > Alkalmazások > Controll > Engedélyek).";
-                return;
-            }
-#if ANDROID
-            await Task.Delay(300);   // az előnézet natív nézete a megjelenés után készül el
-            var activity = Platform.CurrentActivity;
-            var pv = Preview.Handler?.PlatformView as PreviewView;
-            if (activity == null || pv == null || activity is not ILifecycleOwner owner)
-            {
-                StatusLabel.Text = "A kamera nem indítható.";
-                return;
-            }
-            _android = await CameraXMeter.StartAsync(activity, pv, owner);
-            _meter = _android;
-            StatusLabel.Text = BluetoothManager.IsConnected ? "Kész. Irányítsd a LED-re, majd nyomd meg az Indítást." : "Nincs csatlakozva az eszközhöz.";
-            StartButton.IsEnabled = BluetoothManager.IsConnected;
-#else
-            StatusLabel.Text = "A kalibrálás csak Androidon érhető el.";
-#endif
-        }
-        catch (Exception ex) { StatusLabel.Text = "Kamera hiba: " + ex.Message; }
-    }
-
-    private void StopCamera()
-    {
-#if ANDROID
-        _android?.Stop();
-        _android = null;
-#endif
-        _meter = null;
-    }
-
-    private async void OnStartClicked(object? sender, EventArgs e)
-    {
-        if (_running || _meter == null) return;
-        if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
-        _running = true;
-        StartButton.IsEnabled = false;
-        ResultLabel.Text = "";
-        Progress.IsVisible = true;
-        Progress.Progress = 0;
-        DeviceDisplay.Current.KeepScreenOn = true;
-        _cts = new CancellationTokenSource();
-        try
-        {
-            var runner = new RgbCalibrationRunner(_meter, BluetoothManager.WriteAsync);
-            var progress = new Progress<CalibrationProgress>(p =>
-            {
-                Progress.Progress = p.Fraction;
-                StatusLabel.Text = p.Text;
-            });
-            var outcome = await runner.RunAsync(progress, _cts.Token);
-            StatusLabel.Text = outcome.Message;
-            if (outcome.Success && outcome.Result != null)
-            {
-                ResultLabel.Text = Summary(outcome.Result);
-                await BluetoothManager.WriteAsync("GET_RGBCAL");
-            }
-        }
-        finally
-        {
-            DeviceDisplay.Current.KeepScreenOn = false;
-            Progress.IsVisible = false;
-            _running = false;
-            StartButton.IsEnabled = _meter != null && BluetoothManager.IsConnected;
-        }
-    }
-
-    private static string Summary(RgbCalibrationResult r)
-    {
-        var sb = new System.Text.StringBuilder();
-        for (int c = 0; c < 3; c++)
-        {
-            string name = RgbCalibrator.ChannelName(c);
-            name = char.ToUpper(name[0], CultureInfo.InvariantCulture) + name.Substring(1);
-            sb.Append(name).Append(": nyitás kb. ").Append(r.Onset[c]).Append(" / 255, teljes fény ").Append((r.Gain[c] * 100).ToString("0", CultureInfo.InvariantCulture)).AppendLine(" %");
-        }
-        return sb.ToString().TrimEnd();
-    }
-
-    // ── Az eszköz állapota (LOAD_RGBCAL:<használatban 0/1>:<van mentett kalibráció 0/1>) ──
+    // ── Eszközről érkező adatok ──
+    //   LOAD_RGBCAL:<használatban 0/1>:<van mentett 0/1>      LOAD_RGBCALTAB:<csatorna 0..2>:<17 érték, vesszővel>
     private void OnData(string data)
     {
-        if (string.IsNullOrEmpty(data) || !data.StartsWith("LOAD_RGBCAL:")) return;
-        var t = data.Substring("LOAD_RGBCAL:".Length).Trim().Split(':');
-        if (t.Length < 2) return;
-        bool on = t[0] == "1", has = t[1] == "1";
-        MainThread.BeginInvokeOnMainThread(() =>
+        if (string.IsNullOrEmpty(data)) return;
+        if (data.StartsWith("LOAD_RGBCAL:"))
         {
-            _loadingSwitch = true;
-            UseSwitch.IsToggled = on;
-            _loadingSwitch = false;
-            StoredLabel.Text = has ? "Az eszközön: mentett kalibráció van" : "Az eszközön: nincs kalibráció";
-        });
+            var t = data.Substring("LOAD_RGBCAL:".Length).Trim().Split(':');
+            if (t.Length < 2) return;
+            bool on = t[0] == "1", has = t[1] == "1";
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _loading = true;
+                UseSwitch.IsToggled = on;
+                if (!has)
+                {
+                    for (int c = 0; c < 3; c++) _base[c] = RgbCalibrator.IdentityLut();
+                    SetAll(new[] { 100, 100, 100 });
+                }
+                _loading = false;
+            });
+        }
+        else if (data.StartsWith("LOAD_RGBCALTAB:"))
+        {
+            var t = data.Substring("LOAD_RGBCALTAB:".Length).Trim().Split(':');
+            if (t.Length < 2 || !int.TryParse(t[0], out int ch) || ch < 0 || ch > 2) return;
+            var vals = t[1].Split(',');
+            if (vals.Length != RgbCalibrator.LutPoints) return;
+            var lut = new byte[RgbCalibrator.LutPoints];
+            for (int k = 0; k < lut.Length; k++)
+            {
+                if (!int.TryParse(vals[k], NumberStyles.Integer, CultureInfo.InvariantCulture, out int v)) return;
+                lut[k] = (byte)Math.Clamp(v, 0, 255);
+            }
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _base[ch] = lut;
+                _got[ch] = true;
+                if (_got.All(g => g))
+                    SetAll(_base.Select(b => (int)Math.Round(RgbCalibrator.TopPercent(b))).ToArray());
+            });
+        }
+    }
+
+    // A csúszkák és a számmezők beállítása (visszahatás nélkül)
+    private void SetAll(int[] pct)
+    {
+        bool prev = _loading;
+        _loading = true;
+        for (int c = 0; c < 3; c++)
+        {
+            _sl[c].Value = pct[c];
+            _en[c].Text = pct[c].ToString(CultureInfo.InvariantCulture);
+        }
+        _loading = prev;
+    }
+
+    private int Pct(int c) => (int)Math.Round(_sl[c].Value);
+
+    // ── Csúszka / számmező ──
+    private void OnSliderChanged(object? sender, ValueChangedEventArgs e)
+    {
+        if (_loading) return;
+        int c = Array.IndexOf(_sl, sender as Slider);
+        if (c < 0) return;
+        _loading = true;
+        _en[c].Text = Pct(c).ToString(CultureInfo.InvariantCulture);
+        _loading = false;
+        ScheduleSend();
+    }
+
+    private void OnEntryChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_loading) return;
+        int c = Array.IndexOf(_en, sender as Entry);
+        if (c < 0 || !int.TryParse(e.NewTextValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int v)) return;
+        v = Math.Clamp(v, 0, 100);
+        _loading = true;
+        _sl[c].Value = v;
+        if (e.NewTextValue != v.ToString(CultureInfo.InvariantCulture)) _en[c].Text = v.ToString(CultureInfo.InvariantCulture);
+        _loading = false;
+        ScheduleSend();
+    }
+
+    // A változásokat 150 ms-onként összevonjuk, hogy ne árasszuk el a BLE-t
+    private async void ScheduleSend()
+    {
+        _debounce?.Cancel();
+        var cts = _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(150, cts.Token);
+            var d = new int[3];
+            for (int c = 0; c < 3; c++) d[c] = RgbCalibrator.ScaleLut(_base[c], Pct(c))[RgbCalibrator.LutPoints - 1];
+            await BluetoothManager.WriteAsync($"REFW:{d[0]}:{d[1]}:{d[2]}");
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    // ── Gombok ──
+    private async void OnSaveClicked(object? sender, EventArgs e)
+    {
+        if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
+        _debounce?.Cancel();
+        var lut = new byte[3][];
+        for (int c = 0; c < 3; c++) lut[c] = RgbCalibrator.ScaleLut(_base[c], Pct(c));
+        await BluetoothManager.WriteAsync(RgbCalibrator.ToCommand(lut));
+        await BluetoothManager.WriteAsync("RGBCAL_ON:1");
+        for (int c = 0; c < 3; c++) _base[c] = lut[c];
+        StatusLabel.Text = "Mentve.";
+    }
+
+    private async void OnCameraClicked(object? sender, EventArgs e)
+    {
+        if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
+        await Navigation.PushAsync(new RgbCameraCalibrationPage());
     }
 
     private async void OnUseToggled(object? sender, ToggledEventArgs e)
     {
-        if (_loadingSwitch) return;
+        if (_loading) return;
         await BluetoothManager.WriteAsync(e.Value ? "RGBCAL_ON:1" : "RGBCAL_ON:0");
     }
 
     private async void OnResetClicked(object? sender, EventArgs e)
     {
         if (!BluetoothManager.IsConnected) { StatusLabel.Text = "Nincs csatlakozva az eszközhöz."; return; }
-        bool ok = await DisplayAlertAsync("Kalibráció törlése", "Biztosan törlöd az eszközön tárolt kalibrációt? A színek újra nyers kitöltéssel jelennek meg.", "Törlés", "Mégse");
+        bool ok = await DisplayAlertAsync("Törlés", "Törlöd a kalibrációt? Minden csatorna 100 % lesz.", "Törlés", "Mégse");
         if (!ok) return;
+        _debounce?.Cancel();
         await BluetoothManager.WriteAsync("RGBCAL_RESET");
-        await Task.Delay(200);
-        await BluetoothManager.WriteAsync("GET_RGBCAL");
-        ResultLabel.Text = "";
+        for (int c = 0; c < 3; c++) _base[c] = RgbCalibrator.IdentityLut();
+        SetAll(new[] { 100, 100, 100 });
+        await BluetoothManager.WriteAsync("REFW:255:255:255");
+        StatusLabel.Text = "Törölve.";
     }
 }

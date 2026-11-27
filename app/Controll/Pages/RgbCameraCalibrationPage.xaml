@@ -1,0 +1,26 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Controll.Pages"
+             x:Class="Controll.Pages.RgbCameraCalibrationPage"
+             Title="Kalibrálás kamerával"
+             BackgroundColor="#1A1A1A">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="14">
+
+            <Border StrokeShape="RoundRectangle 10" Stroke="#3A3A3C" BackgroundColor="Black" HeightRequest="360">
+                <pages:CameraPreviewView x:Name="Preview" HorizontalOptions="Fill" VerticalOptions="Fill" />
+            </Border>
+
+            <Label Text="Irányítsd a LED-re, sötétben, nyugodt kézzel." TextColor="#AEAEB2" FontSize="12" HorizontalTextAlignment="Center" />
+
+            <ProgressBar x:Name="Progress" Progress="0" ProgressColor="#FF453A" IsVisible="False" />
+            <Label x:Name="StatusLabel" Text="" TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
+
+            <Button x:Name="StartButton" Text="INDÍTÁS" Clicked="OnStartClicked"
+                    BackgroundColor="#FF453A" TextColor="White" FontAttributes="Bold"
+                    HeightRequest="52" CornerRadius="10" IsEnabled="False" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -106,6 +106,40 @@ public static class RgbCalibrator
         return mul;
     }
 
+    // ── Kézi beállítás (a Kalibrálás oldal csúszkái) ──
+    // Alapállapot (nincs kalibráció): egyenes leképezés, a teljes fény 100 %.
+    public static byte[] IdentityLut()
+    {
+        var l = new byte[LutPoints];
+        for (int k = 0; k < LutPoints; k++) l[k] = (byte)Math.Min(255, 16 * k);
+        return l;
+    }
+
+    // A csatorna jelenlegi fényereje (%): a táblázat felső pontja a teljes kitöltéshez képest
+    public static double TopPercent(byte[] lut) => lut[LutPoints - 1] * 100.0 / 255.0;
+
+    // A táblázat átskálázása úgy, hogy a felső pontja a megadott %-ra kerüljön; az alakja (a mért nemlinearitás) megmarad
+    public static byte[] ScaleLut(byte[] baseLut, double pct)
+    {
+        double f = Math.Clamp(pct, 0, 100) / Math.Max(1.0, TopPercent(baseLut));
+        var l = new byte[LutPoints];
+        int prev = 0;
+        for (int k = 0; k < LutPoints; k++)
+        {
+            int v = (int)Math.Round(baseLut[k] * f);
+            v = Math.Clamp(Math.Max(v, prev), 0, 255);
+            l[k] = (byte)v;
+            prev = v;
+        }
+        return l;
+    }
+
+    public static string ToCommand(byte[][] lut)
+    {
+        string Csv(byte[] a) => string.Join(",", a.Select(v => (int)v));
+        return $"SET_RGBCAL:{LutPoints}:{Csv(lut[0])}:{Csv(lut[1])}:{Csv(lut[2])}";
+    }
+
     public static string ChannelName(int c) => c == 0 ? "piros" : c == 1 ? "zöld" : "kék";
 
     // Az eszköznek küldendő parancs: SET_RGBCAL:17:R-csv:G-csv:B-csv

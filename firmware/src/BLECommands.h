@@ -164,7 +164,8 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
   void onDisconnect(NimBLEServer* s, NimBLEConnInfo& connInfo, int reason) override {
     deviceConnected = false;
     bleAuthed = false; bleNonce[0] = 0;
-    rgbCalEnd();   // kalibrálás közben megszakadt kapcsolat: a szalag ne ragadjon nyers állapotban
+    rgbCalEnd();   // kalibrálás / referencia-fehér közben megszakadt kapcsolat: a szalag ne ragadjon nyers állapotban
+    rgbRefEnd();
     if (otaInProgress) {
       Update.abort();
       otaInProgress = false;
@@ -221,7 +222,7 @@ void handleBleCommand(String receivedString) {
     }
 
     if (receivedString.startsWith("#") && receivedString.length() == 7) {
-      if (rgbAuto || calMode) return;   // Automata üzemmódban és kalibrálás közben nincs kézi RGB-vezérlés
+      if (rgbAuto || calMode || refMode) return;   // Automata üzemmódban és kalibrálás közben nincs kézi RGB-vezérlés
       pwmR = (int)strtol(receivedString.substring(1, 3).c_str(), NULL, 16);
       pwmG = (int)strtol(receivedString.substring(3, 5).c_str(), NULL, 16);
       pwmB = (int)strtol(receivedString.substring(5, 7).c_str(), NULL, 16);
@@ -255,8 +256,8 @@ void handleBleCommand(String receivedString) {
       setPWM(4, pwmFan2);
       markDirty();
     }
-    else if (receivedString == "RGB_1") { if (rgbAuto || calMode) return; digitalWrite(RGB_ON, HIGH); markDirty(); }
-    else if (receivedString == "RGB_0") { if (rgbAuto || calMode) return; digitalWrite(RGB_ON, LOW); markDirty(); }
+    else if (receivedString == "RGB_1") { if (rgbAuto || calMode || refMode) return; digitalWrite(RGB_ON, HIGH); markDirty(); }
+    else if (receivedString == "RGB_0") { if (rgbAuto || calMode || refMode) return; digitalWrite(RGB_ON, LOW); markDirty(); }
     else if (receivedString == "F1_1")  { digitalWrite(FAN1_ON, HIGH); markDirty(); }
     else if (receivedString == "F1_0")  { digitalWrite(FAN1_ON, LOW); markDirty(); }
     else if (receivedString == "F2_1")  { digitalWrite(FAN2_ON, HIGH); markDirty(); }
@@ -395,6 +396,9 @@ void handleBleCommand(String receivedString) {
     else if (receivedString == "CAL_BEGIN") { rgbCalBegin(); }
     else if (receivedString.startsWith("CAL_RAW:")) { rgbCalRaw(receivedString.substring(8)); }
     else if (receivedString == "CAL_END") { rgbCalEnd(); }
+    else if (receivedString == "REFWHITE:1") { rgbRefBegin(); }
+    else if (receivedString == "REFWHITE:0") { rgbRefEnd(); }
+    else if (receivedString.startsWith("REFW:")) { rgbRefSet(receivedString.substring(5)); }
     else if (receivedString.startsWith("SET_RGBCAL:")) { handleSetRgbCal(receivedString.substring(11)); }
     else if (receivedString == "GET_RGBCAL") { handleGetRgbCal(); }
     else if (receivedString == "RGBCAL_ON:1") { handleRgbCalOn(true); }

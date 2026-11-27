@@ -4,7 +4,7 @@ ESP32 (LilyGO TTGO T-Display) alapú vezérlő két NTC hőmérővel, két PWM v
 két relével és RGB LED-szalaggal, valamint a hozzá tartozó .NET MAUI Android alkalmazás
 („Pascal-Controll”), ami Bluetooth Low Energy-n kommunikál vele, és OTA-n frissíti a firmware-t.
 
-**Aktuális verzió:** firmware **v5.6.0** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
+**Aktuális verzió:** firmware **v5.6.1** (PlatformIO, NimBLE, LovyanGFX + LVGL kijelző). Az `app/` még a v4.9.0-hoz tartozó változat.
 
 ## Mappák
 
@@ -18,7 +18,7 @@ oldalán vannak (release-enként egy `.bin` melléklet). A repónak publikusnak 
 eszköz token nélkül le tudja tölteni őket.
 A hardverfájlok (SolidWorks, STL, Proteus) Drive-on vannak.
 
-## Firmware (v5.6.0)
+## Firmware (v5.6.1)
 
 - Fordítás: VS Code + PlatformIO, `pio run` a `firmware/` mappában. A platform a pioarduino
   `55.03.311` (Arduino core 3.3.11), fixált könyvtárverziókkal. Windowson PowerShellből futtasd, Git Bash alól az ESP-IDF telepítő nem megy.
@@ -97,15 +97,14 @@ csak Automata állapotban működnek, Kézi állapotban egyik sem ír az RGB-re.
 Elsőbbség: **közeledés → időzítő → hőmérséklet-görbe → napszak-görbe** (a fényerőt a napszak-görbe felülírja, ha fut). Az eszköz az átmeneteket lineárisan, az átmenet-motoron át adja ki.
 BLE: `SET_AUTO:RGB:<0/1>`, `SET_RGBTIMER`, `SET_RGBTHERM`, `SET_RGBDAY` (`óó:pp:fényerő`; a régi, színes alak is elfogadott), `SET_RGBPROX`, `GET_RGBAUTO` (válasz: `LOAD_RGBAUTO/TIMER/THERM/DAY/PROX`), `PROX_LEAVE:RGB`.
 
-**RGB színkalibrálás (v5.6.0):** az RGB oldalon a **Kalibrálás** gomb megnyitja a kamerát; egyetlen **Indítás** gombbal minden automatikus.
-A LED-szalagok csatornái nem egyformák (egyik korán nyit, a gyengébb piros miatt a #FFFFFF cián), ezért az app BLE-n végigfuttatja a csatornákat,
-a telefon kamerája (CameraX, rögzített expozíció és napfény-fehéregyensúly) méri a fényt, és az app csatornánként egy **17 pontos táblázatot** számol
-(logikai szint 0, 16 ... 240, 255 -> tényleges PWM-kitöltés): a kimenő fény arányos lesz a szinttel, és a három csatorna maximuma kiegyenlített
-(a túl erős csatornát visszaveszi), így a `#FFFFFF` a kamera szerint semleges fehér. Az eredményt az **eszköz tárolja** (NVS), így másik telefonnal is érvényes;
-**minden szín** (kézi, időzítő, görbék, közeledés, MQTT) a táblázaton át jelenik meg (`setPWM()`). A kalibráló oldalon: *Kalibráció használata* kapcsoló
-(összehasonlításhoz) és *Kalibráció törlése*. Kalibrálás közben az automatikák szünetelnek, az eszköz fejlécében "KAL" látszik; a mód 2 perc parancs nélkül,
-vagy a BLE kapcsolat megszakadásakor magától véget ér. Sötét helyiségben, nyugodt kézzel pontosabb; a "fehér" a kamera szerinti semleges fehér.
-BLE: `CAL_BEGIN`, `CAL_RAW:r:g:b`, `CAL_END`, `SET_RGBCAL:17:<R csv>:<G csv>:<B csv>`, `GET_RGBCAL` (válasz: `LOAD_RGBCAL:<használatban>:<van mentett>`), `RGBCAL_ON:<0/1>`, `RGBCAL_RESET`.
+**RGB színkalibrálás (v5.6.0 / v5.6.1):** az RGB oldalon a **Kalibrálás** gomb nyitja a kalibráló oldalt. Alapból **három csúszka** (piros, zöld, kék; számmezővel is) van: a LED-ek fehéren
+világítanak a mentett kalibrációval, és a csúszkák a három csatorna fényerejét (%) állítják élőben; a **MENTÉS** az **eszközbe** tárolja (NVS), így másik telefonnal is érvényes. Mentés nélküli kilépéskor
+a régi kalibráció marad. Ha nincs mentett kalibráció, mind a három 100 %. A **Kalibrálás kamerával** gomb automatikus mérést indít (CameraX, rögzített expozíció és napfény-fehéregyensúly): az app BLE-n végigfuttatja
+a csatornákat, a kamera méri a fényt, és csatornánként egy **17 pontos táblázatot** számol (logikai szint 0, 16 ... 240, 255 -> PWM-kitöltés): a kimenő fény arányos lesz a szinttel (nincs korai nyitás / kimaradó szint),
+és a csatornák maximuma kiegyenlített (a túl erős csatornát visszaveszi), így a `#FFFFFF` a kamera szerint semleges fehér. **Minden szín** (kézi, időzítő, görbék, közeledés, MQTT) a táblázaton át jelenik meg (`setPWM()`).
+Van *Kalibráció használata* kapcsoló és *Törlés*. Kalibrálás / referencia-fehér közben az automatikák és a kézi RGB-vezérlés szünetel, az eszköz fejlécében "KAL" látszik; a mód parancs nélkül 2 perc után,
+vagy a BLE kapcsolat megszakadásakor magától véget ér.
+BLE: `CAL_BEGIN`, `CAL_RAW:r:g:b`, `CAL_END`, `REFWHITE:1/0`, `REFW:r:g:b`, `SET_RGBCAL:17:<R csv>:<G csv>:<B csv>`, `GET_RGBCAL` (válasz: `LOAD_RGBCAL:<használatban>:<van mentett>` + `LOAD_RGBCALTAB:<0..2>:<csv>`), `RGBCAL_ON:<0/1>`, `RGBCAL_RESET`.
 Az eddigi RGB-közeledés (BE/KI az időtartamra) megszűnt: helyét a fenti Közeledés vette át, és csak Automata állapotban működik.
 
 **Figyelmeztetések csatornánként (v5.4.0):** Vezérlés → Automatikák beállítása → a Ventilátor 1-2 és Relé 1-2 kártyák alján, a Közeledés alatt egy "Figyelmeztetés" legördülő (bekapcsolóval): *szenzorhiba*, *túl alacsony hőmérséklet* (alsó határ), *túl magas hőmérséklet* (felső határ). A csatorna szenzora a termosztátjáé (1. vagy 2. hőmérő). Az eszköz `CALERT:<csatorna>:<állapot>:<érték>` sort küld (`SET_CALERT` / `GET_CALERT`), az app ebből a csatorna nevével ír értesítést. Az RGB-nek nincs szenzora, ott nincs figyelmeztetés. A Beállítások → Értesítések panel (a két hőmérőre közös riasztás) változatlan.

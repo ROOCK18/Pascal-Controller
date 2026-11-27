@@ -115,4 +115,5 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - Színes falról visszaverődő fénynél (a kamera nem közvetlenül a LED-et látja) a fal színe torzít: fehér felületre vagy közvetlenül a szalagra irányítsd.
 - Kalibrálás közben az automatikák és a kézi RGB-vezérlés szünetel; a mód 2 perc parancs nélkül, vagy a BLE kapcsolat megszakadásakor magától véget ér.
 - Az Androidos CameraX-hívások (AE-zár, napfény-fehéregyensúly) eszközönként eltérően támogatottak; ha egy telefon nem veszi figyelembe, a mérés pontatlanabb lehet.
-- Hardveren / telefonon nem próbáltam: a teljes kalibrálási menet (kamera, mérés, számítás, mentés), a "Kalibráció használata" kapcsoló, a törlés.
+- A kézi csúszkák a csatorna fényerő-skáláját állítják (a táblázat alakja megmarad); a referencia-fehér mód az eszközön nem perzisztens: mentés nélküli kilépéskor a régi kalibráció marad.
+- Hardveren / telefonon nem próbáltam: a teljes kalibrálási menet (kamera, mérés, számítás, mentés), a csúszkás referencia-fehér, a "Kalibráció használata" kapcsoló, a törlés.

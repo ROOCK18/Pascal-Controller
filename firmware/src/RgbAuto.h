@@ -122,7 +122,7 @@ static bool rgbDayPct(uint8_t &tp) {
 
 // Az átmenet-motor lépése + az automatikák kiértékelése. Minden loop()-ban hívandó.
 void applyRgbAutomation() {
-  if (calMode) return;   // kalibrálás közben az app vezérli a kimenetet
+  if (calMode || refMode) return;   // kalibrálás / referencia-fehér közben az app vezérli a kimenetet
   if (!rgbAuto) {
     rgbRamping = false; rgbProxActive = false; rgbSrc = RS_NONE; rgbSrcKey = -1;
     return;
@@ -405,8 +405,54 @@ void handleGetRgbAuto() {
 //   RGBCAL_ON:<0/1>   RGBCAL_RESET
 // ------------------------------------------------------------
 void rgbCalBegin() {
-  if (!calMode) { calPrevOn = digitalRead(RGB_ON); calMode = true; }
+  if (!calMode) {
+    if (!refMode) calPrevOn = digitalRead(RGB_ON);   // referencia-fehérből jövet az eredeti állapot már el van téve
+    refMode = false;
+    calMode = true;
+  }
   calLastCmdMs = millis();
+}
+
+// Referencia-fehér: az RGB kimenet a refDuty kitöltésekkel (alapból a mentett kalibráció logikai fehérje)
+void rgbRefApply() {
+  digitalWrite(RGB_ON, HIGH);
+  ledcWrite(RGB_R_PIN, refDuty[0]);
+  ledcWrite(RGB_G_PIN, refDuty[1]);
+  ledcWrite(RGB_B_PIN, refDuty[2]);
+}
+
+void rgbRefBegin() {
+  if (calMode) return;
+  if (!refMode) {
+    calPrevOn = digitalRead(RGB_ON);
+    for (int c = 0; c < 3; c++) refDuty[c] = (uint8_t)rgbCalMap(c, 255);
+    refMode = true;
+  }
+  calLastCmdMs = millis();   // az ismételt REFWHITE:1 csak megújítja az időzítőt
+  rgbRefApply();
+}
+
+void rgbRefEnd() {
+  if (!refMode) return;
+  refMode = false;
+  digitalWrite(RGB_ON, calPrevOn ? HIGH : LOW);
+  rgbResetEval();
+  setPWM(0, pwmR); setPWM(1, pwmG); setPWM(2, pwmB);
+}
+
+// REFW:<r>:<g>:<b> - a referencia-fehér csatorna-kitöltései (0..255)
+void rgbRefSet(const String &body) {
+  if (!refMode) return;
+  int pos = 0;
+  for (int i = 0; i < 3; i++) {
+    int e = body.indexOf(':', pos);
+    String t = (e < 0) ? body.substring(pos) : body.substring(pos, e);
+    refDuty[i] = (uint8_t)constrain((int)t.toInt(), 0, 255);
+    if (e < 0) break;
+    pos = e + 1;
+  }
+  calLastCmdMs = millis();
+  rgbRefApply();
 }
 
 // Kilépés a kalibrációs módból: az előző RGB-állapot visszaáll (most már a kalibrált leképezéssel)
@@ -439,6 +485,7 @@ void rgbCalRaw(const String &body) {
 // A loop()-ból: ha 2 percig nem jön kalibrációs parancs, a mód magától véget ér
 void rgbCalTick() {
   if (calMode && millis() - calLastCmdMs > CAL_TIMEOUT_MS) rgbCalEnd();
+  if (refMode && millis() - calLastCmdMs > REF_TIMEOUT_MS) rgbRefEnd();
 }
 
 void handleSetRgbCal(const String &body) {
@@ -457,8 +504,15 @@ void handleSetRgbCal(const String &body) {
   notifyLine("LOAD_RGBCAL:" + String(rgbCalOn ? 1 : 0) + ":1");
 }
 
+// LOAD_RGBCAL:<használatban>:<van mentett>, majd (ha van) csatornánként LOAD_RGBCALTAB:<0..2>:<17 érték, vesszővel>
 void handleGetRgbCal() {
   notifyLine("LOAD_RGBCAL:" + String(rgbCalOn ? 1 : 0) + ":" + String(rgbCalHas ? 1 : 0));
+  if (!rgbCalHas) return;
+  for (int c = 0; c < 3; c++) {
+    String s = "LOAD_RGBCALTAB:" + String(c) + ":";
+    for (int k = 0; k < RGBCAL_N; k++) { if (k) s += ","; s += String((int)rgbCalLut[c][k]); }
+    notifyLine(s);
+  }
 }
 
 void handleRgbCalOn(bool on) {
