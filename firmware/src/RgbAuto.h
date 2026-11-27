@@ -122,6 +122,7 @@ static bool rgbDayPct(uint8_t &tp) {
 
 // Az átmenet-motor lépése + az automatikák kiértékelése. Minden loop()-ban hívandó.
 void applyRgbAutomation() {
+  if (calMode) return;   // kalibrálás közben az app vezérli a kimenetet
   if (!rgbAuto) {
     rgbRamping = false; rgbProxActive = false; rgbSrc = RS_NONE; rgbSrcKey = -1;
     return;
@@ -395,6 +396,84 @@ void handleGetRgbAuto() {
   notifyLine("LOAD_RGBPROX:" + String(rgbProxCfg.enabled ? 1 : 0) + ":" + rgbHex(rgbProxCfg.r, rgbProxCfg.g, rgbProxCfg.b) + ":" +
              String(rgbProxCfg.pct) + ":" + String(rgbProxCfg.rampUpSec) + ":" + String(rgbProxCfg.mode) + ":" +
              String(rgbProxCfg.holdSec) + ":" + String(rgbProxCfg.rampDownSec));
+}
+
+// ------------------------------------------------------------
+// RGB színkalibráció (a telefon kamerás kalibrálása) - parancsok. A táblázat és a leképezés: RgbCal.h
+//   CAL_BEGIN | CAL_RAW:<r>:<g>:<b> | CAL_END
+//   SET_RGBCAL:17:<R csv>:<G csv>:<B csv>   GET_RGBCAL -> LOAD_RGBCAL:<használatban 0/1>:<van mentett 0/1>
+//   RGBCAL_ON:<0/1>   RGBCAL_RESET
+// ------------------------------------------------------------
+void rgbCalBegin() {
+  if (!calMode) { calPrevOn = digitalRead(RGB_ON); calMode = true; }
+  calLastCmdMs = millis();
+}
+
+// Kilépés a kalibrációs módból: az előző RGB-állapot visszaáll (most már a kalibrált leképezéssel)
+void rgbCalEnd() {
+  if (!calMode) return;
+  calMode = false;
+  digitalWrite(RGB_ON, calPrevOn ? HIGH : LOW);
+  rgbResetEval();
+  setPWM(0, pwmR); setPWM(1, pwmG); setPWM(2, pwmB);
+}
+
+void rgbCalRaw(const String &body) {
+  if (!calMode) return;   // csak CAL_BEGIN után
+  int v[3] = { 0, 0, 0 };
+  int pos = 0;
+  for (int i = 0; i < 3; i++) {
+    int e = body.indexOf(':', pos);
+    String t = (e < 0) ? body.substring(pos) : body.substring(pos, e);
+    v[i] = constrain((int)t.toInt(), 0, 255);
+    if (e < 0) break;
+    pos = e + 1;
+  }
+  digitalWrite(RGB_ON, HIGH);
+  ledcWrite(RGB_R_PIN, v[0]);
+  ledcWrite(RGB_G_PIN, v[1]);
+  ledcWrite(RGB_B_PIN, v[2]);
+  calLastCmdMs = millis();
+}
+
+// A loop()-ból: ha 2 percig nem jön kalibrációs parancs, a mód magától véget ér
+void rgbCalTick() {
+  if (calMode && millis() - calLastCmdMs > CAL_TIMEOUT_MS) rgbCalEnd();
+}
+
+void handleSetRgbCal(const String &body) {
+  String part[4];
+  if (rgbSplit(body, ':', part, 4) != 4) return;
+  if (part[0].toInt() != RGBCAL_N) return;
+  uint8_t tmp[3][RGBCAL_N];
+  for (int c = 0; c < 3; c++) {
+    String v[RGBCAL_N];
+    if (rgbSplit(part[c + 1], ',', v, RGBCAL_N) != RGBCAL_N) return;
+    for (int k = 0; k < RGBCAL_N; k++) tmp[c][k] = (uint8_t)constrain((int)v[k].toInt(), 0, 255);
+  }
+  memcpy(rgbCalLut, tmp, sizeof(rgbCalLut));
+  rgbCalHas = true;
+  markDirty();
+  notifyLine("LOAD_RGBCAL:" + String(rgbCalOn ? 1 : 0) + ":1");
+}
+
+void handleGetRgbCal() {
+  notifyLine("LOAD_RGBCAL:" + String(rgbCalOn ? 1 : 0) + ":" + String(rgbCalHas ? 1 : 0));
+}
+
+void handleRgbCalOn(bool on) {
+  rgbCalOn = on;
+  if (!calMode) { setPWM(0, pwmR); setPWM(1, pwmG); setPWM(2, pwmB); }
+  markDirty();
+  handleGetRgbCal();
+}
+
+void handleRgbCalReset() {
+  rgbCalHas = false;
+  memset(rgbCalLut, 0, sizeof(rgbCalLut));
+  if (!calMode) { setPWM(0, pwmR); setPWM(1, pwmG); setPWM(2, pwmB); }
+  markDirty();
+  handleGetRgbCal();
 }
 
 // SET_AUTO:RGB:<0/1>

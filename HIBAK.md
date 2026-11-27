@@ -101,3 +101,18 @@ A ✅ a már javított tételeket jelöli (a javítás helyben van, a fordítás
 - A napszak-görbe az eszköz órájára épül: ha az óra nincs szinkronban (TIME), a görbe is eltér.
 - Az RGB-közeledés "amíg ott vagyok" módja a telefon becsült távolságára épül (RSSI); a távozást a telefon jelzi, kapcsolatvesztésnél az eszköz 15 mp után magától.
 - Hardveren / telefonon nem próbáltam: átmenet-motor, időzítő, görbék, közeledés-felfutás, Automata/Kézi.
+
+## 5.5.2 / 5.5.3 – napszak-görbe, Automata/Kézi, állapotjelek: ismert korlátok
+- A napszak-görbe csak fényerőt ad; egyedül a legutóbbi automatika színével világít (alapból fehér). Ez a "legutóbbi szín" újraindításkor elvész (fehérre áll vissza).
+- Automata alatt a kézi RGB-parancsok (app, eszköz menü, MQTT) eldobódnak; Kézi alatt az automatikák nem futnak.
+- A fejléc BT ikonja piros, ha az eszköz nem hirdet (kapcsolat nélkül); csatlakozva kék, hirdetve szürke. WiFi: zöld/szürke.
+- Hardveren / telefonon nem próbáltam: napszak-grafikon, görgethető időválasztó, fejléc-ikonok.
+
+## 5.6.0 – RGB színkalibrálás: ismert korlátok
+- A "fehér" a telefon kamerája szerinti semleges fehér (napfény-fehéregyensúllyal); a kamera színérzékenysége nem azonos a szemével, ezért jó közelítés, nem műszeres mérés. Sötét helyiség és nyugodt kéz kell.
+- A kalibráció a túl erős csatornákat visszaveszi (a gyengébbet nem tudja erősíteni), ezért a teljes fényerő kicsit csökken; 8 bites PWM mellett a visszavett csatornán kevesebb finom lépés marad.
+- A korán nyitó csatornánál (pl. kék) a legalsó fényerő-szinteket a 8 bites PWM felbontása korlátozza: a logikai 1..30 körüli szintek ott 0 vagy 1-2 kitöltésre képződnek le, finomabb lépéshez nagyobb PWM-felbontás kellene (későbbi fejlesztés).
+- Színes falról visszaverődő fénynél (a kamera nem közvetlenül a LED-et látja) a fal színe torzít: fehér felületre vagy közvetlenül a szalagra irányítsd.
+- Kalibrálás közben az automatikák és a kézi RGB-vezérlés szünetel; a mód 2 perc parancs nélkül, vagy a BLE kapcsolat megszakadásakor magától véget ér.
+- Az Androidos CameraX-hívások (AE-zár, napfény-fehéregyensúly) eszközönként eltérően támogatottak; ha egy telefon nem veszi figyelembe, a mérés pontatlanabb lehet.
+- Hardveren / telefonon nem próbáltam: a teljes kalibrálási menet (kamera, mérés, számítás, mentés), a "Kalibráció használata" kapcsoló, a törlés.

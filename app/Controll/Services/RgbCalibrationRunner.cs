@@ -88,7 +88,7 @@ public sealed class RgbCalibrationRunner
                 for (int k = 1; k < RgbCalibrator.Points; k++)
                 {
                     ct.ThrowIfCancellationRequested();
-                    int d = RgbCalibrator.Duties[k];
+                    int d = RgbCalibrator.MeasureDuties[k];
                     await Raw(j == 0 ? d : 0, j == 1 ? d : 0, j == 2 ? d : 0);
                     await Task.Delay(SettleMs, ct);
                     var grid = await _cam.GrabAsync(FramesPerStep, ct);

@@ -82,9 +82,10 @@ void checkDisplaySleep() {
 void setPWM(int channel, int duty) {
   duty = constrain(duty, 0, 255);
   switch (channel) {
-    case 0: pwmR = duty; ledcWrite(RGB_R_PIN, duty); break;
-    case 1: pwmG = duty; ledcWrite(RGB_G_PIN, duty); break;
-    case 2: pwmB = duty; ledcWrite(RGB_B_PIN, duty); break;
+    // Az RGB csatornák a kalibrációs táblázaton át kerülnek a kimenetre (RgbCal.h); kalibrációs módban az app írja a kimenetet
+    case 0: pwmR = duty; if (!calMode) ledcWrite(RGB_R_PIN, rgbCalMap(0, duty)); break;
+    case 1: pwmG = duty; if (!calMode) ledcWrite(RGB_G_PIN, rgbCalMap(1, duty)); break;
+    case 2: pwmB = duty; if (!calMode) ledcWrite(RGB_B_PIN, rgbCalMap(2, duty)); break;
     case 3:
       pwmFan = duty;
       ledcWrite(FAN1_PWM_PIN, duty);

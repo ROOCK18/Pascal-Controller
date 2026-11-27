@@ -2,7 +2,7 @@
 // Az RGB színkalibrálás számítási magja (platformfüggetlen, a kamera és a BLE nélkül).
 //
 // Bemenet: a kamera által mért (lineáris fényű, a környezeti fényre korrigált) R/G/B érték minden LED-csatornára,
-// 17 kitöltés-lépésben (0, 16, 32 ... 240, 255). Kimenet: csatornánként 17 pontos táblázat, ami a logikai szinthez
+// 20 kitöltés-lépésben (az alsó tartományban sűrűbben: a korán nyitó csatornák ott térnek el). Kimenet: csatornánként 17 pontos táblázat, ami a logikai szinthez
 // (0, 16 ... 240, 255) megadja a szükséges tényleges PWM-kitöltést, így
 //   1) a kimenő fény arányos a logikai szinttel (a korai nyitás / kimaradó szintek megszűnnek), és
 //   2) a három csatorna maximuma kiegyenlített: a #FFFFFF a kamera szerint semleges fehér.
@@ -20,16 +20,12 @@ public sealed class RgbCalibrationResult
 
 public static class RgbCalibrator
 {
-    public const int Points = 17;
+    // Az eszköz táblázatának pontszáma: a logikai szint 0, 16, 32 ... 240, 255 pontjai
+    public const int LutPoints = 17;
 
-    // A mérés (és a táblázat) kitöltés-pontjai: 0, 16, ... 240, 255
-    public static readonly int[] Duties = BuildDuties();
-    private static int[] BuildDuties()
-    {
-        var d = new int[Points];
-        for (int k = 0; k < Points; k++) d[k] = Math.Min(255, 16 * k);
-        return d;
-    }
+    // A mérés kitöltés-pontjai: sűrűbben az alsó tartományban (ott nyit korán az erős csatorna), az utolsó a teljes kitöltés
+    public static readonly int[] MeasureDuties = { 0, 1, 2, 3, 4, 6, 8, 11, 14, 18, 24, 32, 48, 64, 96, 128, 160, 192, 224, 255 };
+    public static int Points => MeasureDuties.Length;
 
     // resp[led][lépés][kamera-csatorna]: a "led" csatorna "lépés" kitöltésénél a kamera R/G/B lineáris értéke (környezeti fény levonva).
     // Hibát a visszatérési érték null-ra állításával és az error szöveggel jelez.
@@ -80,9 +76,9 @@ public static class RgbCalibrator
         var res = new RgbCalibrationResult { Gain = g };
         for (int j = 0; j < 3; j++)
         {
-            res.Lut[j] = new byte[Points];
+            res.Lut[j] = new byte[LutPoints];
             int prev = 0;
-            for (int k = 0; k < Points; k++)
+            for (int k = 0; k < LutPoints; k++)
             {
                 double logical = Math.Min(255, 16 * k) / 255.0;
                 int duty = k == 0 ? 0 : (int)Math.Round(Invert(f[j], logical * g[j]));
@@ -90,8 +86,8 @@ public static class RgbCalibrator
                 res.Lut[j][k] = (byte)duty;
                 prev = duty;
             }
-            int onset = Duties[Points - 1];
-            for (int k = 1; k < Points; k++) if (f[j][k] >= 0.02) { onset = Duties[k - 1] + 1; break; }
+            int onset = MeasureDuties[Points - 1];
+            for (int k = 1; k < Points; k++) if (f[j][k] >= 0.02) { onset = MeasureDuties[k]; break; }
             res.Onset[j] = onset;
         }
         return res;
@@ -116,11 +112,11 @@ public static class RgbCalibrator
     public static string ToCommand(RgbCalibrationResult r)
     {
         string Csv(byte[] a) => string.Join(",", a.Select(v => (int)v));
-        return $"SET_RGBCAL:{Points}:{Csv(r.Lut[0])}:{Csv(r.Lut[1])}:{Csv(r.Lut[2])}";
+        return $"SET_RGBCAL:{LutPoints}:{Csv(r.Lut[0])}:{Csv(r.Lut[1])}:{Csv(r.Lut[2])}";
     }
 
     // A kitöltések, amikkel a logikai fehér (255) valójában megjelenik (a táblázat utolsó pontjai)
-    public static int[] WhiteDuties(RgbCalibrationResult r) => new[] { (int)r.Lut[0][Points - 1], (int)r.Lut[1][Points - 1], (int)r.Lut[2][Points - 1] };
+    public static int[] WhiteDuties(RgbCalibrationResult r) => new[] { (int)r.Lut[0][LutPoints - 1], (int)r.Lut[1][LutPoints - 1], (int)r.Lut[2][LutPoints - 1] };
 
     // f (0..1, monoton) inverze lineáris interpolációval: melyik kitöltésnél éri el a görbe a t értéket
     private static double Invert(double[] f, double t)
@@ -131,7 +127,7 @@ public static class RgbCalibrator
             if (f[k] >= t)
             {
                 double f0 = f[k - 1], f1 = f[k];
-                double d0 = Duties[k - 1], d1 = Duties[k];
+                double d0 = MeasureDuties[k - 1], d1 = MeasureDuties[k];
                 if (f1 - f0 < 1e-9) return d1;
                 return d0 + (t - f0) / (f1 - f0) * (d1 - d0);
             }

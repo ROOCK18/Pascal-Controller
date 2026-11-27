@@ -46,6 +46,7 @@
 #include "ui.h"
 #include "Comm.h"
 #include "Sensors.h"
+#include "RgbCal.h"
 #include "PWMControl.h"
 #include "Thermostat.h"
 #include "SwitchLogic.h"
@@ -243,6 +244,7 @@ void loop() {
     applyProxOverrides(); // ... és az aktív közeledés-művelet is
   }
   checkAlerts();          // riasztások (szenzorhiba / hőmérséklet-határ) -> értesítés az appnak
+  rgbCalTick();           // kalibrációs mód időtúllépése
   applyRgbAutomation();   // RGB: átmenet-motor + időzítő / görbék / közeledés (csak Automata üzemmódban)
 
   // ── Gombok: menü navigáció, vagy idle képernyőn belépés a menübe ──

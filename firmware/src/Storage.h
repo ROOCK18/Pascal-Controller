@@ -82,6 +82,9 @@ void saveAllSettings() {
   prefs.putBytes("rgbTherm", &rgbThermCfg, sizeof(rgbThermCfg));
   prefs.putBytes("rgbDay", &rgbDayCfg, sizeof(rgbDayCfg));
   prefs.putBytes("rgbProx", &rgbProxCfg, sizeof(rgbProxCfg));
+  prefs.putBytes("rgbcal", rgbCalLut, sizeof(rgbCalLut));
+  prefs.putBool("rgbcalHas", rgbCalHas);
+  prefs.putBool("rgbcalOn", rgbCalOn);
 
   prefs.end();
 }
@@ -176,6 +179,9 @@ void loadAllSettings() {
   loadStructIfMatching("rgbTherm", rgbThermCfg);
   loadStructIfMatching("rgbDay", rgbDayCfg);
   loadStructIfMatching("rgbProx", rgbProxCfg);
+  rgbCalHas = prefs.getBool("rgbcalHas", false);
+  rgbCalOn = prefs.getBool("rgbcalOn", true);
+  if (rgbCalHas && prefs.getBytes("rgbcal", rgbCalLut, sizeof(rgbCalLut)) != sizeof(rgbCalLut)) rgbCalHas = false;
 
   prefs.end();
 }

@@ -303,7 +303,8 @@ void displayInfo() {
     lastAlert = alertNow;
     if (alertNow) lv_obj_remove_flag(idAlert, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(idAlert, LV_OBJ_FLAG_HIDDEN);
   }
-  if (currentMode != lastMode) { lastMode = currentMode; ui_set_text(idMode, MODE_SHORT[currentMode]); }
+  int modeKey = calMode ? 99 : currentMode;   // kalibrálás közben "KAL" jelzés a mód-kód helyett
+  if (modeKey != lastMode) { lastMode = modeKey; ui_set_text(idMode, calMode ? "KAL" : MODE_SHORT[currentMode]); }
 
   // Szenzor kártyák: mód-függő tartalom
   switch (currentMode) {
